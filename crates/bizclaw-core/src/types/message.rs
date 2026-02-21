@@ -144,3 +144,45 @@ pub struct Usage {
     pub completion_tokens: u32,
     pub total_tokens: u32,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_message_constructors() {
+        let sys = Message::system("You are helpful.");
+        assert_eq!(sys.role, Role::System);
+        assert_eq!(sys.content, "You are helpful.");
+
+        let user = Message::user("Hello");
+        assert_eq!(user.role, Role::User);
+
+        let asst = Message::assistant("Hi!");
+        assert_eq!(asst.role, Role::Assistant);
+    }
+
+    #[test]
+    fn test_role_display() {
+        assert_eq!(Role::System.to_string(), "system");
+        assert_eq!(Role::User.to_string(), "user");
+        assert_eq!(Role::Assistant.to_string(), "assistant");
+        assert_eq!(Role::Tool.to_string(), "tool");
+    }
+
+    #[test]
+    fn test_message_json_roundtrip() {
+        let msg = Message::user("test message");
+        let json = serde_json::to_string(&msg).unwrap();
+        let parsed: Message = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.content, "test message");
+        assert_eq!(parsed.role, Role::User);
+    }
+
+    #[test]
+    fn test_provider_response() {
+        let resp = ProviderResponse::text("hello");
+        assert_eq!(resp.content, Some("hello".into()));
+        assert!(resp.tool_calls.is_empty());
+    }
+}

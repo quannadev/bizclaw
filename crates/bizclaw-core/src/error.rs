@@ -113,3 +113,36 @@ impl BizClawError {
         Self::Security(msg.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_error_display() {
+        let err = BizClawError::Provider("timeout".into());
+        assert!(err.to_string().contains("timeout"));
+    }
+
+    #[test]
+    fn test_error_constructors() {
+        let e1 = BizClawError::provider("test");
+        assert!(matches!(e1, BizClawError::Provider(_)));
+
+        let e2 = BizClawError::channel("test");
+        assert!(matches!(e2, BizClawError::Channel(_)));
+
+        let e3 = BizClawError::brain("test");
+        assert!(matches!(e3, BizClawError::Brain(_)));
+
+        let e4 = BizClawError::security("test");
+        assert!(matches!(e4, BizClawError::Security(_)));
+    }
+
+    #[test]
+    fn test_io_error_conversion() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let err: BizClawError = io_err.into();
+        assert!(matches!(err, BizClawError::Io(_)));
+    }
+}

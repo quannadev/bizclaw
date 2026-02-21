@@ -64,9 +64,54 @@ pub async fn list_channels() -> Json<serde_json::Value> {
         "channels": [
             {"name": "cli", "type": "interactive", "status": "available"},
             {"name": "zalo", "type": "messaging", "status": "available"},
-            {"name": "telegram", "type": "messaging", "status": "planned"},
-            {"name": "discord", "type": "messaging", "status": "planned"},
-            {"name": "webhook", "type": "api", "status": "planned"},
+            {"name": "telegram", "type": "messaging", "status": "available"},
+            {"name": "discord", "type": "messaging", "status": "available"},
+            {"name": "webhook", "type": "api", "status": "available"},
         ]
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::server::AppState;
+
+    fn test_state() -> State<Arc<AppState>> {
+        State(Arc::new(AppState {
+            config: bizclaw_core::config::GatewayConfig::default(),
+            start_time: std::time::Instant::now(),
+        }))
+    }
+
+    #[tokio::test]
+    async fn test_health_check() {
+        let result = health_check().await;
+        let json = result.0;
+        assert_eq!(json["status"], "ok");
+    }
+
+    #[tokio::test]
+    async fn test_system_info() {
+        let result = system_info(test_state()).await;
+        let json = result.0;
+        assert_eq!(json["name"], "BizClaw");
+        assert!(json["version"].is_string());
+    }
+
+    #[tokio::test]
+    async fn test_list_providers() {
+        let result = list_providers().await;
+        let json = result.0;
+        assert!(json["providers"].is_array());
+        assert!(json["providers"].as_array().unwrap().len() >= 5);
+    }
+
+    #[tokio::test]
+    async fn test_list_channels() {
+        let result = list_channels().await;
+        let json = result.0;
+        assert!(json["channels"].is_array());
+        let channels = json["channels"].as_array().unwrap();
+        assert!(channels.iter().all(|c| c["status"] == "available"));
+    }
 }

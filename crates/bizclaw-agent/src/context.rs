@@ -86,3 +86,49 @@ impl Default for ConversationContext {
         Self::new(50) // Default: keep last 50 messages
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_context_push_and_access() {
+        let mut ctx = ConversationContext::new(10);
+        ctx.push(Message::system("You are helpful."));
+        ctx.push(Message::user("Hello"));
+        assert_eq!(ctx.len(), 2);
+        assert_eq!(ctx.messages()[1].content, "Hello");
+    }
+
+    #[test]
+    fn test_context_trim() {
+        let mut ctx = ConversationContext::new(3);
+        ctx.push(Message::system("System"));
+        ctx.push(Message::user("msg1"));
+        ctx.push(Message::user("msg2"));
+        ctx.push(Message::user("msg3"));
+
+        // Should keep system + last 2
+        assert_eq!(ctx.len(), 3);
+        assert_eq!(ctx.messages()[0].content, "System");
+        assert_eq!(ctx.messages()[2].content, "msg3");
+    }
+
+    #[test]
+    fn test_context_clear() {
+        let mut ctx = ConversationContext::new(10);
+        ctx.push(Message::system("System"));
+        ctx.push(Message::user("Hello"));
+        ctx.push(Message::assistant("Hi"));
+        ctx.clear();
+        assert_eq!(ctx.len(), 1);
+        assert_eq!(ctx.messages()[0].content, "System");
+    }
+
+    #[test]
+    fn test_estimated_tokens() {
+        let mut ctx = ConversationContext::new(10);
+        ctx.push(Message::user("abcdefgh")); // 8 chars = ~2 tokens
+        assert!(ctx.estimated_tokens() > 0);
+    }
+}

@@ -436,3 +436,50 @@ pub struct DiscordChannelConfig {
     #[serde(default)]
     pub allowed_channel_ids: Vec<u64>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_config() {
+        let config = BizClawConfig::default();
+        assert_eq!(config.default_provider, "openai");
+        assert_eq!(config.default_model, "gpt-4o-mini");
+        assert!((config.default_temperature - 0.7).abs() < 0.01);
+        assert_eq!(config.identity.name, "BizClaw");
+    }
+
+    #[test]
+    fn test_config_from_toml() {
+        let toml_str = r#"
+            default_provider = "ollama"
+            default_model = "llama3.2"
+            default_temperature = 0.5
+
+            [identity]
+            name = "TestBot"
+            persona = "A test assistant"
+            system_prompt = "You are a test bot."
+        "#;
+
+        let config: BizClawConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.default_provider, "ollama");
+        assert_eq!(config.default_model, "llama3.2");
+        assert_eq!(config.identity.name, "TestBot");
+    }
+
+    #[test]
+    fn test_config_missing_fields_use_defaults() {
+        let toml_str = "";
+        let config: BizClawConfig = toml::from_str(toml_str).unwrap();
+        assert_eq!(config.default_provider, "openai");
+        assert_eq!(config.gateway.port, 3000);
+    }
+
+    #[test]
+    fn test_home_dir() {
+        let home = BizClawConfig::home_dir();
+        assert!(home.to_string_lossy().contains("bizclaw"));
+    }
+}

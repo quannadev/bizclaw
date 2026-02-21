@@ -41,3 +41,32 @@ impl ToolRegistry {
 impl Default for ToolRegistry {
     fn default() -> Self { Self::with_defaults() }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_registry_with_defaults() {
+        let reg = ToolRegistry::with_defaults();
+        assert!(reg.get("shell").is_some());
+        assert!(reg.get("file").is_some());
+        assert!(reg.get("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_registry_list() {
+        let reg = ToolRegistry::with_defaults();
+        let defs = reg.list();
+        assert!(defs.len() >= 2);
+        assert!(defs.iter().any(|d| d.name == "shell"));
+        assert!(defs.iter().any(|d| d.name == "file"));
+    }
+
+    #[test]
+    fn test_registry_empty() {
+        let reg = ToolRegistry::new();
+        assert!(reg.list().is_empty());
+        assert!(reg.get("shell").is_none());
+    }
+}

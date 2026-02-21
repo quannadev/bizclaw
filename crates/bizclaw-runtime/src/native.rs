@@ -42,3 +42,24 @@ pub async fn execute_with_stderr(
 
     Ok((stdout, stderr, exit_code))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_runtime_info() {
+        let info = RuntimeInfo::current();
+        assert!(!info.os.is_empty());
+        assert!(!info.arch.is_empty());
+        assert!(info.pid > 0);
+    }
+
+    #[tokio::test]
+    async fn test_execute_echo() {
+        let (stdout, stderr, code) = execute_with_stderr("echo hello", None).await.unwrap();
+        assert_eq!(stdout.trim(), "hello");
+        assert!(stderr.is_empty());
+        assert_eq!(code, 0);
+    }
+}
