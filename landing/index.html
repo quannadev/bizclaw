@@ -505,7 +505,7 @@ footer a{color:var(--accent2);text-decoration:none}
       <div class="form-success" id="register-success">
         <div class="icon">🎉</div>
         <h3 data-vi="Đăng ký thành công!" data-en="Registration successful!">Đăng ký thành công!</h3>
-        <p id="success-message" data-vi="Tenant đã được tạo. Subdomain của bạn sẵn sàng!" data-en="Tenant created. Your subdomain is ready!">Tenant đã được tạo. Subdomain của bạn sẵn sàng!</p>
+        <p id="success-message" data-vi="Tenant đã được tạo. Trợ lý AI của bạn đã lên! Hãy truy cập Dashboard để cấu hình API Key & Chọn LLM Provider nhé!" data-en="Tenant created. Your AI assistant is up! Go to your Dashboard to configure API Key & choose your LLM Provider!">Tenant đã được tạo. Trợ lý AI của bạn đã lên! Hãy truy cập Dashboard để cấu hình API Key & Chọn LLM Provider nhé!</p>
         <div id="pairing-display" style="margin-top:20px;padding:20px;background:var(--surface);border-radius:12px;border:1px solid var(--border)"></div>
       </div>
     </div>
@@ -635,8 +635,9 @@ async function handleRegister(e) {
       document.getElementById('pairing-display').innerHTML = `
         <p style="color:var(--muted);font-size:13px;margin-bottom:8px">${currentLang === 'vi' ? 'Subdomain của bạn' : 'Your subdomain'}:</p>
         <p style="font-size:20px;font-weight:700;color:var(--accent2)">${data.slug}.bizclaw.vn</p>
+        <a href="http://${data.slug}.bizclaw.vn" target="_blank" class="btn-primary" style="margin-top:16px;padding:8px 24px;display:inline-block">${currentLang === 'vi' ? 'Vào Dashboard của bạn' : 'Go to your Dashboard'} 🔗</a>
         ${result.pairing_code ? `
-          <p style="color:var(--muted);font-size:13px;margin-top:16px">${currentLang === 'vi' ? 'Mã pairing (dùng 1 lần)' : 'Pairing code (one-time)'}:</p>
+          <p style="color:var(--muted);font-size:13px;margin-top:24px">${currentLang === 'vi' ? 'Mã pairing (dùng 1 lần để CLI quản lý)' : 'Pairing code (one-time for CLI management)'}:</p>
           <p style="font-family:'Space Grotesk';font-size:36px;font-weight:800;letter-spacing:8px;color:var(--orange);margin-top:4px">${result.pairing_code}</p>
         ` : ''}
       `;
@@ -654,8 +655,9 @@ async function handleRegister(e) {
     document.getElementById('register-form-container').style.display = 'none';
     document.getElementById('register-success').style.display = 'block';
     document.getElementById('pairing-display').innerHTML = `
-      <p style="color:var(--muted);font-size:13px">${currentLang === 'vi' ? 'Đăng ký đã được ghi nhận! Chúng tôi sẽ liên hệ qua email để kích hoạt.' : 'Registration recorded! We will contact you via email for activation.'}</p>
-      <p style="font-size:18px;font-weight:600;color:var(--accent2);margin-top:8px">${data.slug}.bizclaw.vn</p>
+      <p style="color:var(--muted);font-size:13px">${currentLang === 'vi' ? 'Đăng ký lưu trữ thành công trên local! Tên agent của bạn:' : 'Local registration recorded! Your agent name:'}</p>
+      <p style="font-size:18px;font-weight:600;color:var(--accent2);margin-top:8px;margin-bottom:16px">${data.slug}.bizclaw.vn</p>
+      <a href="http://localhost:3000" target="_blank" class="btn-primary" style="padding:8px 24px;display:inline-block">${currentLang === 'vi' ? 'Mở Admin Dashboard (Test)' : 'Open Admin Dashboard (Test)'} 🔗</a>
     `;
   }
 }
