@@ -311,8 +311,42 @@ async fn main() -> Result<()> {
                     println!("🧠 Downloading: {filename}");
                     println!("   From: {url}");
                     println!("   To:   {}", dest.display());
-                    println!("\n   Use curl or wget to download:");
-                    println!("   curl -L -o \"{}\" \"{url}\"", dest.display());
+                    println!();
+
+                    // Stream download with progress
+                    let client = reqwest::Client::new();
+                    let response = client.get(url)
+                        .send()
+                        .await
+                        .map_err(|e| anyhow::anyhow!("Download failed: {e}"))?;
+
+                    let total_size = response.content_length().unwrap_or(0);
+                    println!("   Total size: {:.1} MB", total_size as f64 / 1024.0 / 1024.0);
+
+                    let mut file = tokio::fs::File::create(&dest).await?;
+                    let mut downloaded: u64 = 0;
+                    let mut stream = response.bytes_stream();
+
+                    use futures::StreamExt;
+                    use tokio::io::AsyncWriteExt;
+
+                    while let Some(chunk) = stream.next().await {
+                        let chunk = chunk.map_err(|e| anyhow::anyhow!("Download error: {e}"))?;
+                        file.write_all(&chunk).await?;
+                        downloaded += chunk.len() as u64;
+
+                        if total_size > 0 {
+                            let pct = (downloaded as f64 / total_size as f64 * 100.0) as u32;
+                            let mb = downloaded as f64 / 1024.0 / 1024.0;
+                            print!("\r   ⬇️  {mb:.1} MB / {:.1} MB ({pct}%)", total_size as f64 / 1024.0 / 1024.0);
+                            use std::io::Write;
+                            std::io::stdout().flush().ok();
+                        }
+                    }
+
+                    file.flush().await?;
+                    println!("\n\n✅ Download complete: {}", dest.display());
+                    println!("   Test with: bizclaw brain test \"Hello!\"");
                 }
                 BrainAction::List => {
                     println!("🧠 Brain Models\n");
