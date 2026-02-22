@@ -298,9 +298,9 @@ pub async fn list_channels(
             {"name": "telegram", "type": "messaging", "status": if cfg.channel.telegram.as_ref().map_or(false, |t| t.enabled) { "active" } else { "disabled" }, "configured": cfg.channel.telegram.is_some()},
             {"name": "zalo", "type": "messaging", "status": if cfg.channel.zalo.as_ref().map_or(false, |z| z.enabled) { "active" } else { "disabled" }, "configured": cfg.channel.zalo.is_some()},
             {"name": "discord", "type": "messaging", "status": if cfg.channel.discord.as_ref().map_or(false, |d| d.enabled) { "active" } else { "disabled" }, "configured": cfg.channel.discord.is_some()},
-            {"name": "email", "type": "messaging", "status": "available", "configured": false},
+            {"name": "email", "type": "messaging", "status": if cfg.channel.email.as_ref().map_or(false, |e| e.enabled) { "active" } else { "disabled" }, "configured": cfg.channel.email.is_some()},
             {"name": "webhook", "type": "api", "status": "available", "configured": false},
-            {"name": "whatsapp", "type": "messaging", "status": "available", "configured": false},
+            {"name": "whatsapp", "type": "messaging", "status": if cfg.channel.whatsapp.as_ref().map_or(false, |w| w.enabled) { "active" } else { "disabled" }, "configured": cfg.channel.whatsapp.is_some()},
         ]
     }))
 }
@@ -336,6 +336,119 @@ pub async fn zalo_qr_code(
     }
 }
 
+/// WhatsApp webhook verification (GET) — Meta sends this to verify endpoint.
+pub async fn whatsapp_webhook_verify(
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+    State(state): State<Arc<AppState>>,
+) -> axum::response::Response {
+    let mode = params.get("hub.mode").map(|s| s.as_str()).unwrap_or("");
+    let token = params.get("hub.verify_token").map(|s| s.as_str()).unwrap_or("");
+    let challenge = params.get("hub.challenge").map(|s| s.as_str()).unwrap_or("");
+
+    let expected_token = {
+        let cfg = state.full_config.lock().unwrap();
+        cfg.channel.whatsapp.as_ref()
+            .map(|w| w.webhook_verify_token.clone())
+            .unwrap_or_default()
+    };
+
+    if mode == "subscribe" && token == expected_token {
+        tracing::info!("WhatsApp webhook verified");
+        axum::response::Response::builder()
+            .status(200)
+            .body(axum::body::Body::from(challenge.to_string()))
+            .unwrap()
+    } else {
+        axum::response::Response::builder()
+            .status(403)
+            .body(axum::body::Body::from("Forbidden"))
+            .unwrap()
+    }
+}
+
+/// WhatsApp webhook handler (POST) — receives incoming messages from Meta.
+pub async fn whatsapp_webhook(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    // Extract messages and spawn processing in background
+    // (WhatsApp expects quick 200 OK response)
+    let entry = &body["entry"];
+    if let Some(entries) = entry.as_array() {
+        for entry in entries {
+            if let Some(changes) = entry["changes"].as_array() {
+                for change in changes {
+                    let value = &change["value"];
+                    if let Some(messages) = value["messages"].as_array() {
+                        for msg in messages {
+                            let msg_type = msg["type"].as_str().unwrap_or("");
+                            if msg_type != "text" { continue; }
+
+                            let from = msg["from"].as_str().unwrap_or("").to_string();
+                            let text = msg["text"]["body"].as_str().unwrap_or("").to_string();
+                            let msg_id = msg["id"].as_str().unwrap_or("").to_string();
+
+                            if text.is_empty() { continue; }
+
+                            tracing::info!("[whatsapp] Message from {from}: {text}");
+
+                            // Get WhatsApp config for reply
+                            let wa_config = {
+                                let cfg = state.full_config.lock().unwrap();
+                                cfg.channel.whatsapp.clone()
+                            };
+
+                            // Spawn background task for agent processing + reply
+                            let agent_lock = state.agent.clone();
+                            tokio::spawn(async move {
+                                // Process through Agent Engine
+                                let response = {
+                                    let mut agent = agent_lock.lock().await;
+                                    if let Some(agent) = agent.as_mut() {
+                                        match agent.process(&text).await {
+                                            Ok(r) => r,
+                                            Err(e) => format!("Error: {e}"),
+                                        }
+                                    } else {
+                                        "Agent not available".to_string()
+                                    }
+                                };
+
+                                // Send reply via WhatsApp Cloud API
+                                if let Some(wa_cfg) = wa_config {
+                                    let url = format!(
+                                        "https://graph.facebook.com/v21.0/{}/messages",
+                                        wa_cfg.phone_number_id
+                                    );
+                                    let reply = serde_json::json!({
+                                        "messaging_product": "whatsapp",
+                                        "to": from,
+                                        "type": "text",
+                                        "text": { "body": response },
+                                        "context": { "message_id": msg_id },
+                                    });
+                                    let client = reqwest::Client::new();
+                                    if let Err(e) = client
+                                        .post(&url)
+                                        .header("Authorization", format!("Bearer {}", wa_cfg.access_token))
+                                        .json(&reply)
+                                        .send()
+                                        .await
+                                    {
+                                        tracing::error!("[whatsapp] Reply failed: {e}");
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Json(serde_json::json!({"status": "ok"}))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -349,6 +462,7 @@ mod tests {
             config_path: std::path::PathBuf::from("/tmp/test_config.toml"),
             start_time: std::time::Instant::now(),
             pairing_code: None,
+            agent: std::sync::Arc::new(tokio::sync::Mutex::new(None)),
         }))
     }
 

@@ -579,6 +579,40 @@ async fn main() -> Result<()> {
                 }
             }
 
+            // Zalo channel (Personal mode — requires cookie)
+            if let Some(ref zalo_cfg) = channel_config.zalo {
+                if zalo_cfg.enabled {
+                    let cookie_path = &zalo_cfg.personal.cookie_path;
+                    let expanded_path = if cookie_path.starts_with("~/") {
+                        std::env::var("HOME").ok()
+                            .map(|h| std::path::PathBuf::from(h).join(&cookie_path[2..]))
+                            .unwrap_or_else(|| std::path::PathBuf::from(cookie_path))
+                    } else {
+                        std::path::PathBuf::from(cookie_path)
+                    };
+
+                    if expanded_path.exists() {
+                        println!("   💬 Zalo: starting ({} mode)...", zalo_cfg.mode);
+                        tracing::info!("Zalo channel starting with cookie from: {}",
+                            expanded_path.display());
+                        // Note: Zalo uses WebSocket-based listening which is handled inside the
+                        // ZaloChannel::connect(). For now, we log that it's ready.
+                        // Full polling requires zpw_enk encryption which is complex.
+                        // The channel will be activated when admin sends a
+                        // "start channel" command via the API.
+                    } else {
+                        println!("   💬 Zalo: skipped (no cookie at {})", cookie_path);
+                    }
+                }
+            }
+
+            // WhatsApp channel (webhook-based — no background task needed)
+            if let Some(ref wa_cfg) = channel_config.whatsapp {
+                if wa_cfg.enabled && !wa_cfg.access_token.is_empty() {
+                    println!("   📱 WhatsApp: enabled (webhook at /api/v1/webhook/whatsapp)");
+                }
+            }
+
             println!();
 
             if open {

@@ -120,9 +120,10 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                         tracing::info!("Chat req={request_id}: provider={provider}, model={model}, stream={stream}, len={}, agent={has_agent}",
                             content.len());
 
-                        if has_agent && !stream {
+                        if has_agent {
                             // ═══════════════════════════════════════════
                             // AGENT ENGINE MODE (tools + memory + all providers)
+                            // Works for BOTH stream and non-stream requests
                             // ═══════════════════════════════════════════
                             let _ = send_json(&mut socket, &serde_json::json!({
                                 "type": "chat_start",
@@ -143,20 +144,44 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
 
                             match result {
                                 Some(Ok(response)) => {
-                                    let _ = send_json(&mut socket, &serde_json::json!({
-                                        "type": "chat_response",
-                                        "request_id": &request_id,
-                                        "content": &response,
-                                        "provider": &provider,
-                                        "model": &model,
-                                        "mode": "agent",
-                                    })).await;
-                                    let _ = send_json(&mut socket, &serde_json::json!({
-                                        "type": "chat_done",
-                                        "request_id": &request_id,
-                                        "full_content": &response,
-                                        "mode": "agent",
-                                    })).await;
+                                    if stream {
+                                        // Emit as rapid chunks for streaming UX
+                                        let chunk_size = 8; // chars per chunk
+                                        let chars: Vec<char> = response.chars().collect();
+                                        let mut idx: u64 = 0;
+                                        for chunk in chars.chunks(chunk_size) {
+                                            let text: String = chunk.iter().collect();
+                                            let _ = send_json(&mut socket, &serde_json::json!({
+                                                "type": "chat_chunk",
+                                                "request_id": &request_id,
+                                                "content": &text,
+                                                "index": idx,
+                                            })).await;
+                                            idx += 1;
+                                        }
+                                        let _ = send_json(&mut socket, &serde_json::json!({
+                                            "type": "chat_done",
+                                            "request_id": &request_id,
+                                            "total_tokens": idx,
+                                            "full_content": &response,
+                                            "mode": "agent",
+                                        })).await;
+                                    } else {
+                                        let _ = send_json(&mut socket, &serde_json::json!({
+                                            "type": "chat_response",
+                                            "request_id": &request_id,
+                                            "content": &response,
+                                            "provider": &provider,
+                                            "model": &model,
+                                            "mode": "agent",
+                                        })).await;
+                                        let _ = send_json(&mut socket, &serde_json::json!({
+                                            "type": "chat_done",
+                                            "request_id": &request_id,
+                                            "full_content": &response,
+                                            "mode": "agent",
+                                        })).await;
+                                    }
                                 }
                                 Some(Err(e)) => {
                                     let _ = send_json(&mut socket, &serde_json::json!({

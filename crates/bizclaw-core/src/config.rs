@@ -313,6 +313,8 @@ pub struct ChannelConfig {
     pub discord: Option<DiscordChannelConfig>,
     #[serde(default)]
     pub email: Option<EmailChannelConfig>,
+    #[serde(default)]
+    pub whatsapp: Option<WhatsAppChannelConfig>,
 }
 
 /// Zalo channel configuration.
@@ -459,6 +461,20 @@ pub struct EmailChannelConfig {
 
 fn default_imap_port_cfg() -> u16 { 993 }
 fn default_smtp_port_cfg() -> u16 { 587 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WhatsAppChannelConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default)]
+    pub access_token: String,
+    #[serde(default)]
+    pub phone_number_id: String,
+    #[serde(default)]
+    pub webhook_verify_token: String,
+    #[serde(default)]
+    pub business_id: String,
+}
 
 #[cfg(test)]
 mod tests {

@@ -12,6 +12,41 @@ use bizclaw_core::traits::memory::MemoryBackend;
 use bizclaw_core::traits::provider::GenerateParams;
 use bizclaw_core::types::{Message, OutgoingMessage};
 
+/// Prompt cache — caches serialized system prompt + tool definitions to avoid
+/// re-serializing on every request. Speeds up repeated calls significantly.
+struct PromptCache {
+    /// Hash of system prompt for change detection
+    system_prompt_hash: u64,
+    /// Pre-serialized tool definitions ready for provider API
+    cached_tool_defs: Vec<bizclaw_core::types::ToolDefinition>,
+    /// Timestamp of last cache refresh
+    last_refresh: std::time::Instant,
+}
+
+impl PromptCache {
+    fn new(system_prompt: &str, tools: &bizclaw_tools::ToolRegistry) -> Self {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        system_prompt.hash(&mut hasher);
+        let hash = hasher.finish();
+
+        Self {
+            system_prompt_hash: hash,
+            cached_tool_defs: tools.list(),
+            last_refresh: std::time::Instant::now(),
+        }
+    }
+
+    /// Get cached tool definitions (refresh every 5 minutes).
+    fn tool_defs(&mut self, tools: &bizclaw_tools::ToolRegistry) -> &[bizclaw_core::types::ToolDefinition] {
+        if self.last_refresh.elapsed() > std::time::Duration::from_secs(300) {
+            self.cached_tool_defs = tools.list();
+            self.last_refresh = std::time::Instant::now();
+        }
+        &self.cached_tool_defs
+    }
+}
+
 /// The BizClaw agent — processes messages using LLM providers and tools.
 pub struct Agent {
     config: BizClawConfig,
@@ -20,6 +55,7 @@ pub struct Agent {
     tools: bizclaw_tools::ToolRegistry,
     security: bizclaw_security::DefaultSecurityPolicy,
     conversation: Vec<Message>,
+    prompt_cache: PromptCache,
 }
 
 impl Agent {
@@ -29,6 +65,8 @@ impl Agent {
         let memory = bizclaw_memory::create_memory(&config.memory)?;
         let tools = bizclaw_tools::ToolRegistry::with_defaults();
         let security = bizclaw_security::DefaultSecurityPolicy::new(config.autonomy.clone());
+
+        let prompt_cache = PromptCache::new(&config.identity.system_prompt, &tools);
 
         let mut conversation = vec![];
         conversation.push(Message::system(&config.identity.system_prompt));
@@ -40,6 +78,7 @@ impl Agent {
             tools,
             security,
             conversation,
+            prompt_cache,
         })
     }
 
@@ -48,8 +87,18 @@ impl Agent {
         // Add user message to conversation
         self.conversation.push(Message::user(user_message));
 
-        // Get tool definitions
-        let tool_defs = self.tools.list();
+        // Trim conversation to prevent context overflow (keep system + last 40 messages)
+        if self.conversation.len() > 41 {
+            let system = self.conversation[0].clone();
+            let keep = self.conversation.len() - 40;
+            let tail: Vec<_> = self.conversation.drain(keep..).collect();
+            self.conversation.clear();
+            self.conversation.push(system);
+            self.conversation.extend(tail);
+        }
+
+        // Get cached tool definitions (avoids re-serialization)
+        let tool_defs = self.prompt_cache.tool_defs(&self.tools).to_vec();
 
         // Create generation params
         let params = GenerateParams {

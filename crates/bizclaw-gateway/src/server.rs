@@ -99,7 +99,11 @@ pub fn build_router(state: AppState) -> Router {
     let public = Router::new()
         .route("/", get(dashboard_page))
         .route("/health", get(super::routes::health_check))
-        .route("/api/v1/verify-pairing", post(verify_pairing));
+        .route("/api/v1/verify-pairing", post(verify_pairing))
+        // WhatsApp webhook — must be public for Meta verification
+        .route("/api/v1/webhook/whatsapp",
+            get(super::routes::whatsapp_webhook_verify)
+                .post(super::routes::whatsapp_webhook));
 
     // SPA fallback — serve dashboard HTML for all frontend routes
     // so that /dashboard, /chat, /settings etc. all work with path-based routing
