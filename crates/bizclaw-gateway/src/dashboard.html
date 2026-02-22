@@ -152,6 +152,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <a href="/channels" onclick="navigateTo(event,'channels')" id="nav-channels">📱 <span data-i18n="nav.channels">Kênh liên lạc</span></a>
       <a href="/tools" onclick="navigateTo(event,'tools')" id="nav-tools">🛠️ <span data-i18n="nav.tools">Công cụ</span></a>
       <a href="/mcp" onclick="navigateTo(event,'mcp')" id="nav-mcp">🔗 MCP Servers</a>
+      <a href="/agents" onclick="navigateTo(event,'agents')" id="nav-agents">🤖 Multi-Agent</a>
+      <a href="/knowledge" onclick="navigateTo(event,'knowledge')" id="nav-knowledge">📚 Knowledge</a>
       <div class="nav-sep"></div>
       <a href="/brain" onclick="navigateTo(event,'brain')" id="nav-brain">🧠 <span data-i18n="nav.brain">Brain Engine</span></a>
       <a href="/configfile" onclick="navigateTo(event,'configfile')" id="nav-configfile">📄 config.toml</a>
@@ -267,12 +269,20 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <button class="btn btn-outline btn-sm" onclick="loadOllamaModels()" title="Refresh models">🔄</button>
             </div>
           </div>
-          <div class="form-row"><span class="form-label">Ollama URL</span><input id="set-ollama-url" placeholder="http://localhost:11434"></div>
           <div id="ollama-status-row" class="form-row" style="background:var(--accent-glow);border-color:var(--accent)"><span class="form-label" style="color:var(--accent2)">💡 Status</span><span id="ollama-status-msg" style="font-size:12px;color:var(--text2)">Checking Ollama...</span></div>
         </div>
         <!-- Brain Engine fields -->
         <div id="provider-brain-fields" style="display:none">
-          <div class="form-row"><span class="form-label">Model Path</span><input id="set-brain-path" placeholder="~/.bizclaw/models/tinyllama.gguf"></div>
+          <div class="form-row"><span class="form-label">Model Path</span>
+            <div style="display:flex;gap:8px;flex:1">
+              <input id="set-brain-path" placeholder="~/.bizclaw/models/tinyllama.gguf" style="flex:1">
+              <button class="btn btn-outline btn-sm" onclick="scanBrainModels()" title="Scan for GGUF models">📂 Scan</button>
+            </div>
+          </div>
+          <div id="brain-models-found" style="display:none;margin:-8px 0 8px 0">
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Found GGUF models — click to select:</div>
+            <div id="brain-models-list" style="display:flex;flex-wrap:wrap;gap:4px"></div>
+          </div>
           <div class="form-row"><span class="form-label">Threads</span><input id="set-brain-threads" type="number" min="1" max="32" value="4" placeholder="4"></div>
           <div class="form-row" style="background:var(--accent-glow);border-color:var(--accent)"><span class="form-label" style="color:var(--accent2)">🧠 Brain</span><span style="font-size:12px;color:var(--text2)">GGUF models run 100% offline. Download: <code style="color:var(--cyan)">bizclaw brain download tinyllama-1.1b</code></span></div>
         </div>
@@ -396,6 +406,76 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
     </div>
 
+    <!-- ═══ MULTI-AGENT ═══ -->
+    <div id="page-agents" style="display:none">
+      <div class="page-header"><div><h1>🤖 Multi-Agent Orchestrator</h1><div class="sub">Create and manage multiple AI agents with different roles</div></div>
+        <button class="btn btn-primary" onclick="showCreateAgentForm()">+ Create Agent</button>
+      </div>
+      <div class="stats">
+        <div class="card"><div class="card-label">Total Agents</div><div class="card-value accent" id="agents-total">0</div></div>
+        <div class="card"><div class="card-label">Default Agent</div><div class="card-value green" id="agents-default">—</div></div>
+        <div class="card"><div class="card-label">Messages</div><div class="card-value blue" id="agents-messages">0</div></div>
+      </div>
+      <!-- Create Agent Form -->
+      <div id="agent-create-form" class="card" style="display:none;margin-top:16px">
+        <h3>➕ Create New Agent</h3>
+        <div class="form-row"><span class="form-label">Name</span><input id="new-agent-name" placeholder="researcher"></div>
+        <div class="form-row"><span class="form-label">Role</span><select id="new-agent-role">
+          <option value="assistant">Assistant</option><option value="researcher">Researcher</option>
+          <option value="coder">Coder</option><option value="writer">Writer</option>
+          <option value="analyst">Analyst</option><option value="translator">Translator</option>
+        </select></div>
+        <div class="form-row"><span class="form-label">Description</span><input id="new-agent-desc" placeholder="A helpful research agent"></div>
+        <div class="form-row"><span class="form-label">System Prompt</span><textarea id="new-agent-prompt" placeholder="You are a specialized research agent..."></textarea></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" onclick="createAgent()">🤖 Create</button>
+          <button class="btn btn-outline" onclick="document.getElementById('agent-create-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <div id="agents-list" class="ch-grid" style="margin-top:16px"></div>
+      <!-- Broadcast -->
+      <div class="card" style="margin-top:16px">
+        <h3>📢 Broadcast Message</h3>
+        <div class="form-row"><span class="form-label">Message</span><input id="broadcast-msg" placeholder="Send to all agents..."></div>
+        <button class="btn btn-primary btn-sm" onclick="broadcastMessage()">📢 Send to All</button>
+        <div id="broadcast-results" style="margin-top:12px"></div>
+      </div>
+    </div>
+
+    <!-- ═══ KNOWLEDGE BASE ═══ -->
+    <div id="page-knowledge" style="display:none">
+      <div class="page-header"><div><h1>📚 Knowledge Base</h1><div class="sub">Personal RAG — add documents for context-aware AI responses</div></div>
+        <button class="btn btn-primary" onclick="showAddDocForm()">+ Add Document</button>
+      </div>
+      <div class="stats">
+        <div class="card"><div class="card-label">Documents</div><div class="card-value accent" id="kb-docs">0</div></div>
+        <div class="card"><div class="card-label">Chunks</div><div class="card-value blue" id="kb-chunks">0</div></div>
+        <div class="card"><div class="card-label">Search Engine</div><div class="card-value green">FTS5</div></div>
+      </div>
+      <!-- Search -->
+      <div class="card" style="margin-top:16px">
+        <h3>🔍 Search Knowledge</h3>
+        <div style="display:flex;gap:8px"><input id="kb-search-input" placeholder="Search your documents..." style="flex:1" onkeydown="if(event.key==='Enter')searchKnowledge()"><button class="btn btn-primary btn-sm" onclick="searchKnowledge()">Search</button></div>
+        <div id="kb-search-results" style="margin-top:12px"></div>
+      </div>
+      <!-- Add Document Form -->
+      <div id="kb-add-form" class="card" style="display:none;margin-top:16px">
+        <h3>➕ Add Document</h3>
+        <div class="form-row"><span class="form-label">Name</span><input id="kb-doc-name" placeholder="meeting_notes.txt"></div>
+        <div class="form-row"><span class="form-label">Source</span><input id="kb-doc-source" placeholder="manual" value="dashboard"></div>
+        <div class="form-row"><span class="form-label">Content</span><textarea id="kb-doc-content" rows="6" placeholder="Paste document content here..."></textarea></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="btn btn-primary" onclick="addDocument()">💾 Save</button>
+          <button class="btn btn-outline" onclick="document.getElementById('kb-add-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+      <!-- Document List -->
+      <div class="card" style="margin-top:16px">
+        <h3>📄 Documents</h3>
+        <div id="kb-doc-list"></div>
+      </div>
+    </div>
+
     <!-- ═══ CONFIG FILE ═══ -->
     <div id="page-configfile" style="display:none">
       <div class="page-header"><div><h1>📄 config.toml</h1><div class="sub" id="config-path">—</div></div></div>
@@ -478,6 +558,8 @@ function showPage(name, pushState) {
   if (name === 'channels') renderChannelCards();
   if (name === 'configfile') loadConfigToml();
   if (name === 'mcp') loadMcpServers();
+  if (name === 'agents') loadAgents();
+  if (name === 'knowledge') loadKnowledgeDocs();
 }
 
 // Handle browser back/forward
@@ -490,7 +572,7 @@ window.addEventListener('popstate', (ev) => {
 function getPageFromPath() {
   const path = location.pathname.replace(/^\//, '').replace(/\/$/, '');
   // Map valid page names
-  const validPages = ['dashboard','chat','settings','providers','channels','tools','brain','configfile'];
+  const validPages = ['dashboard','chat','settings','providers','channels','tools','brain','configfile','mcp','agents','knowledge'];
   if (!path || path === '' || !validPages.includes(path)) return 'dashboard';
   return path;
 }
@@ -556,6 +638,45 @@ async function loadConfig() {
   try {
     configData = await (await authFetch(API + '/api/v1/config')).json();
   } catch(e) { configData = {}; }
+}
+
+// Scan for GGUF model files using real API
+async function scanBrainModels() {
+  const listEl = document.getElementById('brain-models-list');
+  const wrapEl = document.getElementById('brain-models-found');
+  listEl.innerHTML = '<span style="color:var(--text2)">Scanning filesystem for GGUF models...</span>';
+  wrapEl.style.display = '';
+  try {
+    const res = await authFetch(API + '/api/v1/brain/models');
+    const data = await res.json();
+    if (!data.ok) {
+      listEl.innerHTML = `<span style="color:var(--red)">Error: ${data.error || 'Unknown error'}</span>`;
+      return;
+    }
+    
+    const currentPath = document.getElementById('set-brain-path').value;
+    const models = data.models || [];
+    
+    if (models.length === 0) {
+      listEl.innerHTML = `<div style="width:100%;font-size:12px">
+        <span style="color:var(--text2)">No GGUF models found.</span><br>
+        <span style="font-size:11px;color:var(--text2)">Download a model: <code style="color:var(--cyan)">bizclaw brain download tinyllama-1.1b</code></span><br>
+        <span style="font-size:11px;color:var(--text2)">Models directory: <code>${data.models_dir}</code></span>
+      </div>`;
+      return;
+    }
+    
+    listEl.innerHTML = models.map(m => {
+      const isActive = m.path === currentPath;
+      return `<button class="btn ${isActive ? 'btn-primary' : 'btn-outline'} btn-sm" 
+        onclick="document.getElementById('set-brain-path').value='${m.path}'" 
+        style="font-size:11px" title="${m.path}">${m.name} (${m.size})</button>`;
+    }).join('') + `<div style="width:100%;font-size:11px;color:var(--text2);margin-top:4px">
+      📁 Found ${models.length} model(s) in: ${(data.scan_dirs || []).join(', ')}
+    </div>`;
+  } catch(e) {
+    listEl.innerHTML = `<span style="color:var(--red)">Error: ${e.message}</span>`;
+  }
 }
 
 // Provider-specific form visibility
@@ -676,7 +797,7 @@ async function saveSettings() {
       workspace_only: document.getElementById('set-auto-workspace').value === 'true',
     },
   };
-  // Provider-specific fields
+  // Provider-specific fields — always send brain config to persist model_path
   if (provider === 'brain') {
     body.brain = {
       enabled: true,
@@ -691,15 +812,22 @@ async function saveSettings() {
   try {
     const res = await authFetch(API + '/api/v1/config/update', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const r = await res.json();
-    toast(r.ok ? '✅ Settings saved!' : '❌ ' + r.error);
-    if (r.ok) { await loadConfig(); loadDashboard(); }
+    if (r.ok) {
+      toast('✅ Settings saved! Agent reloading...');
+      // Reload config from server to ensure UI shows persisted values
+      await loadConfig();
+      loadSettingsForm();
+      loadDashboard();
+    } else {
+      toast('❌ ' + r.error);
+    }
   } catch(e) { toast('❌ ' + e.message); }
 }
 
 // ═══ CHANNELS ═══
 const CHANNELS = [
   {type:'telegram',name:'Telegram Bot',icon:'🤖',fields:[
-    {key:'bot_token',label:'Bot Token',type:'password',placeholder:'123456:ABC-DEF...'},
+    {key:'bot_token',label:'Bot Token',type:'password',placeholder:'123456:ABC-DEF...', masked:true},
     {key:'allowed_chat_ids',label:'Allowed Chat IDs',type:'text',placeholder:'123456789, -100123...'},
   ]},
   {type:'zalo',name:'Zalo Personal',icon:'💬',hasQR:true,fields:[
@@ -707,19 +835,19 @@ const CHANNELS = [
     {key:'imei',label:'IMEI',type:'text',placeholder:'Tự động tạo nếu để trống'},
   ]},
   {type:'discord',name:'Discord Bot',icon:'🎮',fields:[
-    {key:'bot_token',label:'Bot Token',type:'password',placeholder:'MTk...'},
+    {key:'bot_token',label:'Bot Token',type:'password',placeholder:'MTk...', masked:true},
     {key:'allowed_channel_ids',label:'Channel IDs',type:'text',placeholder:'123456789, 987654321'},
   ]},
   {type:'email',name:'Email (SMTP)',icon:'📧',fields:[
     {key:'smtp_host',label:'SMTP Host',type:'text',placeholder:'smtp.gmail.com'},
     {key:'smtp_port',label:'Port',type:'text',placeholder:'587'},
     {key:'smtp_user',label:'Username',type:'text',placeholder:'agent@company.com'},
-    {key:'smtp_pass',label:'Password',type:'password',placeholder:'App password'},
+    {key:'smtp_pass',label:'Password',type:'password',placeholder:'App password', masked:true},
   ]},
   {type:'whatsapp',name:'WhatsApp Business',icon:'📲',fields:[
-    {key:'phone_id',label:'Phone Number ID',type:'text',placeholder:'Cloud API Phone ID'},
-    {key:'access_token',label:'Access Token',type:'password',placeholder:'EAAG...'},
-    {key:'webhook_secret',label:'Webhook Verify Token',type:'text',placeholder:'my_verify_token'},
+    {key:'phone_number_id',label:'Phone Number ID',type:'text',placeholder:'Cloud API Phone ID'},
+    {key:'access_token',label:'Access Token',type:'password',placeholder:'EAAG...', masked:true},
+    {key:'webhook_verify_token',label:'Webhook Verify Token',type:'text',placeholder:'my_verify_token'},
   ]},
   {type:'webhook',name:'Webhook API',icon:'🔗',fields:[
     {key:'webhook_url',label:'Inbound URL',type:'text',placeholder:'https://your-app.com/webhook'},
@@ -742,9 +870,14 @@ function renderChannelCards() {
       </div>
       <div class="ch-fields">
         ${def.fields.map(f => {
-          const val = (saved && saved[f.key]) || '';
-          if (f.type === 'textarea') return `<label>${f.label}</label><textarea id="ch-${def.type}-${f.key}" placeholder="${f.placeholder}">${val}</textarea>`;
-          return `<label>${f.label}</label><input type="${f.type}" id="ch-${def.type}-${f.key}" value="${val}" placeholder="${f.placeholder}">`;
+          let val = (saved && saved[f.key]) || '';
+          // For masked fields (tokens/passwords), show indicator but keep actual input empty
+          // so user can type new value. Don't pre-fill masked values.
+          const isMaskedValue = f.masked && val && (val.includes('•') || val === '••••');
+          const indicator = isMaskedValue ? '<span style="font-size:10px;color:var(--green)"> ✅ saved</span>' : (f.masked && saved && saved[f.key+'_set'] ? '<span style="font-size:10px;color:var(--green)"> ✅ saved</span>' : '');
+          const displayVal = isMaskedValue ? '' : val;
+          if (f.type === 'textarea') return `<label>${f.label}${indicator}</label><textarea id="ch-${def.type}-${f.key}" placeholder="${f.placeholder}">${displayVal}</textarea>`;
+          return `<label>${f.label}${indicator}</label><input type="${f.type}" id="ch-${def.type}-${f.key}" value="${displayVal}" placeholder="${f.placeholder}">`;
         }).join('')}
       </div>
       <div class="ch-actions">
@@ -924,13 +1057,234 @@ async function toggleMcp(index, enabled) {
   } catch(e) { toast('❌ ' + e.message, 'error'); }
 }
 
+// ═══ MULTI-AGENT ORCHESTRATOR ═══
+function showCreateAgentForm() { document.getElementById('agent-create-form').style.display = ''; }
+
+async function loadAgents() {
+  try {
+    const res = await authFetch(API + '/api/v1/agents');
+    const data = await res.json();
+    if (!data.ok) return;
+    
+    document.getElementById('agents-total').textContent = data.total || 0;
+    document.getElementById('agents-default').textContent = data.default || '—';
+    document.getElementById('agents-messages').textContent = 
+      (data.recent_messages || []).length;
+    
+    const list = document.getElementById('agents-list');
+    if (!data.agents || data.agents.length === 0) {
+      list.innerHTML = '<div class="card" style="text-align:center;padding:40px;color:var(--text2)"><div style="font-size:48px;margin-bottom:12px">🤖</div><div>No agents yet. Click <b>+ Create Agent</b> to build your AI team.</div></div>';
+      return;
+    }
+    
+    list.innerHTML = data.agents.map(a => `
+      <div class="card" style="position:relative">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:24px">${a.role === 'coder' ? '💻' : a.role === 'researcher' ? '🔬' : a.role === 'writer' ? '✍️' : a.role === 'analyst' ? '📊' : a.role === 'translator' ? '🌐' : '🤖'}</span>
+          <div>
+            <div style="font-weight:600;color:var(--text)">${a.name} ${a.is_default ? '<span style="font-size:10px;background:var(--accent);color:#000;padding:2px 6px;border-radius:8px">DEFAULT</span>' : ''}</div>
+            <div style="font-size:11px;color:var(--text2)">${a.role} • ${a.provider} • ${a.tools} tools</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text2)">${a.description}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:6px">💬 ${a.messages_processed} messages • 📝 ${a.conversation_length} in context</div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <input id="agent-msg-${a.name}" placeholder="Chat with ${a.name}..." style="flex:1;font-size:12px">
+          <button class="btn btn-primary btn-sm" onclick="chatWithAgent('${a.name}')" style="font-size:11px">Send</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteAgent('${a.name}')" style="font-size:11px;color:var(--red)">🗑️</button>
+        </div>
+        <div id="agent-response-${a.name}" style="margin-top:8px;font-size:12px;color:var(--cyan);display:none"></div>
+      </div>
+    `).join('');
+  } catch(e) { console.error('Load agents:', e); }
+}
+
+async function createAgent() {
+  const name = document.getElementById('new-agent-name').value.trim();
+  const role = document.getElementById('new-agent-role').value;
+  const desc = document.getElementById('new-agent-desc').value.trim();
+  const prompt = document.getElementById('new-agent-prompt').value.trim();
+  if (!name) { toast('Agent name is required', 'error'); return; }
+  
+  try {
+    const res = await authFetch(API + '/api/v1/agents', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, role, description: desc || `A ${role} agent`, system_prompt: prompt || undefined })
+    });
+    const r = await res.json();
+    if (r.ok) {
+      toast(`🤖 Agent '${name}' created!`);
+      document.getElementById('agent-create-form').style.display = 'none';
+      ['new-agent-name','new-agent-desc','new-agent-prompt'].forEach(id => document.getElementById(id).value = '');
+      loadAgents();
+    } else { toast('❌ ' + r.error, 'error'); }
+  } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+
+async function deleteAgent(name) {
+  try {
+    const res = await authFetch(API + `/api/v1/agents/${name}`, { method: 'DELETE' });
+    const r = await res.json();
+    toast(r.ok ? `🗑️ Agent '${name}' removed` : '❌ ' + r.message);
+    loadAgents();
+  } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+
+async function chatWithAgent(name) {
+  const input = document.getElementById(`agent-msg-${name}`);
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  
+  const respEl = document.getElementById(`agent-response-${name}`);
+  respEl.style.display = '';
+  respEl.innerHTML = '<span style="color:var(--text2)">Thinking...</span>';
+  
+  try {
+    const res = await authFetch(API + `/api/v1/agents/${name}/chat`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ message: msg })
+    });
+    const r = await res.json();
+    respEl.innerHTML = r.ok 
+      ? `<div style="background:var(--bg);padding:8px;border-radius:8px;border:1px solid var(--border)">${r.response.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`
+      : `<span style="color:var(--red)">❌ ${r.error}</span>`;
+  } catch(e) { respEl.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`; }
+}
+
+async function broadcastMessage() {
+  const msg = document.getElementById('broadcast-msg').value.trim();
+  if (!msg) { toast('Enter a message to broadcast', 'error'); return; }
+  
+  const el = document.getElementById('broadcast-results');
+  el.innerHTML = '<span style="color:var(--text2)">Broadcasting...</span>';
+  
+  try {
+    const res = await authFetch(API + '/api/v1/agents/broadcast', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ message: msg })
+    });
+    const r = await res.json();
+    if (r.ok) {
+      el.innerHTML = r.responses.map(resp => `
+        <div style="margin-top:8px;padding:8px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+          <div style="font-weight:600;color:${resp.ok ? 'var(--cyan)' : 'var(--red)'}">${resp.agent}</div>
+          <div style="font-size:12px;margin-top:4px">${(resp.ok ? resp.response : resp.error).replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>
+        </div>
+      `).join('');
+    }
+  } catch(e) { el.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`; }
+}
+
+// ═══ KNOWLEDGE BASE ═══
+function showAddDocForm() { document.getElementById('kb-add-form').style.display = ''; }
+
+async function loadKnowledgeDocs() {
+  try {
+    const res = await authFetch(API + '/api/v1/knowledge/documents');
+    const data = await res.json();
+    if (!data.ok) {
+      document.getElementById('kb-doc-list').innerHTML = '<div style="color:var(--text2);padding:20px;text-align:center">Knowledge base not available. Check server logs.</div>';
+      return;
+    }
+    
+    document.getElementById('kb-docs').textContent = data.total_docs || 0;
+    document.getElementById('kb-chunks').textContent = data.total_chunks || 0;
+    
+    const list = document.getElementById('kb-doc-list');
+    if (!data.documents || data.documents.length === 0) {
+      list.innerHTML = '<div style="color:var(--text2);padding:20px;text-align:center">No documents yet. Add knowledge for context-aware responses.</div>';
+      return;
+    }
+    
+    list.innerHTML = `<table style="width:100%;font-size:12px;border-collapse:collapse">
+      <tr style="color:var(--text2);text-align:left;border-bottom:1px solid var(--border)">
+        <th style="padding:8px">ID</th><th>Name</th><th>Source</th><th>Chunks</th><th></th>
+      </tr>
+      ${data.documents.map(d => `
+        <tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:6px">${d.id}</td>
+          <td style="color:var(--accent2)">${d.name}</td>
+          <td style="color:var(--text2)">${d.source}</td>
+          <td>${d.chunks}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="removeDocument(${d.id})" style="font-size:10px;color:var(--red)">🗑️</button></td>
+        </tr>
+      `).join('')}
+    </table>`;
+  } catch(e) { console.error('Load KB:', e); }
+}
+
+async function searchKnowledge() {
+  const query = document.getElementById('kb-search-input').value.trim();
+  if (!query) return;
+  
+  const el = document.getElementById('kb-search-results');
+  el.innerHTML = '<span style="color:var(--text2)">Searching...</span>';
+  
+  try {
+    const res = await authFetch(API + '/api/v1/knowledge/search', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ query, limit: 5 })
+    });
+    const data = await res.json();
+    if (!data.ok) { el.innerHTML = `<span style="color:var(--red)">❌ ${data.error}</span>`; return; }
+    
+    if (data.results.length === 0) {
+      el.innerHTML = '<span style="color:var(--text2)">No results found.</span>';
+      return;
+    }
+    
+    el.innerHTML = data.results.map(r => `
+      <div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:4px">
+          <span>📄 ${r.doc_name} (chunk ${r.chunk_idx})</span>
+          <span>Score: ${(r.score || 0).toFixed(2)}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text)">${(r.content || '').replace(/</g,'&lt;').substring(0, 300)}${(r.content||'').length > 300 ? '...' : ''}</div>
+      </div>
+    `).join('');
+  } catch(e) { el.innerHTML = `<span style="color:var(--red)">❌ ${e.message}</span>`; }
+}
+
+async function addDocument() {
+  const name = document.getElementById('kb-doc-name').value.trim();
+  const content = document.getElementById('kb-doc-content').value.trim();
+  const source = document.getElementById('kb-doc-source').value.trim() || 'dashboard';
+  if (!name || !content) { toast('Name and content are required', 'error'); return; }
+  
+  try {
+    const res = await authFetch(API + '/api/v1/knowledge/documents', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name, content, source })
+    });
+    const r = await res.json();
+    if (r.ok) {
+      toast(`📚 Document added (${r.chunks} chunks)`);
+      document.getElementById('kb-add-form').style.display = 'none';
+      ['kb-doc-name','kb-doc-content'].forEach(id => document.getElementById(id).value = '');
+      loadKnowledgeDocs();
+    } else { toast('❌ ' + r.error, 'error'); }
+  } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+
+async function removeDocument(id) {
+  try {
+    const res = await authFetch(API + `/api/v1/knowledge/documents/${id}`, { method: 'DELETE' });
+    const r = await res.json();
+    toast(r.ok ? '🗑️ Document removed' : '❌ ' + r.error);
+    loadKnowledgeDocs();
+  } catch(e) { toast('❌ ' + e.message, 'error'); }
+}
+
 // ═══ WEBSOCKET CHAT ═══
+let _wsReconnectAttempts = 0;
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   // Include pairing code in query param (WS doesn't support custom headers)
   const codeParam = pairingCode ? '?code=' + encodeURIComponent(pairingCode) : '';
   ws = new WebSocket(proto + '//' + location.host + '/ws' + codeParam);
   ws.onopen = () => {
+    _wsReconnectAttempts = 0;
     document.getElementById('ws-status').innerHTML = '🟢 ' + t('status.connected');
     // Send ping every 25s to keep alive
     if(window._wsPing) clearInterval(window._wsPing);
@@ -939,7 +1293,10 @@ function connectWS() {
   ws.onclose = (ev) => {
     document.getElementById('ws-status').innerHTML = '🔴 ' + t('status.disconnected');
     if(window._wsPing) clearInterval(window._wsPing);
-    setTimeout(connectWS, 3000);
+    // Exponential backoff reconnect (max 30s)
+    _wsReconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(1.5, _wsReconnectAttempts), 30000);
+    setTimeout(connectWS, delay);
   };
   ws.onerror = (ev) => {
     console.error('WS error:', ev);
@@ -954,7 +1311,11 @@ function handleWS(msg) {
   const typing = document.getElementById('chat-typing');
   switch(msg.type) {
     case 'connected':
-      addMsg(`Connected — ${msg.provider}/${msg.model}`, 'system');
+      const agentStr = msg.agent_engine ? ' (Agent+Tools)' : ' (Direct)';
+      addMsg(`🟢 Connected — ${msg.provider}/${msg.model}${agentStr}`, 'system');
+      if (!msg.agent_engine) {
+        addMsg('⚠️ Agent Engine not available. Chat will use direct provider calls (no tools/memory). Check Settings → Provider config.', 'system');
+      }
       break;
     case 'chat_start': typing.style.display = ''; break;
     case 'chat_chunk':
@@ -970,9 +1331,21 @@ function handleWS(msg) {
       if (st) st.classList.remove('msg-streaming');
       break;
     case 'chat_response': addMsg(msg.content, 'bot'); break;
-    case 'chat_error': addMsg('❌ ' + (msg.error||'Unknown error'), 'system'); typing.style.display = 'none'; break;
+    case 'chat_error':
+      typing.style.display = 'none';
+      const errMsg = msg.error || 'Unknown error';
+      addMsg('❌ ' + errMsg, 'system');
+      // Show helpful hints for common errors
+      if (errMsg.includes('Ollama') || errMsg.includes('connection failed')) {
+        addMsg('💡 Tip: Make sure Ollama is running: ollama serve', 'system');
+      } else if (errMsg.includes('API key') || errMsg.includes('401')) {
+        addMsg('💡 Tip: Go to Settings → API Key and enter your provider API key', 'system');
+      } else if (errMsg.includes('Agent') || errMsg.includes('not available')) {
+        addMsg('💡 Tip: Go to Settings → choose a valid provider (e.g., Ollama or OpenAI) and save', 'system');
+      }
+      break;
     case 'status':
-      addMsg(`📊 Provider: ${msg.provider} | Model: ${msg.model} | Uptime: ${fmtUptime(msg.uptime_secs)} | Requests: ${msg.requests_processed}`, 'system');
+      addMsg(`📊 Provider: ${msg.provider} | Model: ${msg.model} | Uptime: ${fmtUptime(msg.uptime_secs)} | Requests: ${msg.requests_processed} | Agent: ${msg.agent_engine ? '✅' : '❌'}`, 'system');
       break;
     case 'pong': break; // silent
     case 'error': addMsg('⚠️ ' + msg.message, 'system'); break;
@@ -1104,8 +1477,8 @@ function setLang(lang){
 // ═══ INIT ═══
 async function initApp(){
   setLang(currentLang);
+  await loadConfig(); // Load config FIRST so settings form has data
   routeFromPath();
-  await loadConfig();
   loadDashboard();
   loadProviders();
   connectWS();

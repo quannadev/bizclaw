@@ -18,6 +18,8 @@ pub struct AppState {
     pub pairing_code: Option<String>,
     /// The Agent engine — handles chat with tools, memory, and all providers.
     pub agent: Arc<tokio::sync::Mutex<Option<bizclaw_agent::Agent>>>,
+    /// Multi-Agent Orchestrator — manages multiple named agents.
+    pub orchestrator: Arc<tokio::sync::Mutex<bizclaw_agent::orchestrator::Orchestrator>>,
     /// Scheduler engine — manages scheduled tasks and notifications.
     pub scheduler: Arc<tokio::sync::Mutex<bizclaw_scheduler::SchedulerEngine>>,
     /// Knowledge base — personal RAG with FTS5 search.
@@ -96,6 +98,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/channels", get(super::routes::list_channels))
         .route("/api/v1/channels/update", post(super::routes::update_channel))
         .route("/api/v1/ollama/models", get(super::routes::ollama_models))
+        .route("/api/v1/brain/models", get(super::routes::brain_scan_models))
         .route("/api/v1/zalo/qr", post(super::routes::zalo_qr_code))
         // Scheduler API
         .route("/api/v1/scheduler/tasks", get(super::routes::scheduler_list_tasks))
@@ -107,6 +110,12 @@ pub fn build_router(state: AppState) -> Router {
         .route("/api/v1/knowledge/documents", get(super::routes::knowledge_list_docs))
         .route("/api/v1/knowledge/documents", post(super::routes::knowledge_add_doc))
         .route("/api/v1/knowledge/documents/{id}", axum::routing::delete(super::routes::knowledge_remove_doc))
+        // Multi-Agent Orchestrator API
+        .route("/api/v1/agents", get(super::routes::list_agents))
+        .route("/api/v1/agents", post(super::routes::create_agent))
+        .route("/api/v1/agents/{name}", axum::routing::delete(super::routes::delete_agent))
+        .route("/api/v1/agents/{name}/chat", post(super::routes::agent_chat))
+        .route("/api/v1/agents/broadcast", post(super::routes::agent_broadcast))
         .route("/ws", get(super::ws::ws_handler))
         .route_layer(axum::middleware::from_fn_with_state(shared.clone(), require_pairing));
 
@@ -200,6 +209,10 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
         }
     };
 
+    // Initialize Multi-Agent Orchestrator
+    let orchestrator = bizclaw_agent::orchestrator::Orchestrator::new();
+    tracing::info!("🤖 Multi-Agent Orchestrator initialized");
+
     let state = AppState {
         gateway_config: config.clone(),
         full_config: Arc::new(Mutex::new(full_config)),
@@ -218,6 +231,7 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
             None
         },
         agent: Arc::new(tokio::sync::Mutex::new(agent)),
+        orchestrator: Arc::new(tokio::sync::Mutex::new(orchestrator)),
         scheduler,
         knowledge: Arc::new(tokio::sync::Mutex::new(knowledge)),
     };

@@ -3,6 +3,7 @@
 
 pub mod engine;
 pub mod context;
+pub mod orchestrator;
 
 use bizclaw_core::config::BizClawConfig;
 use bizclaw_core::error::Result;

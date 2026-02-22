@@ -216,8 +216,17 @@ pub async fn update_config(
         if let Some(v) = brain.get("enabled").and_then(|v| v.as_bool()) {
             cfg.brain.enabled = v;
         }
+        if let Some(v) = brain.get("model_path").and_then(|v| v.as_str()) {
+            cfg.brain.model_path = v.to_string();
+        }
         if let Some(v) = brain.get("threads").and_then(|v| v.as_u64()) {
             cfg.brain.threads = v as u32;
+        }
+        if let Some(v) = brain.get("max_tokens").and_then(|v| v.as_u64()) {
+            cfg.brain.max_tokens = v as u32;
+        }
+        if let Some(v) = brain.get("context_length").and_then(|v| v.as_u64()) {
+            cfg.brain.context_length = v as u32;
         }
         if let Some(v) = brain.get("temperature").and_then(|v| v.as_f64()) {
             cfg.brain.temperature = v as f32;
@@ -423,6 +432,72 @@ pub async fn ollama_models() -> Json<serde_json::Value> {
         }
         Err(e) => Json(serde_json::json!({"ok": false, "error": format!("Ollama not running: {e}")})),
     }
+}
+
+/// Scan for GGUF model files in standard directories.
+pub async fn brain_scan_models(
+    State(state): State<Arc<AppState>>,
+) -> Json<serde_json::Value> {
+    let config_dir = state.config_path.parent()
+        .unwrap_or(std::path::Path::new("."));
+    let models_dir = config_dir.join("models");
+    
+    // Scan paths: ~/.bizclaw/models/, cwd, common locations
+    let scan_dirs = vec![
+        models_dir.clone(),
+        config_dir.to_path_buf(),
+        std::path::PathBuf::from("/root/.bizclaw/models"),
+        std::path::PathBuf::from(std::env::var("HOME").unwrap_or_default())
+            .join(".bizclaw").join("models"),
+    ];
+
+    let mut found_models: Vec<serde_json::Value> = Vec::new();
+    let mut seen_paths = std::collections::HashSet::new();
+
+    for dir in &scan_dirs {
+        if !dir.exists() { continue; }
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(ext) = path.extension() {
+                    if ext == "gguf" || ext == "bin" {
+                        let abs = path.canonicalize().unwrap_or(path.clone());
+                        if seen_paths.contains(&abs) { continue; }
+                        seen_paths.insert(abs.clone());
+                        
+                        let size_bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
+                        let size_str = if size_bytes > 1_000_000_000 {
+                            format!("{:.1} GB", size_bytes as f64 / 1e9)
+                        } else {
+                            format!("{} MB", size_bytes / 1_000_000)
+                        };
+                        let name = path.file_name()
+                            .map(|n| n.to_string_lossy().to_string())
+                            .unwrap_or_default();
+                        
+                        found_models.push(serde_json::json!({
+                            "name": name,
+                            "path": abs.display().to_string(),
+                            "size": size_str,
+                            "size_bytes": size_bytes,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    // Sort by name
+    found_models.sort_by(|a, b| {
+        a["name"].as_str().unwrap_or("").cmp(b["name"].as_str().unwrap_or(""))
+    });
+
+    Json(serde_json::json!({
+        "ok": true,
+        "models": found_models,
+        "models_dir": models_dir.display().to_string(),
+        "scan_dirs": scan_dirs.iter().filter(|d| d.exists()).map(|d| d.display().to_string()).collect::<Vec<_>>(),
+    }))
 }
 
 /// Generate Zalo QR code for login.
@@ -734,6 +809,137 @@ pub async fn knowledge_remove_doc(
     }
 }
 
+// ---- Multi-Agent Orchestrator API ----
+
+/// List all agents in the orchestrator.
+pub async fn list_agents(
+    State(state): State<Arc<AppState>>,
+) -> Json<serde_json::Value> {
+    let orch = state.orchestrator.lock().await;
+    Json(serde_json::json!({
+        "ok": true,
+        "agents": orch.list_agents(),
+        "total": orch.agent_count(),
+        "default": orch.default_agent_name(),
+        "recent_messages": orch.recent_messages(10),
+    }))
+}
+
+/// Create a new named agent.
+pub async fn create_agent(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let name = body["name"].as_str().unwrap_or("agent");
+    let role = body["role"].as_str().unwrap_or("assistant");
+    let description = body["description"].as_str().unwrap_or("A helpful AI agent");
+    
+    // Use current config as base, optionally override provider/model
+    let mut agent_config = state.full_config.lock().unwrap().clone();
+    if let Some(provider) = body["provider"].as_str() {
+        agent_config.default_provider = provider.to_string();
+    }
+    if let Some(model) = body["model"].as_str() {
+        agent_config.default_model = model.to_string();
+    }
+    if let Some(persona) = body["persona"].as_str() {
+        agent_config.identity.persona = persona.to_string();
+    }
+    if let Some(sys_prompt) = body["system_prompt"].as_str() {
+        agent_config.identity.system_prompt = sys_prompt.to_string();
+    }
+    agent_config.identity.name = name.to_string();
+    
+    match bizclaw_agent::Agent::new_with_mcp(agent_config).await {
+        Ok(agent) => {
+            let mut orch = state.orchestrator.lock().await;
+            orch.add_agent(name, role, description, agent);
+            tracing::info!("🤖 Agent '{}' created (role={})", name, role);
+            Json(serde_json::json!({
+                "ok": true,
+                "name": name,
+                "role": role,
+                "total_agents": orch.agent_count(),
+            }))
+        }
+        Err(e) => Json(serde_json::json!({
+            "ok": false,
+            "error": format!("Failed to create agent: {e}"),
+        })),
+    }
+}
+
+/// Delete a named agent.
+pub async fn delete_agent(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(name): axum::extract::Path<String>,
+) -> Json<serde_json::Value> {
+    let mut orch = state.orchestrator.lock().await;
+    let removed = orch.remove_agent(&name);
+    Json(serde_json::json!({
+        "ok": removed,
+        "message": if removed { format!("Agent '{}' removed", name) } else { format!("Agent '{}' not found", name) },
+    }))
+}
+
+/// Chat with a specific agent.
+pub async fn agent_chat(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(name): axum::extract::Path<String>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let message = body["message"].as_str().unwrap_or("");
+    if message.is_empty() {
+        return Json(serde_json::json!({"ok": false, "error": "Empty message"}));
+    }
+    
+    let mut orch = state.orchestrator.lock().await;
+    match orch.send_to(&name, message).await {
+        Ok(response) => Json(serde_json::json!({
+            "ok": true,
+            "agent": name,
+            "response": response,
+        })),
+        Err(e) => Json(serde_json::json!({
+            "ok": false,
+            "error": e.to_string(),
+        })),
+    }
+}
+
+/// Broadcast message to all agents.
+pub async fn agent_broadcast(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let message = body["message"].as_str().unwrap_or("");
+    if message.is_empty() {
+        return Json(serde_json::json!({"ok": false, "error": "Empty message"}));
+    }
+    
+    let mut orch = state.orchestrator.lock().await;
+    let results = orch.broadcast(message).await;
+    let responses: Vec<serde_json::Value> = results.into_iter().map(|(name, result)| {
+        match result {
+            Ok(response) => serde_json::json!({
+                "agent": name,
+                "ok": true,
+                "response": response,
+            }),
+            Err(e) => serde_json::json!({
+                "agent": name,
+                "ok": false,
+                "error": e.to_string(),
+            }),
+        }
+    }).collect();
+    
+    Json(serde_json::json!({
+        "ok": true,
+        "responses": responses,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -748,6 +954,9 @@ mod tests {
             start_time: std::time::Instant::now(),
             pairing_code: None,
             agent: std::sync::Arc::new(tokio::sync::Mutex::new(None)),
+            orchestrator: std::sync::Arc::new(tokio::sync::Mutex::new(
+                bizclaw_agent::orchestrator::Orchestrator::new()
+            )),
             scheduler: Arc::new(tokio::sync::Mutex::new(
                 bizclaw_scheduler::SchedulerEngine::new(&std::env::temp_dir().join("bizclaw-test-sched"))
             )),

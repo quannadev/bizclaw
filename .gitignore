@@ -22,5 +22,10 @@ GETTING_STARTED.md
 install.sh
 update.sh
 
+# Deploy & infra scripts — contain VPS IP, credentials
+deploy-landing.sh
+deploy*.sh
+scripts/
+
 # OS
 Thumbs.db

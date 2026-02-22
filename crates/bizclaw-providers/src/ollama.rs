@@ -82,6 +82,45 @@ impl Provider for OllamaProvider {
             .await
             .map_err(|e| BizClawError::Http(format!("Ollama connection failed ({}): {}", self.api_url, e)))?;
 
+        // Handle 400 errors — often means model doesn't support tools
+        if resp.status() == reqwest::StatusCode::BAD_REQUEST {
+            let text = resp.text().await.unwrap_or_default();
+            // If error is about tools not supported, retry WITHOUT tools
+            if text.contains("does not support tools") || text.contains("does not support") {
+                tracing::warn!("⚠️ Ollama model '{}' does not support tools — retrying without tools", model);
+                body.as_object_mut().map(|o| o.remove("tools"));
+                let resp2 = self.client
+                    .post(format!("{}/api/chat", self.api_url))
+                    .header("Content-Type", "application/json")
+                    .json(&body)
+                    .send()
+                    .await
+                    .map_err(|e| BizClawError::Http(format!("Ollama retry failed: {}", e)))?;
+                if !resp2.status().is_success() {
+                    let status = resp2.status();
+                    let text2 = resp2.text().await.unwrap_or_default();
+                    return Err(BizClawError::Provider(format!("Ollama API error {status}: {text2}")));
+                }
+                // Parse retry response (no tool calls possible)
+                let json: serde_json::Value = resp2.json().await
+                    .map_err(|e| BizClawError::Http(e.to_string()))?;
+                let content = json["message"]["content"].as_str().map(String::from);
+                let usage = Some(bizclaw_core::types::Usage {
+                    prompt_tokens: json["prompt_eval_count"].as_u64().unwrap_or(0) as u32,
+                    completion_tokens: json["eval_count"].as_u64().unwrap_or(0) as u32,
+                    total_tokens: (json["prompt_eval_count"].as_u64().unwrap_or(0)
+                        + json["eval_count"].as_u64().unwrap_or(0)) as u32,
+                });
+                return Ok(ProviderResponse {
+                    content,
+                    tool_calls: vec![],
+                    finish_reason: Some("stop".into()),
+                    usage,
+                });
+            }
+            return Err(BizClawError::Provider(format!("Ollama API error 400: {text}")));
+        }
+
         if !resp.status().is_success() {
             let status = resp.status();
             let text = resp.text().await.unwrap_or_default();
