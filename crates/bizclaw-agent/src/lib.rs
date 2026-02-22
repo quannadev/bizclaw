@@ -1,7 +1,7 @@
 //! # BizClaw Agent
 //! The core agent engine — orchestrates providers, channels, memory, and tools.
 //! 
-//! ## Features (ported from OpenCrabs patterns):
+//! ## Features (BizClaw agent features):
 //! - **Multi-round tool calling**: Up to 3 rounds of tool → LLM → tool loops
 //! - **Memory retrieval (RAG)**: FTS5-powered search of past conversations
 //! - **Knowledge base integration**: Auto-search uploaded documents for context
