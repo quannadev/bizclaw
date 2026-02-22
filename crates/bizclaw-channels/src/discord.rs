@@ -100,172 +100,175 @@ impl DiscordChannel {
     }
 
     /// Start Gateway WebSocket connection — returns a stream of IncomingMessages.
+    /// Auto-reconnects on disconnect with exponential backoff.
     pub fn start_gateway(self) -> DiscordGatewayStream {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
         tokio::spawn(async move {
             let channel = self;
-            tracing::info!("Discord Gateway connecting...");
+            let mut backoff_secs: u64 = 5;
 
-            // Get gateway URL
-            let gateway_url = match channel.get_gateway_url().await {
-                Ok(url) => url,
-                Err(e) => {
-                    tracing::error!("Failed to get gateway URL: {e}");
-                    return;
-                }
-            };
-
-            // Connect WebSocket
-            let ws_result = tokio_tungstenite::connect_async(&gateway_url).await;
-            let (mut ws, _) = match ws_result {
-                Ok(conn) => conn,
-                Err(e) => {
-                    tracing::error!("Gateway WebSocket connect failed: {e}");
-                    return;
-                }
-            };
-
-            tracing::info!("Discord Gateway connected");
-
-            use futures::{SinkExt, StreamExt};
-            use tokio_tungstenite::tungstenite::Message as WsMsg;
-
-            let mut heartbeat_interval_ms: u64 = 41250;
-            let mut seq: Option<u64> = None;
-            let mut identified = false;
-
+            // ═══ Reconnect loop ═══
             loop {
-                tokio::select! {
-                    msg = ws.next() => {
-                        match msg {
-                            Some(Ok(WsMsg::Text(text))) => {
-                                let payload: serde_json::Value = match serde_json::from_str(&text) {
-                                    Ok(v) => v,
-                                    Err(_) => continue,
-                                };
+                tracing::info!("Discord Gateway connecting...");
 
-                                let op = payload["op"].as_u64().unwrap_or(0);
-                                if let Some(s) = payload["s"].as_u64() {
-                                    seq = Some(s);
-                                }
+                // Get gateway URL
+                let gateway_url = match channel.get_gateway_url().await {
+                    Ok(url) => url,
+                    Err(e) => {
+                        tracing::error!("Failed to get gateway URL: {e}, retrying in {backoff_secs}s...");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+                        backoff_secs = (backoff_secs * 2).min(60);
+                        continue;
+                    }
+                };
 
-                                match op {
-                                    // Hello — start heartbeating
-                                    10 => {
-                                        heartbeat_interval_ms = payload["d"]["heartbeat_interval"]
-                                            .as_u64().unwrap_or(41250);
-                                        tracing::debug!("Gateway Hello: heartbeat={}ms", heartbeat_interval_ms);
+                // Connect WebSocket
+                let ws_result = tokio_tungstenite::connect_async(&gateway_url).await;
+                let (mut ws, _) = match ws_result {
+                    Ok(conn) => conn,
+                    Err(e) => {
+                        tracing::error!("Gateway WebSocket failed: {e}, retrying in {backoff_secs}s...");
+                        tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+                        backoff_secs = (backoff_secs * 2).min(60);
+                        continue;
+                    }
+                };
 
-                                        // Send Identify
-                                        if !identified {
-                                            let identify = serde_json::json!({
-                                                "op": 2,
-                                                "d": {
-                                                    "token": channel.config.bot_token,
-                                                    "intents": channel.config.intents,
-                                                    "properties": {
-                                                        "os": std::env::consts::OS,
-                                                        "browser": "bizclaw",
-                                                        "device": "bizclaw"
+                // Reset backoff on successful connect
+                backoff_secs = 5;
+                tracing::info!("Discord Gateway connected");
+
+                use futures::{SinkExt, StreamExt};
+                use tokio_tungstenite::tungstenite::Message as WsMsg;
+
+                let mut heartbeat_interval_ms: u64 = 41250;
+                let mut seq: Option<u64> = None;
+                let mut identified = false;
+
+                loop {
+                    tokio::select! {
+                        msg = ws.next() => {
+                            match msg {
+                                Some(Ok(WsMsg::Text(text))) => {
+                                    let payload: serde_json::Value = match serde_json::from_str(&text) {
+                                        Ok(v) => v,
+                                        Err(_) => continue,
+                                    };
+
+                                    let op = payload["op"].as_u64().unwrap_or(0);
+                                    if let Some(s) = payload["s"].as_u64() {
+                                        seq = Some(s);
+                                    }
+
+                                    match op {
+                                        10 => {
+                                            heartbeat_interval_ms = payload["d"]["heartbeat_interval"]
+                                                .as_u64().unwrap_or(41250);
+                                            tracing::debug!("Gateway Hello: heartbeat={}ms", heartbeat_interval_ms);
+
+                                            if !identified {
+                                                let identify = serde_json::json!({
+                                                    "op": 2,
+                                                    "d": {
+                                                        "token": channel.config.bot_token,
+                                                        "intents": channel.config.intents,
+                                                        "properties": {
+                                                            "os": std::env::consts::OS,
+                                                            "browser": "bizclaw",
+                                                            "device": "bizclaw"
+                                                        }
+                                                    }
+                                                });
+                                                let _ = ws.send(WsMsg::Text(identify.to_string())).await;
+                                                identified = true;
+                                            }
+                                        }
+                                        11 => { tracing::trace!("Heartbeat ACK"); }
+                                        0 => {
+                                            let event_name = payload["t"].as_str().unwrap_or("");
+                                            match event_name {
+                                                "READY" => {
+                                                    let user = payload["d"]["user"]["username"]
+                                                        .as_str().unwrap_or("unknown");
+                                                    tracing::info!("Discord Gateway READY as {user}");
+                                                }
+                                                "MESSAGE_CREATE" => {
+                                                    let d = &payload["d"];
+                                                    if d["author"]["bot"].as_bool().unwrap_or(false) {
+                                                        continue;
+                                                    }
+
+                                                    let msg = IncomingMessage {
+                                                        channel: "discord".into(),
+                                                        thread_id: d["channel_id"].as_str()
+                                                            .unwrap_or("").into(),
+                                                        sender_id: d["author"]["id"].as_str()
+                                                            .unwrap_or("").into(),
+                                                        sender_name: d["author"]["username"].as_str()
+                                                            .map(String::from),
+                                                        content: d["content"].as_str()
+                                                            .unwrap_or("").into(),
+                                                        thread_type: if d["guild_id"].is_null() {
+                                                            ThreadType::Direct
+                                                        } else {
+                                                            ThreadType::Group
+                                                        },
+                                                        timestamp: chrono::Utc::now(),
+                                                        reply_to: d["referenced_message"]["id"]
+                                                            .as_str().map(String::from),
+                                                    };
+
+                                                    if tx.send(msg).is_err() {
+                                                        tracing::info!("Discord stream closed (receiver dropped)");
+                                                        return; // Stop completely
                                                     }
                                                 }
-                                            });
-                                            let _ = ws.send(WsMsg::Text(identify.to_string())).await;
-                                            identified = true;
-                                        }
-                                    }
-                                    // Heartbeat ACK
-                                    11 => {
-                                        tracing::trace!("Heartbeat ACK");
-                                    }
-                                    // Dispatch (event)
-                                    0 => {
-                                        let event_name = payload["t"].as_str().unwrap_or("");
-                                        match event_name {
-                                            "READY" => {
-                                                let user = payload["d"]["user"]["username"]
-                                                    .as_str().unwrap_or("unknown");
-                                                tracing::info!("Discord Gateway READY as {user}");
-                                            }
-                                            "MESSAGE_CREATE" => {
-                                                let d = &payload["d"];
-                                                // Skip bot messages
-                                                if d["author"]["bot"].as_bool().unwrap_or(false) {
-                                                    continue;
-                                                }
-
-                                                let msg = IncomingMessage {
-                                                    channel: "discord".into(),
-                                                    thread_id: d["channel_id"].as_str()
-                                                        .unwrap_or("").into(),
-                                                    sender_id: d["author"]["id"].as_str()
-                                                        .unwrap_or("").into(),
-                                                    sender_name: d["author"]["username"].as_str()
-                                                        .map(String::from),
-                                                    content: d["content"].as_str()
-                                                        .unwrap_or("").into(),
-                                                    thread_type: if d["guild_id"].is_null() {
-                                                        ThreadType::Direct
-                                                    } else {
-                                                        ThreadType::Group
-                                                    },
-                                                    timestamp: chrono::Utc::now(),
-                                                    reply_to: d["referenced_message"]["id"]
-                                                        .as_str().map(String::from),
-                                                };
-
-                                                if tx.send(msg).is_err() {
-                                                    tracing::info!("Discord stream closed");
-                                                    return;
-                                                }
-                                            }
-                                            _ => {
-                                                tracing::trace!("Ignoring event: {event_name}");
+                                                _ => { tracing::trace!("Ignoring event: {event_name}"); }
                                             }
                                         }
+                                        7 => {
+                                            tracing::warn!("Gateway requesting reconnect");
+                                            break; // → outer reconnect loop
+                                        }
+                                        9 => {
+                                            tracing::warn!("Invalid session, re-identifying");
+                                            identified = false;
+                                        }
+                                        _ => {}
                                     }
-                                    // Reconnect
-                                    7 => {
-                                        tracing::warn!("Gateway requesting reconnect");
-                                        break;
-                                    }
-                                    // Invalid Session
-                                    9 => {
-                                        tracing::warn!("Invalid session, re-identifying");
-                                        identified = false;
-                                    }
-                                    _ => {}
                                 }
+                                Some(Ok(WsMsg::Close(_))) => {
+                                    tracing::warn!("Discord Gateway closed by server");
+                                    break; // → reconnect
+                                }
+                                Some(Err(e)) => {
+                                    tracing::error!("Gateway error: {e}");
+                                    break; // → reconnect
+                                }
+                                None => break,
+                                _ => {}
                             }
-                            Some(Ok(WsMsg::Close(_))) => {
-                                tracing::info!("Discord Gateway closed");
-                                break;
-                            }
-                            Some(Err(e)) => {
-                                tracing::error!("Gateway error: {e}");
-                                break;
-                            }
-                            None => break,
-                            _ => {}
                         }
-                    }
-                    // Heartbeat timer
-                    _ = tokio::time::sleep(tokio::time::Duration::from_millis(heartbeat_interval_ms)) => {
-                        let heartbeat = serde_json::json!({
-                            "op": 1,
-                            "d": seq,
-                        });
-                        if ws.send(WsMsg::Text(heartbeat.to_string())).await.is_err() {
-                            tracing::error!("Heartbeat send failed");
-                            break;
+                        _ = tokio::time::sleep(tokio::time::Duration::from_millis(heartbeat_interval_ms)) => {
+                            let heartbeat = serde_json::json!({
+                                "op": 1,
+                                "d": seq,
+                            });
+                            if ws.send(WsMsg::Text(heartbeat.to_string())).await.is_err() {
+                                tracing::error!("Heartbeat send failed");
+                                break; // → reconnect
+                            }
+                            tracing::trace!("Heartbeat sent (seq={:?})", seq);
                         }
-                        tracing::trace!("Heartbeat sent (seq={:?})", seq);
                     }
                 }
-            }
 
-            tracing::info!("Discord Gateway loop exited");
+                // Disconnected — reconnect after backoff
+                tracing::info!("Discord Gateway disconnected, reconnecting in {backoff_secs}s...");
+                tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+                backoff_secs = (backoff_secs * 2).min(60);
+            } // end reconnect loop
         });
 
         DiscordGatewayStream { rx }

@@ -56,10 +56,11 @@ impl MemoryBackend for SqliteMemory {
     async fn search(&self, query: &str, limit: usize) -> Result<Vec<MemorySearchResult>> {
         let conn = self.conn.lock().map_err(|e| bizclaw_core::error::BizClawError::Memory(e.to_string()))?;
         let mut stmt = conn.prepare(
-            "SELECT id, content, metadata, created_at, updated_at FROM memories WHERE content LIKE ?1 LIMIT ?2"
+            "SELECT id, content, metadata, created_at, updated_at FROM memories WHERE content LIKE ?1 ORDER BY created_at DESC LIMIT ?2"
         ).map_err(|e| bizclaw_core::error::BizClawError::Memory(e.to_string()))?;
 
-        let pattern = format!("%{query}%");
+        let pattern = format!("%{}%", query.to_lowercase());
+        let query_lower = query.to_lowercase();
         let rows = stmt.query_map(rusqlite::params![pattern, limit], |row| {
             Ok(MemoryEntry {
                 id: row.get(0)?,
@@ -79,7 +80,13 @@ impl MemoryBackend for SqliteMemory {
 
         let results: Vec<MemorySearchResult> = rows
             .filter_map(|r| r.ok())
-            .map(|entry| MemorySearchResult { entry, score: 1.0 })
+            .map(|entry| {
+                // Score based on keyword match count in content
+                let content_lower = entry.content.to_lowercase();
+                let matches = content_lower.matches(&query_lower).count();
+                let score = (matches as f32).min(5.0) / 5.0; // normalize to 0.0-1.0
+                MemorySearchResult { entry, score: score.max(0.1) }
+            })
             .collect();
         Ok(results)
     }

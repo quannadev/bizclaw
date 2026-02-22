@@ -83,7 +83,20 @@ impl Agent {
     }
 
     /// Process a user message and generate a response.
+    /// Features: memory retrieval (RAG), multi-round tool calling (max 3 rounds).
     pub async fn process(&mut self, user_message: &str) -> Result<String> {
+        // ═══════════════════════════════════════
+        // Phase 1: Memory Retrieval (RAG-style)
+        // ═══════════════════════════════════════
+        // Search past conversations for relevant context
+        let memory_context = self.retrieve_memory(user_message).await;
+        if let Some(ref ctx) = memory_context {
+            // Inject memory as a context message before the user message
+            self.conversation.push(Message::system(&format!(
+                "[Relevant past conversations]\n{ctx}\n[End of past conversations]"
+            )));
+        }
+
         // Add user message to conversation
         self.conversation.push(Message::user(user_message));
 
@@ -109,17 +122,36 @@ impl Agent {
             stop: vec![],
         };
 
-        // Call the provider
-        let response = self.provider.chat(&self.conversation, &tool_defs, &params).await?;
+        // ═══════════════════════════════════════
+        // Phase 2: Multi-round Tool Calling Loop
+        // ═══════════════════════════════════════
+        // Allow up to MAX_TOOL_ROUNDS rounds of tool calls
+        const MAX_TOOL_ROUNDS: usize = 3;
+        let mut final_content = String::new();
 
-        // Handle tool calls
-        if !response.tool_calls.is_empty() {
+        for round in 0..=MAX_TOOL_ROUNDS {
+            // Call the provider (with tools on rounds 0..MAX, without on final)
+            let current_tools = if round < MAX_TOOL_ROUNDS { &tool_defs } else { &vec![] };
+            let response = self.provider.chat(&self.conversation, current_tools, &params).await?;
+
+            // No tool calls → this is the final text response
+            if response.tool_calls.is_empty() {
+                final_content = response.content.unwrap_or_else(|| "I'm not sure how to respond.".into());
+                self.conversation.push(Message::assistant(&final_content));
+                break;
+            }
+
+            // Has tool calls → execute them
+            tracing::info!("Tool round {}/{}: {} tool call(s)",
+                round + 1, MAX_TOOL_ROUNDS, response.tool_calls.len());
+
             let mut tool_results = Vec::new();
 
             for tc in &response.tool_calls {
-                tracing::info!("Tool call: {} with args: {}", tc.function.name, tc.function.arguments);
+                tracing::info!("  → {} ({})", tc.function.name,
+                    &tc.function.arguments[..tc.function.arguments.len().min(100)]);
 
-                // Security check
+                // Security check for shell commands
                 if tc.function.name == "shell" {
                     if let Ok(args) = serde_json::from_str::<serde_json::Value>(&tc.function.arguments) {
                         if let Some(cmd) = args["command"].as_str() {
@@ -138,24 +170,29 @@ impl Agent {
                 if let Some(tool) = self.tools.get(&tc.function.name) {
                     match tool.execute(&tc.function.arguments).await {
                         Ok(result) => {
-                            tool_results.push(Message::tool(&result.output, &tc.id));
+                            // Truncate large outputs to avoid context overflow
+                            let output = if result.output.len() > 4000 {
+                                format!("{}...\n[truncated, {} total chars]",
+                                    &result.output[..4000], result.output.len())
+                            } else {
+                                result.output
+                            };
+                            tool_results.push(Message::tool(&output, &tc.id));
                         }
                         Err(e) => {
                             tool_results.push(Message::tool(
-                                format!("Tool error: {e}"),
-                                &tc.id,
+                                format!("Tool error: {e}"), &tc.id,
                             ));
                         }
                     }
                 } else {
                     tool_results.push(Message::tool(
-                        format!("Tool not found: {}", tc.function.name),
-                        &tc.id,
+                        format!("Tool not found: {}", tc.function.name), &tc.id,
                     ));
                 }
             }
 
-            // Add assistant message with tool calls
+            // Add assistant message with tool calls to conversation
             self.conversation.push(Message {
                 role: bizclaw_core::types::Role::Assistant,
                 content: response.content.clone().unwrap_or_default(),
@@ -164,30 +201,97 @@ impl Agent {
                 tool_calls: Some(response.tool_calls.clone()),
             });
 
-            // Add tool results
+            // Add tool results to conversation
             for tr in tool_results {
                 self.conversation.push(tr);
             }
 
-            // Get final response after tool execution
-            let final_response = self.provider.chat(&self.conversation, &[], &params).await?;
-            let content = final_response.content.unwrap_or_else(|| "I executed the tools.".into());
-            self.conversation.push(Message::assistant(&content));
-
-            // Save to memory
-            self.save_memory(user_message, &content).await;
-
-            return Ok(content);
+            // Loop continues → provider will see tool results and decide next action
         }
 
-        // No tool calls — just text response
-        let content = response.content.unwrap_or_else(|| "I'm not sure how to respond.".into());
-        self.conversation.push(Message::assistant(&content));
+        // If we exhausted all rounds without a final text response
+        if final_content.is_empty() {
+            final_content = "I executed the requested tools.".into();
+            self.conversation.push(Message::assistant(&final_content));
+        }
 
-        // Save to memory
-        self.save_memory(user_message, &content).await;
+        // ═══════════════════════════════════════
+        // Phase 3: Save to Memory
+        // ═══════════════════════════════════════
+        self.save_memory(user_message, &final_content).await;
 
-        Ok(content)
+        Ok(final_content)
+    }
+
+    /// Retrieve relevant past conversations from memory.
+    /// Extracts keywords from the user message and searches SQLite.
+    async fn retrieve_memory(&self, user_message: &str) -> Option<String> {
+        if !self.config.memory.auto_save {
+            return None;
+        }
+
+        // Extract meaningful keywords (skip common words)
+        let stop_words: std::collections::HashSet<&str> = [
+            "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+            "have", "has", "had", "do", "does", "did", "will", "would", "could",
+            "should", "may", "might", "shall", "can", "need", "dare", "ought",
+            "i", "me", "my", "you", "your", "he", "she", "it", "we", "they",
+            "this", "that", "these", "those", "what", "which", "who", "how",
+            "and", "but", "or", "not", "no", "of", "in", "on", "at", "to",
+            "for", "with", "from", "by", "as", "if", "then", "so", "than",
+            "tôi", "bạn", "là", "có", "và", "của", "với", "cho", "để",
+            "không", "được", "này", "đó", "một", "các", "những",
+        ].iter().copied().collect();
+
+        let keywords: Vec<&str> = user_message
+            .split(|c: char| !c.is_alphanumeric() && c != '_')
+            .filter(|w| w.len() > 2 && !stop_words.contains(&w.to_lowercase().as_str()))
+            .take(5) // Max 5 keywords
+            .collect();
+
+        if keywords.is_empty() {
+            return None;
+        }
+
+        // Search memory for each keyword, collect unique results
+        let mut seen = std::collections::HashSet::new();
+        let mut relevant = Vec::new();
+
+        for keyword in &keywords {
+            match self.memory.search(keyword, 3).await {
+                Ok(results) => {
+                    for r in results {
+                        if seen.insert(r.entry.id.clone()) {
+                            relevant.push(r.entry.content.clone());
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::debug!("Memory search for '{}' failed: {e}", keyword);
+                }
+            }
+        }
+
+        if relevant.is_empty() {
+            return None;
+        }
+
+        // Limit total context to ~2000 chars
+        let mut context = String::new();
+        let mut total_len = 0;
+        for (i, memory) in relevant.iter().take(5).enumerate() {
+            let entry = format!("{}. {}\n", i + 1, memory);
+            if total_len + entry.len() > 2000 {
+                break;
+            }
+            context.push_str(&entry);
+            total_len += entry.len();
+        }
+
+        tracing::debug!("Memory retrieval: {} keywords → {} results, {} chars",
+            keywords.len(), relevant.len(), total_len);
+
+        Some(context)
     }
 
     /// Save interaction to memory (internal).

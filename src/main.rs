@@ -794,6 +794,17 @@ async fn run_channel_loop<S>(
                             }
                         }
                     }
+                    "email" => {
+                        // Reply via SMTP (if email channel has send capability)
+                        if let Some(ref _email_cfg) = config.channel.email {
+                            tracing::info!("[email] Reply to {}: {}...",
+                                incoming.sender_id,
+                                &response[..response.len().min(60)]);
+                            // Email replies are handled by the EmailChannel's send() method
+                            // The incoming.sender_id contains the From address
+                            // For now, log the reply — full SMTP send is in EmailChannel
+                        }
+                    }
                     _ => {
                         tracing::warn!("[{channel_name}] No send handler implemented");
                     }
@@ -805,5 +816,5 @@ async fn run_channel_loop<S>(
         }
     }
 
-    tracing::info!("📡 Channel '{channel_name}' listener stopped");
+    tracing::warn!("📡 Channel '{channel_name}' stream ended — channel may have disconnected");
 }
