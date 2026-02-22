@@ -54,10 +54,12 @@ impl McpClient {
 
     /// Initialize the MCP session (handshake).
     async fn initialize(&mut self) -> Result<(), String> {
+        let id1 = self.next_id();
+        let id2 = self.next_id();
         let transport = self.transport.as_mut()
             .ok_or("Not connected")?;
 
-        let req = JsonRpcRequest::new(self.next_id(), "initialize", Some(serde_json::json!({
+        let req = JsonRpcRequest::new(id1, "initialize", Some(serde_json::json!({
             "protocolVersion": "2024-11-05",
             "capabilities": {},
             "clientInfo": {
@@ -73,7 +75,7 @@ impl McpClient {
         }
 
         // Send initialized notification (no response expected, but send via request for simplicity)
-        let notify = JsonRpcRequest::new(self.next_id(), "notifications/initialized", None);
+        let notify = JsonRpcRequest::new(id2, "notifications/initialized", None);
         // For notification, we don't wait for response strictly, but send it
         let _ = transport.request(&notify).await;
 
@@ -82,10 +84,12 @@ impl McpClient {
 
     /// Discover tools from the MCP server.
     async fn discover_tools(&mut self) -> Result<(), String> {
+        let id = self.next_id();
+        let server_name = self.name.clone();
         let transport = self.transport.as_mut()
             .ok_or("Not connected")?;
 
-        let req = JsonRpcRequest::new(self.next_id(), "tools/list", None);
+        let req = JsonRpcRequest::new(id, "tools/list", None);
         let res = transport.request(&req).await?;
 
         if let Some(err) = res.error {
@@ -103,7 +107,7 @@ impl McpClient {
                     "type": "object",
                     "properties": {}
                 })),
-                server_name: self.name.clone(),
+                server_name: server_name.clone(),
             }).collect();
         }
 
@@ -112,10 +116,11 @@ impl McpClient {
 
     /// Call a tool on the MCP server.
     pub async fn call_tool(&mut self, tool_name: &str, arguments: serde_json::Value) -> Result<String, String> {
+        let id = self.next_id();
         let transport = self.transport.as_mut()
             .ok_or("MCP server not connected")?;
 
-        let req = JsonRpcRequest::new(self.next_id(), "tools/call", Some(serde_json::json!({
+        let req = JsonRpcRequest::new(id, "tools/call", Some(serde_json::json!({
             "name": tool_name,
             "arguments": arguments
         })));
