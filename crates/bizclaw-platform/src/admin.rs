@@ -66,6 +66,11 @@ impl AdminServer {
             .route("/api/admin/tenants/{id}/channels", post(upsert_channel))
             .route("/api/admin/tenants/{id}/channels/{channel_id}", delete(delete_channel))
             .route("/api/admin/tenants/{id}/channels/zalo/qr", post(zalo_get_qr))
+            // Ollama / Brain Engine
+            .route("/api/admin/ollama/models", get(ollama_list_models))
+            .route("/api/admin/ollama/pull", post(ollama_pull_model))
+            .route("/api/admin/ollama/delete", post(ollama_delete_model))
+            .route("/api/admin/ollama/health", get(ollama_health))
             // Users
             .route("/api/admin/users", get(list_users))
             .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
@@ -391,5 +396,140 @@ async fn zalo_get_qr(
             "error": e.to_string(),
             "fallback": "Vui lòng vào chat.zalo.me → F12 → Application → Cookies → Copy toàn bộ và paste vào ô Cookie bên dưới"
         })),
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// OLLAMA / BRAIN ENGINE MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+
+fn ollama_url() -> String {
+    std::env::var("OLLAMA_HOST").unwrap_or_else(|_| "http://localhost:11434".to_string())
+}
+
+/// Check if Ollama is running.
+async fn ollama_health(
+    State(_state): State<Arc<AdminState>>,
+) -> Json<serde_json::Value> {
+    let client = reqwest::Client::new();
+    let url = ollama_url();
+    match client.get(format!("{url}/api/tags")).send().await {
+        Ok(r) if r.status().is_success() => {
+            Json(serde_json::json!({"ok": true, "url": url, "status": "running"}))
+        }
+        Ok(r) => Json(serde_json::json!({
+            "ok": false, "url": url,
+            "status": format!("unhealthy: {}", r.status())
+        })),
+        Err(e) => Json(serde_json::json!({
+            "ok": false, "url": url,
+            "status": "not_running",
+            "error": e.to_string(),
+            "install_guide": "curl -fsSL https://ollama.ai/install.sh | sh"
+        })),
+    }
+}
+
+/// List installed Ollama models.
+async fn ollama_list_models(
+    State(_state): State<Arc<AdminState>>,
+) -> Json<serde_json::Value> {
+    let client = reqwest::Client::new();
+    let url = ollama_url();
+    match client.get(format!("{url}/api/tags")).send().await {
+        Ok(r) if r.status().is_success() => {
+            let body: serde_json::Value = r.json().await.unwrap_or_default();
+            let models: Vec<serde_json::Value> = body["models"].as_array()
+                .map(|arr| arr.iter().map(|m| {
+                    let size_bytes = m["size"].as_u64().unwrap_or(0);
+                    let size_mb = size_bytes as f64 / 1_048_576.0;
+                    serde_json::json!({
+                        "name": m["name"].as_str().unwrap_or(""),
+                        "size": format!("{:.0} MB", size_mb),
+                        "size_bytes": size_bytes,
+                        "modified_at": m["modified_at"].as_str().unwrap_or(""),
+                        "family": m["details"]["family"].as_str().unwrap_or(""),
+                        "parameter_size": m["details"]["parameter_size"].as_str().unwrap_or(""),
+                        "quantization": m["details"]["quantization_level"].as_str().unwrap_or(""),
+                    })
+                }).collect())
+                .unwrap_or_default();
+            Json(serde_json::json!({"ok": true, "models": models}))
+        }
+        _ => Json(serde_json::json!({
+            "ok": false,
+            "models": [],
+            "error": "Ollama not running. Install: curl -fsSL https://ollama.ai/install.sh | sh"
+        })),
+    }
+}
+
+/// Pull (download) a model.
+async fn ollama_pull_model(
+    State(_state): State<Arc<AdminState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let model = body["model"].as_str().unwrap_or("tinyllama");
+    let client = reqwest::Client::new();
+    let url = ollama_url();
+
+    tracing::info!("Pulling Ollama model: {}", model);
+
+    match client
+        .post(format!("{url}/api/pull"))
+        .json(&serde_json::json!({"name": model, "stream": false}))
+        .timeout(std::time::Duration::from_secs(600)) // 10 min timeout
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => {
+            let resp: serde_json::Value = r.json().await.unwrap_or_default();
+            tracing::info!("Model pulled: {}", model);
+            Json(serde_json::json!({
+                "ok": true,
+                "model": model,
+                "status": resp["status"].as_str().unwrap_or("success"),
+                "message": format!("Model '{}' pulled successfully!", model)
+            }))
+        }
+        Ok(r) => {
+            let text = r.text().await.unwrap_or_default();
+            Json(serde_json::json!({"ok": false, "error": text}))
+        }
+        Err(e) => Json(serde_json::json!({
+            "ok": false,
+            "error": e.to_string(),
+            "hint": "Ollama might not be installed. Run: curl -fsSL https://ollama.ai/install.sh | sh"
+        })),
+    }
+}
+
+/// Delete a model.
+async fn ollama_delete_model(
+    State(_state): State<Arc<AdminState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let model = body["model"].as_str().unwrap_or("");
+    if model.is_empty() {
+        return Json(serde_json::json!({"ok": false, "error": "Missing model name"}));
+    }
+
+    let client = reqwest::Client::new();
+    let url = ollama_url();
+
+    match client
+        .delete(format!("{url}/api/delete"))
+        .json(&serde_json::json!({"name": model}))
+        .send()
+        .await
+    {
+        Ok(r) if r.status().is_success() => {
+            Json(serde_json::json!({"ok": true, "message": format!("Model '{}' deleted", model)}))
+        }
+        Ok(r) => {
+            let text = r.text().await.unwrap_or_default();
+            Json(serde_json::json!({"ok": false, "error": text}))
+        }
+        Err(e) => Json(serde_json::json!({"ok": false, "error": e.to_string()})),
     }
 }

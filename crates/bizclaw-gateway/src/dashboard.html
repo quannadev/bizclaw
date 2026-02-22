@@ -149,6 +149,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="nav-sep"></div>
       <a onclick="showPage('settings')" id="nav-settings">⚙️ Settings</a>
       <a onclick="showPage('providers')" id="nav-providers">🔌 Providers</a>
+      <a onclick="showPage('channels')" id="nav-channels">📱 Channels</a>
       <a onclick="showPage('tools')" id="nav-tools">🛠️ Tools</a>
       <div class="nav-sep"></div>
       <a onclick="showPage('brain')" id="nav-brain">🧠 Brain Engine</a>
@@ -250,9 +251,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="stats">
         <div class="card"><div class="card-label">Shell</div><div class="card-value green">● Active</div><div class="card-sub">Execute system commands (sandboxed)</div></div>
         <div class="card"><div class="card-label">File</div><div class="card-value green">● Active</div><div class="card-sub">Read/write/list files</div></div>
-        <div class="card"><div class="card-label">Web Search</div><div class="card-value orange">● Available</div><div class="card-sub">DuckDuckGo search</div></div>
+        <div class="card"><div class="card-label">Web Search</div><div class="card-value green">● Active</div><div class="card-sub">DuckDuckGo search</div></div>
         <div class="card"><div class="card-label">Calendar</div><div class="card-value orange">● Available</div><div class="card-sub">Google Calendar integration</div></div>
-        <div class="card"><div class="card-label">Browser</div><div class="card-value" style="color:var(--text2)">○ Disabled</div><div class="card-sub">Browser automation (CDP)</div></div>
+        <div class="card"><div class="card-label">Document Reader</div><div class="card-value green">● Active</div><div class="card-sub">PDF, DOCX, Excel, CSV extraction</div></div>
+        <div class="card"><div class="card-label">Group Summarizer</div><div class="card-value green">● Active</div><div class="card-sub">Zalo/Telegram group message summary</div></div>
       </div>
     </div>
 
@@ -565,6 +567,9 @@ function handleWS(msg) {
   const el = document.getElementById('chat-messages');
   const typing = document.getElementById('chat-typing');
   switch(msg.type) {
+    case 'connected':
+      addMsg(`Connected — ${msg.provider}/${msg.model}`, 'system');
+      break;
     case 'chat_start': typing.style.display = ''; break;
     case 'chat_chunk':
       typing.style.display = 'none';
@@ -579,7 +584,12 @@ function handleWS(msg) {
       if (st) st.classList.remove('msg-streaming');
       break;
     case 'chat_response': addMsg(msg.content, 'bot'); break;
-    case 'error': addMsg('Error: ' + msg.message, 'system'); break;
+    case 'chat_error': addMsg('❌ ' + (msg.error||'Unknown error'), 'system'); typing.style.display = 'none'; break;
+    case 'status':
+      addMsg(`📊 Provider: ${msg.provider} | Model: ${msg.model} | Uptime: ${fmtUptime(msg.uptime_secs)} | Requests: ${msg.requests_processed}`, 'system');
+      break;
+    case 'pong': break; // silent
+    case 'error': addMsg('⚠️ ' + msg.message, 'system'); break;
   }
 }
 
@@ -587,9 +597,26 @@ function sendChat() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if (!text || !ws || ws.readyState !== 1) return;
+  input.value = '';
+
+  // Slash commands
+  if (text === '/status') {
+    ws.send(JSON.stringify({type:'status'}));
+    addMsg('/status', 'user');
+    return;
+  }
+  if (text === '/reset') {
+    document.getElementById('chat-messages').innerHTML = '<div class="msg msg-system">💬 Chat history cleared</div>';
+    return;
+  }
+  if (text === '/help') {
+    addMsg('/help', 'user');
+    addMsg('Available commands:\n/status — Show agent status\n/reset — Clear chat history\n/help — Show this help', 'system');
+    return;
+  }
+
   addMsg(text, 'user');
   ws.send(JSON.stringify({type:'chat',content:text,stream:true}));
-  input.value = '';
 }
 
 function addMsg(text, role) {
