@@ -1018,12 +1018,80 @@ pub async fn update_agent(
 ) -> Json<serde_json::Value> {
     let role = body["role"].as_str();
     let description = body["description"].as_str();
+    let provider = body["provider"].as_str();
+    let model = body["model"].as_str();
+    let system_prompt = body["system_prompt"].as_str();
 
     let mut orch = state.orchestrator.lock().await;
+
+    // Update basic metadata (role, description)
     let updated = orch.update_agent(&name, role, description);
+    if !updated {
+        return Json(serde_json::json!({"ok": false, "message": format!("Agent '{}' not found", name)}));
+    }
+
+    // If provider/model/system_prompt changed, we need to re-create the agent
+    let needs_recreate = provider.is_some() || model.is_some() || system_prompt.is_some();
+    if needs_recreate {
+        // Build new config based on current system config + overrides
+        let mut agent_config = state.full_config.lock().unwrap().clone();
+        
+        // Get current agent values as fallback
+        if let Some(agent) = orch.get_agent_mut(&name) {
+            // Use existing values as base
+            agent_config.default_provider = agent.provider_name().to_string();
+            agent_config.default_model = agent.model_name().to_string();
+            agent_config.identity.system_prompt = agent.system_prompt().to_string();
+        }
+
+        // Apply overrides
+        if let Some(p) = provider {
+            if !p.is_empty() { agent_config.default_provider = p.to_string(); }
+        }
+        if let Some(m) = model {
+            if !m.is_empty() { agent_config.default_model = m.to_string(); }
+        }
+        if let Some(sp) = system_prompt {
+            agent_config.identity.system_prompt = sp.to_string();
+        }
+        agent_config.identity.name = name.clone();
+
+        // Re-create agent with new config
+        match bizclaw_agent::Agent::new_with_mcp(agent_config).await {
+            Ok(new_agent) => {
+                // Remove old agent, add new one
+                let role_str = role.unwrap_or("assistant").to_string();
+                let desc_str = description.unwrap_or("").to_string();
+                // Get current role/desc if not provided
+                let agents_list = orch.list_agents();
+                let current = agents_list.iter().find(|a| a["name"].as_str() == Some(&name));
+                let final_role = if role.is_some() { role_str.clone() } else {
+                    current.and_then(|a| a["role"].as_str()).unwrap_or("assistant").to_string()
+                };
+                let final_desc = if description.is_some() { desc_str.clone() } else {
+                    current.and_then(|a| a["description"].as_str()).unwrap_or("").to_string()
+                };
+                
+                orch.remove_agent(&name);
+                orch.add_agent(&name, &final_role, &final_desc, new_agent);
+                tracing::info!("🔄 Agent '{}' re-created with new config", name);
+            }
+            Err(e) => {
+                tracing::warn!("⚠️ Agent '{}' re-create failed: {}", name, e);
+                // Still save metadata change even if re-create failed
+            }
+        }
+    }
+
+    // Persist to disk
+    let agents_path = state.config_path.parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("agents.json");
+    orch.save_agents_metadata(&agents_path);
+
     Json(serde_json::json!({
-        "ok": updated,
-        "message": if updated { format!("Agent '{}' updated", name) } else { format!("Agent '{}' not found", name) },
+        "ok": true,
+        "message": format!("Agent '{}' updated", name),
     }))
 }
 
