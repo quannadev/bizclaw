@@ -938,6 +938,10 @@ const CHANNELS = [
     {key:'cookie',label:'Zalo Cookie',type:'textarea',placeholder:'Paste cookie từ chat.zalo.me → F12 → Application → Cookies'},
     {key:'imei',label:'IMEI',type:'text',placeholder:'Tự động tạo nếu để trống'},
   ]},
+  {type:'zalo_oa',name:'Zalo OA Bot',icon:'🇻🇳',fields:[
+    {key:'bot_token',label:'Bot Token',type:'password',placeholder:'Token từ Zalo Bot Creator (bot.zapps.me)', masked:true},
+    {key:'webhook_url',label:'Webhook URL',type:'text',placeholder:'https://your-domain.com/api/v1/zalo-oa/webhook'},
+  ]},
   {type:'discord',name:'Discord Bot',icon:'🎮',fields:[
     {key:'bot_token',label:'Bot Token',type:'password',placeholder:'MTk...', masked:true},
     {key:'allowed_channel_ids',label:'Channel IDs',type:'text',placeholder:'123456789, 987654321'},
@@ -956,6 +960,11 @@ const CHANNELS = [
   {type:'webhook',name:'Webhook API',icon:'🔗',fields:[
     {key:'webhook_url',label:'Inbound URL',type:'text',placeholder:'https://your-app.com/webhook'},
     {key:'webhook_secret',label:'Secret',type:'password',placeholder:'shared secret for HMAC'},
+  ]},
+  {type:'slack',name:'Slack Bot',icon:'💼',fields:[
+    {key:'bot_token',label:'Bot Token (xoxb-)',type:'password',placeholder:'xoxb-...', masked:true},
+    {key:'app_token',label:'App Token (xapp-)',type:'password',placeholder:'xapp-...', masked:true},
+    {key:'allowed_channel_ids',label:'Channel IDs',type:'text',placeholder:'C01ABCDEF, C02GHIJKL'},
   ]},
 ];
 
