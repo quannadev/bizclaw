@@ -693,9 +693,8 @@ pub async fn fetch_provider_models(
 
     let url = format!("{}{}", provider.base_url.trim_end_matches('/'), provider.models_path);
     let client = reqwest::Client::new();
-    let mut req = client.get(&url).timeout(std::time::Duration::from_secs(10));
 
-    // Apply auth
+    // Apply auth — detect API key from provider config or env vars
     let api_key = if !provider.api_key.is_empty() {
         provider.api_key.clone()
     } else {
@@ -705,9 +704,29 @@ pub async fn fetch_provider_models(
             .unwrap_or_default()
     };
 
-    if provider.auth_style == "bearer" && !api_key.is_empty() {
-        req = req.header("Authorization", format!("Bearer {}", api_key));
-    }
+    // Build request with provider-specific auth handling
+    let req = if name == "anthropic" {
+        // Anthropic uses x-api-key header (not Bearer)
+        let mut r = client.get(&url).timeout(std::time::Duration::from_secs(10));
+        if !api_key.is_empty() {
+            r = r.header("x-api-key", &api_key)
+                 .header("anthropic-version", "2023-06-01");
+        }
+        r
+    } else if name == "gemini" {
+        // Gemini uses ?key= query param
+        let full_url = if !api_key.is_empty() {
+            format!("{}?key={}", url, api_key)
+        } else { url.clone() };
+        client.get(&full_url).timeout(std::time::Duration::from_secs(10))
+    } else {
+        let mut r = client.get(&url).timeout(std::time::Duration::from_secs(10));
+        if provider.auth_style == "bearer" && !api_key.is_empty() {
+            r = r.header("Authorization", format!("Bearer {}", api_key));
+        }
+        r
+    };
+
 
     match req.send().await {
         Ok(resp) if resp.status().is_success() => {
@@ -1493,6 +1512,15 @@ pub async fn update_agent(
             }
             if let Some(m) = model {
                 if !m.is_empty() && m != cur_model { needs_recreate = true; }
+            }
+            // Update system prompt directly on live agent (no re-creation needed)
+            if !needs_recreate {
+                if let Some(sp) = system_prompt {
+                    if !sp.is_empty() && sp != agent.system_prompt() {
+                        agent.set_system_prompt(sp);
+                        tracing::info!("📝 update_agent '{}' — system_prompt updated in-place", name);
+                    }
+                }
             }
         }
         tracing::info!("📝 update_agent '{}' — Phase 1: done, needs_recreate={}", name, needs_recreate);

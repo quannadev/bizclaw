@@ -915,26 +915,30 @@ async function loadDashboard() {
 }
 
 // Provider fields definition — defines which fields appear on each type of provider card
+// model field uses 'select' type — populated dynamically from provider.models
 const PROVIDER_FIELDS = {
   cloud: [
     {key:'api_key',label:'API Key',type:'password',placeholder:'sk-...'},
-    {key:'model',label:'Model',type:'text',placeholder:'Select or type model'},
+    {key:'model',label:'Model',type:'select',placeholder:'Chọn model từ API'},
     {key:'base_url',label:'Base URL (optional)',type:'text',placeholder:'https://...'},
   ],
   local: [
-    {key:'model',label:'Model',type:'text',placeholder:'auto-detected'},
+    {key:'model',label:'Model',type:'select',placeholder:'auto-detected'},
     {key:'base_url',label:'Server URL',type:'text',placeholder:'http://localhost:11434/v1'},
   ],
   proxy: [
     {key:'base_url',label:'Proxy URL (required)',type:'text',placeholder:'http://localhost:8787/v1'},
     {key:'api_key',label:'API Key (if needed)',type:'password',placeholder:'proxy-key-...'},
-    {key:'model',label:'Model',type:'text',placeholder:'gpt-4o-mini'},
+    {key:'model',label:'Model',type:'select',placeholder:'gpt-4o-mini'},
   ],
   brain: [
-    {key:'model_path',label:'Model Path (.gguf)',type:'text',placeholder:'~/.bizclaw/models/tinyllama.gguf'},
+    {key:'model_path',label:'Model đã Load',type:'select_brain',placeholder:'Chọn model đã load'},
     {key:'threads',label:'Threads',type:'number',placeholder:'4'},
   ],
 };
+
+// Built-in providers that cannot be deleted
+const BUILTIN_PROVIDERS = ['openai','anthropic','gemini','deepseek','groq','ollama','llamacpp','brain','cliproxy','openrouter','together','minimax','xai','mistral','vllm'];
 
 // ═══ CLIProxy Persistence ═══
 function isClipProxyActive(c) {
@@ -987,6 +991,7 @@ async function renderProviderCards() {
     const savedKey = p.api_key_set && isActive;
     const typeLabel = p.type === 'cloud' ? cloudLabel : (p.type === 'proxy' ? proxyLabel : localLabel);
     const fields = p.name === 'brain' ? PROVIDER_FIELDS.brain : (PROVIDER_FIELDS[p.type] || PROVIDER_FIELDS.cloud);
+    const provModels = p.models || [];
     
     const fieldVals = {};
     if (isActive) {
@@ -999,8 +1004,45 @@ async function renderProviderCards() {
       });
     }
 
-    // Models hint (from DB cache)
-    const modelsHint = (p.models || []).slice(0, 5).join(', ');
+    // Models summary for card subtitle
+    const modelsCount = provModels.length;
+    const modelsHint = provModels.slice(0, 3).join(', ') + (modelsCount > 3 ? ` +${modelsCount-3} more` : '');
+
+    // Render field HTML
+    const fieldsHtml = fields.map(f => {
+      const val = fieldVals[f.key] || '';
+      // SELECT for model field — dropdown from provider models
+      if (f.type === 'select') {
+        const options = provModels.map(m => 
+          `<option value="${m}" ${m === val ? 'selected' : ''}>${m}</option>`
+        ).join('');
+        return `<label>${f.label}</label>
+          <div style="display:flex;gap:4px">
+            <select id="prov-${p.name}-${f.key}" style="flex:1;min-width:0">
+              ${options || '<option value="">— Bấm 🔄 để tải models —</option>'}
+              ${val && !provModels.includes(val) ? `<option value="${val}" selected>${val}</option>` : ''}
+            </select>
+            <input type="text" id="prov-${p.name}-${f.key}-custom" placeholder="Hoặc nhập tên model" style="flex:0 0 140px;font-size:11px" oninput="let s=document.getElementById('prov-${p.name}-${f.key}');if(this.value){let o=new Option(this.value,this.value,true,true);s.add(o);s.value=this.value}">
+          </div>`;
+      }
+      // SELECT_BRAIN for Brain Engine — load GGUF models directly
+      if (f.type === 'select_brain') {
+        const brainModels = provModels;
+        const currentPath = val;
+        const options = brainModels.map(m => 
+          `<option value="${m}" ${m === currentPath || currentPath.endsWith(m) ? 'selected' : ''}>${m}</option>`
+        ).join('');
+        return `<label>${f.label}</label>
+          <div style="display:flex;gap:4px;align-items:center">
+            <select id="prov-${p.name}-${f.key}" style="flex:1;min-width:0">
+              ${options || '<option value="">— Chưa có model. Scan để tìm —</option>'}
+            </select>
+            <button class="btn btn-outline btn-sm" onclick="scanBrainForProviderCard()" title="Quét file GGUF" style="flex:0 0 auto;font-size:11px">📂 Scan</button>
+          </div>
+          <div style="font-size:10px;color:var(--text2);margin-top:2px">💡 Brain Engine load trực tiếp model đã tải — không cần API</div>`;
+      }
+      return `<label>${f.label}</label><input type="${f.type||'text'}" id="prov-${p.name}-${f.key}" value="${val}" placeholder="${f.placeholder}">`;
+    }).join('');
 
     return `<div class="ch-card" style="${isActive?'border-color:var(--accent);box-shadow:0 0 24px rgba(99,102,241,.15)':''}">
       <div class="ch-header">
@@ -1009,25 +1051,23 @@ async function renderProviderCards() {
           <span class="badge badge-${isActive?'green':p.type==='proxy'?'purple':'blue'}">${isActive?'\u25cf '+activeLabel:typeLabel}</span>
         </div>
       </div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${modelsHint || 'no cached models'}</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${modelsHint || 'Bấm 🔄 Models để tải danh sách'}</div>
       <div class="ch-fields">
-        ${fields.map(f => {
-          const val = fieldVals[f.key] || '';
-          return `<label>${f.label}</label><input type="${f.type||'text'}" id="prov-${p.name}-${f.key}" value="${val}" placeholder="${f.placeholder}">`;
-        }).join('')}
+        ${fieldsHtml}
       </div>
       ${p.name === 'cliproxy' ? '<div style="font-size:11px;color:var(--cyan);margin-bottom:8px;padding:6px 8px;background:rgba(34,211,238,.06);border-radius:6px">\ud83d\udca1 Proxy OpenAI-compatible APIs: LiteLLM, LocalAI, vLLM, text-gen-webui, etc.</div>' : ''}
+      ${p.name === 'brain' ? '' : ''}
       <div class="ch-actions">
         <button class="btn ${isActive?'btn-green':'btn-primary'} btn-sm" onclick="setActiveProvider('${p.name}')">${isActive?activeBtn:activateBtn}</button>
-        <button class="btn btn-outline btn-sm" onclick="fetchModelsLive('${p.name}')" title="Tải model từ API">🔄 Models</button>
-        ${!['openai','anthropic','gemini','deepseek','groq','ollama','llamacpp','brain'].includes(p.name) ? `<button class="btn btn-outline btn-sm" onclick="deleteProviderCard('${p.name}')" style="color:var(--red)">🗑️</button>` : ''}
+        ${p.name !== 'brain' ? `<button class="btn btn-outline btn-sm" onclick="fetchModelsLive('${p.name}')" title="Tải model mới nhất từ API nhà cung cấp">🔄 Models</button>` : ''}
+        ${!BUILTIN_PROVIDERS.includes(p.name) ? `<button class="btn btn-outline btn-sm" onclick="deleteProviderCard('${p.name}')" style="color:var(--red)">🗑️</button>` : ''}
       </div>
     </div>`;
   }).join('');
 }
 
 async function fetchModelsLive(name) {
-  toast('🔄 Đang tải models từ API...');
+  toast('🔄 Đang tải models mới nhất từ ' + name + '...');
   try {
     const res = await authFetch(API + '/api/v1/providers/' + encodeURIComponent(name) + '/models');
     const data = await res.json();
@@ -1039,9 +1079,49 @@ async function fetchModelsLive(name) {
         const prov = _dbProviders.find(p => p.name === name);
         if (prov) prov.models = models;
       }
-      await renderProviderCards();
+      // Update select dropdown immediately without full re-render
+      const sel = document.getElementById('prov-' + name + '-model');
+      if (sel && sel.tagName === 'SELECT') {
+        const currentVal = sel.value;
+        sel.innerHTML = models.map(m => `<option value="${m}" ${m === currentVal ? 'selected' : ''}>${m}</option>`).join('');
+        if (!models.includes(currentVal) && currentVal) {
+          sel.innerHTML += `<option value="${currentVal}" selected>${currentVal} (current)</option>`;
+        }
+      } else {
+        await renderProviderCards();
+      }
     } else {
-      toast('⚠️ ' + (data.error || 'Không lấy được models'));
+      toast('⚠️ ' + (data.error || 'Không lấy được models. Kiểm tra API key và kết nối.'));
+    }
+  } catch(e) {
+    toast('❌ ' + e.message);
+  }
+}
+
+// Scan Brain Engine models (GGUF) for provider card
+async function scanBrainForProviderCard() {
+  toast('📂 Đang quét file model GGUF...');
+  try {
+    const res = await authFetch(API + '/api/v1/brain/models');
+    const data = await res.json();
+    if (data.ok && data.models && data.models.length > 0) {
+      const models = data.models.map(m => m.path || m.name);
+      const names = data.models.map(m => m.name);
+      toast('✅ Tìm thấy ' + models.length + ' model(s)');
+      // Update Brain models in cache
+      if (_dbProviders) {
+        const brain = _dbProviders.find(p => p.name === 'brain');
+        if (brain) brain.models = models;
+      }
+      // Update select
+      const sel = document.getElementById('prov-brain-model_path');
+      if (sel) {
+        sel.innerHTML = data.models.map((m,i) => 
+          `<option value="${models[i]}">${names[i]} (${m.size})</option>`
+        ).join('');
+      }
+    } else {
+      toast('⚠️ Không tìm thấy model GGUF. Download: bizclaw brain download tinyllama-1.1b');
     }
   } catch(e) {
     toast('❌ ' + e.message);
@@ -2071,15 +2151,29 @@ async function installGallerySkill(id) {
   };
   if (activeProvider) body.provider = activeProvider;
   if (activeModel) body.model = activeModel;
+  // Show loading indicator
+  toast('⏳ Đang cài đặt Agent "' + body.name + '"...');
   try {
     const res = await authFetch(API + '/api/v1/agents', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
     const r = await res.json();
-    if (r.ok) { toast('⚡ Agent "' + body.name + '" đã cài từ Gallery!' + (activeProvider ? ` [${activeProvider}]` : '')); }
-    else { toast('❌ ' + r.error, 'error'); }
-  } catch(e) { toast('❌ ' + e.message, 'error'); }
+    if (r.ok) {
+      toast('⚡ Agent "' + body.name + '" đã cài từ Gallery!' + (activeProvider ? ` [${activeProvider}]` : ''));
+      // Auto-refresh agent list if on agents page
+      if (typeof loadAgents === 'function') loadAgents();
+    } else {
+      // Show detailed error with provider hint
+      let errMsg = r.error || 'Lỗi không xác định';
+      if (errMsg.includes('API key') || errMsg.includes('401') || errMsg.includes('Unauthorized')) {
+        errMsg += ' — Vui lòng cấu hình API key cho provider "' + (activeProvider || 'default') + '" trong trang Providers.';
+      } else if (errMsg.includes('Ollama') || errMsg.includes('connection')) {
+        errMsg += ' — Kiểm tra Ollama đang chạy: ollama serve';
+      }
+      toast('❌ ' + errMsg, 'error');
+    }
+  } catch(e) { toast('❌ Lỗi kết nối: ' + e.message, 'error'); }
 }
 
 async function viewGalleryMd(id) {
@@ -2722,6 +2816,12 @@ function selectAgentChat(name, role) {
 }
 
 function selectGroupChat(idx) {
+  // Bounds check — prevent crash on invalid group index
+  if (idx < 0 || idx >= _groups.length || !_groups[idx]) {
+    toast('❌ Nhóm không tồn tại hoặc đã bị xóa', 'error');
+    selectWSChat();
+    return;
+  }
   saveChatHistory(); // save current before switching
   _chatMode = 'group';
   _chatAgentName = '';
@@ -2729,17 +2829,19 @@ function selectGroupChat(idx) {
   const g = _groups[idx];
   document.getElementById('chat-target-icon').textContent = '\ud83d\udc65';
   document.getElementById('chat-target-name').textContent = g.name;
-  document.getElementById('chat-target-sub').textContent = g.agents.join(', ') + ' \u2022 ' + g.topic;
+  document.getElementById('chat-target-sub').textContent = (g.agents || []).join(', ') + ' \u2022 ' + (g.topic || '');
   renderGroupMessagesInChat();
   refreshChatSidebar();
   document.getElementById('chat-input').focus();
 }
 
 function renderGroupMessagesInChat() {
-  if (_activeGroupIdx < 0) return;
+  if (_activeGroupIdx < 0 || _activeGroupIdx >= _groups.length) return;
   const g = _groups[_activeGroupIdx];
+  if (!g) return;
   const el = document.getElementById('chat-messages');
-  if (g.messages.length === 0) {
+  if (!el) return;
+  if (!g.messages || g.messages.length === 0) {
     el.innerHTML = '<div class="msg msg-system">Nh\u00f3m \u0111\u00e3 s\u1eb5n s\u00e0ng. G\u1eedi tin nh\u1eafn v\u00e0 c\u00e1c agent s\u1ebd c\u00f9ng th\u1ea3o lu\u1eadn!</div>';
     return;
   }
@@ -2796,7 +2898,7 @@ function onChatAgentChange() {
 }
 
 async function sendGroupMessage(messageText) {
-  if (_activeGroupIdx < 0) return;
+  if (_activeGroupIdx < 0 || _activeGroupIdx >= _groups.length || !_groups[_activeGroupIdx]) return;
   let text = messageText;
   if (!text) {
     const input = document.getElementById('chat-input');

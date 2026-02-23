@@ -103,15 +103,21 @@ pub struct Agent {
 impl Agent {
     /// Create a new agent from configuration (sync, no MCP).
     pub fn new(config: BizClawConfig) -> Result<Self> {
+        let t0 = std::time::Instant::now();
         let provider = bizclaw_providers::create_provider(&config)?;
+        tracing::info!("Agent::new — create_provider: {:?}", t0.elapsed());
         let memory = bizclaw_memory::create_memory(&config.memory)?;
+        tracing::info!("Agent::new — create_memory: {:?}", t0.elapsed());
         let tools = bizclaw_tools::ToolRegistry::with_defaults();
+        tracing::info!("Agent::new — with_defaults tools: {:?}", t0.elapsed());
         let security = bizclaw_security::DefaultSecurityPolicy::new(config.autonomy.clone());
 
         // 3-Tier Memory: assemble brain context from workspace files
         let brain_ws = bizclaw_memory::brain::BrainWorkspace::default();
         let _ = brain_ws.initialize(); // seed default files if missing
+        tracing::info!("Agent::new — brain init: {:?}", t0.elapsed());
         let brain_context = brain_ws.assemble_brain();
+        tracing::info!("Agent::new — brain assemble: {:?}", t0.elapsed());
         let daily_log = bizclaw_memory::brain::DailyLogManager::default();
 
         // Build system prompt: user config + brain workspace
@@ -674,6 +680,24 @@ impl Agent {
     /// Get system prompt.
     pub fn system_prompt(&self) -> &str {
         &self.config.identity.system_prompt
+    }
+
+    /// Update system prompt in-place (without re-creating agent).
+    /// Updates both the config and the first message in conversation history.
+    pub fn set_system_prompt(&mut self, prompt: &str) {
+        self.config.identity.system_prompt = prompt.to_string();
+        // Also update the system message in conversation (always at index 0)
+        if !self.conversation.is_empty() {
+            // Rebuild with brain context same as new()
+            let brain_ws = bizclaw_memory::brain::BrainWorkspace::default();
+            let brain_context = brain_ws.assemble_brain();
+            let full_prompt = if brain_context.trim().is_empty() {
+                prompt.to_string()
+            } else {
+                format!("{}\n\n{}", prompt, brain_context)
+            };
+            self.conversation[0] = Message::system(&full_prompt);
+        }
     }
 
     /// Get total tool count (native + MCP).

@@ -145,14 +145,10 @@ impl GatewayDb {
         Ok(())
     }
 
-    /// Seed default providers if table is empty — fully self-describing records.
+    /// Seed default providers — ensures all built-in providers exist.
+    /// Uses INSERT OR IGNORE so existing providers (with user-set API keys) are preserved.
     fn seed_default_providers(&self) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
-        let count: i64 = conn.query_row(
-            "SELECT COUNT(*) FROM providers", [], |r| r.get(0),
-        ).unwrap_or(0);
-        
-        if count > 0 { return Ok(()); }
 
         // Each provider definition is fully self-describing:
         // (name, label, icon, type, base_url, chat_path, models_path, auth_style, env_keys_json, models_json)
@@ -162,21 +158,21 @@ impl GatewayDb {
                 "https://api.openai.com/v1",
                 "/chat/completions", "/models", "bearer",
                 r#"["OPENAI_API_KEY"]"#,
-                r#"["gpt-4o","gpt-4o-mini","gpt-3.5-turbo","o1-mini","o3-mini"]"#,
+                r#"["gpt-4.1","gpt-4.1-mini","gpt-4.1-nano","gpt-4o","gpt-4o-mini","o3","o3-mini","o4-mini"]"#,
             ),
             (
                 "anthropic", "Anthropic", "🧠", "cloud",
                 "https://api.anthropic.com/v1",
                 "/chat/completions", "/models", "bearer",
                 r#"["ANTHROPIC_API_KEY"]"#,
-                r#"["claude-sonnet-4-20250514","claude-3.5-sonnet","claude-3-haiku"]"#,
+                r#"["claude-sonnet-4-20250514","claude-opus-4-20250514","claude-3.5-haiku-20241022"]"#,
             ),
             (
                 "gemini", "Google Gemini", "💎", "cloud",
                 "https://generativelanguage.googleapis.com/v1beta/openai",
                 "/chat/completions", "/models", "bearer",
                 r#"["GEMINI_API_KEY","GOOGLE_API_KEY"]"#,
-                r#"["gemini-2.5-pro","gemini-2.5-flash","gemini-2.0-flash"]"#,
+                r#"["gemini-2.5-pro-preview-06-05","gemini-2.5-flash-preview-05-20","gemini-2.0-flash","gemini-2.0-flash-lite"]"#,
             ),
             (
                 "deepseek", "DeepSeek", "🌊", "cloud",
@@ -190,28 +186,49 @@ impl GatewayDb {
                 "https://api.groq.com/openai/v1",
                 "/chat/completions", "/models", "bearer",
                 r#"["GROQ_API_KEY"]"#,
-                r#"["llama-3.3-70b-versatile","mixtral-8x7b-32768","llama-3.1-8b-instant"]"#,
+                r#"["llama-3.3-70b-versatile","llama-3.1-8b-instant","gemma2-9b-it","mixtral-8x7b-32768"]"#,
             ),
             (
                 "openrouter", "OpenRouter", "🌐", "cloud",
                 "https://openrouter.ai/api/v1",
                 "/chat/completions", "/models", "bearer",
                 r#"["OPENROUTER_API_KEY","OPENAI_API_KEY"]"#,
-                r#"["openai/gpt-4o","anthropic/claude-sonnet-4-20250514"]"#,
+                r#"["openai/gpt-4.1","anthropic/claude-sonnet-4","google/gemini-2.5-flash-preview","deepseek/deepseek-r1"]"#,
             ),
             (
                 "together", "Together AI", "🤝", "cloud",
                 "https://api.together.xyz/v1",
                 "/chat/completions", "/models", "bearer",
                 r#"["TOGETHER_API_KEY"]"#,
-                r#"["meta-llama/Llama-3.3-70B-Instruct-Turbo"]"#,
+                r#"["meta-llama/Llama-3.3-70B-Instruct-Turbo","Qwen/Qwen2.5-72B-Instruct-Turbo","deepseek-ai/DeepSeek-R1"]"#,
+            ),
+            (
+                "minimax", "MiniMax", "🔮", "cloud",
+                "https://api.minimaxi.chat/v1",
+                "/chat/completions", "/models", "bearer",
+                r#"["MINIMAX_API_KEY"]"#,
+                r#"["MiniMax-Text-01","MiniMax-M1","abab6.5s-chat","abab6.5-chat","abab5.5-chat"]"#,
+            ),
+            (
+                "xai", "xAI (Grok)", "🚀", "cloud",
+                "https://api.x.ai/v1",
+                "/chat/completions", "/models", "bearer",
+                r#"["XAI_API_KEY"]"#,
+                r#"["grok-3","grok-3-mini","grok-3-fast","grok-2"]"#,
+            ),
+            (
+                "mistral", "Mistral AI", "🌪️", "cloud",
+                "https://api.mistral.ai/v1",
+                "/chat/completions", "/models", "bearer",
+                r#"["MISTRAL_API_KEY"]"#,
+                r#"["mistral-large-latest","mistral-medium-latest","mistral-small-latest","codestral-latest","open-mistral-nemo"]"#,
             ),
             (
                 "ollama", "Ollama (Local)", "🦙", "local",
                 "http://localhost:11434/v1",
                 "/chat/completions", "/models", "none",
                 r#"[]"#,
-                r#"["llama3.2","qwen3","phi-4","gemma2"]"#,
+                r#"["llama3.2","qwen3","phi-4","gemma2","deepseek-r1"]"#,
             ),
             (
                 "llamacpp", "llama.cpp", "🔧", "local",
@@ -573,7 +590,7 @@ mod tests {
     fn test_default_providers_seeded() {
         let db = temp_db();
         let providers = db.list_providers("").unwrap();
-        assert!(providers.len() >= 8, "Should have at least 8 default providers, got {}", providers.len());
+        assert!(providers.len() >= 14, "Should have at least 14 default providers, got {}", providers.len());
         
         let openai = providers.iter().find(|p| p.name == "openai").unwrap();
         assert_eq!(openai.provider_type, "cloud");
