@@ -729,6 +729,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <h3>➕ <span data-i18n="kb.add_title">Thêm tài liệu</span></h3>
         <div class="form-row"><span class="form-label" data-i18n="form.name">Tên</span><input id="kb-doc-name" placeholder="ghi_chu_cuoc_hop.txt"></div>
         <div class="form-row"><span class="form-label" data-i18n="kb.source">Nguồn</span><input id="kb-doc-source" placeholder="thủ công" value="dashboard"></div>
+        <div class="form-row"><span class="form-label">📎 Upload file</span><input type="file" id="kb-doc-file" accept=".txt,.md,.csv,.json,.html,.xml,.log,.pdf,.doc,.docx" style="font-size:12px"></div>
+        <div style="font-size:11px;color:var(--text2);margin:-8px 0 8px;padding-left:140px">Hỗ trợ: .txt, .md, .csv, .json, .html, .xml — hoặc dán nội dung bên dưới</div>
         <div class="form-row"><span class="form-label" data-i18n="kb.content">Nội dung</span><textarea id="kb-doc-content" rows="6" placeholder="Dán nội dung tài liệu vào đây..."></textarea></div>
         <div style="display:flex;gap:8px;margin-top:12px">
           <button class="btn btn-primary" onclick="addDocument()">💾 <span data-i18n="form.save">Lưu</span></button>
@@ -1774,8 +1776,15 @@ function filterGallery(cat) {
 
 async function installTemplate(idx) {
   const t = AGENT_TEMPLATES[idx];
-  const provider = document.getElementById('tpl-prov-' + idx)?.value || '';
-  const model = document.getElementById('tpl-model-' + idx)?.value || '';
+  let provider = document.getElementById('tpl-prov-' + idx)?.value || '';
+  let model = document.getElementById('tpl-model-' + idx)?.value || '';
+  
+  // If no provider explicitly selected, inherit tenant's active provider
+  // This prevents "API key not configured" errors when tenant uses Ollama/DeepSeek
+  if (!provider && configData.default_provider) {
+    provider = configData.default_provider;
+    model = model || configData.default_model || '';
+  }
   
   const body = {
     name: t.name,
@@ -1953,19 +1962,24 @@ async function installGallerySkill(id) {
       }
     } catch(e) { /* MD load fail — continue without it */ }
   }
+  // Inherit tenant's active provider and model so gallery agents don't default to openai
+  const activeProvider = configData.default_provider || '';
+  const activeModel = configData.default_model || '';
   const body = {
     name: skill.name || id,
     role: skill.role || 'assistant',
     description: skill.description || skill.desc || '',
     system_prompt: systemPrompt,
   };
+  if (activeProvider) body.provider = activeProvider;
+  if (activeModel) body.model = activeModel;
   try {
     const res = await authFetch(API + '/api/v1/agents', {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify(body)
     });
     const r = await res.json();
-    if (r.ok) { toast('⚡ Agent "' + body.name + '" đã cài từ Gallery!'); }
+    if (r.ok) { toast('⚡ Agent "' + body.name + '" đã cài từ Gallery!' + (activeProvider ? ` [${activeProvider}]` : '')); }
     else { toast('❌ ' + r.error, 'error'); }
   } catch(e) { toast('❌ ' + e.message, 'error'); }
 }
@@ -2128,9 +2142,15 @@ async function createAgent() {
   const role = document.getElementById('new-agent-role').value;
   const desc = document.getElementById('new-agent-desc').value.trim();
   const prompt = document.getElementById('new-agent-prompt').value.trim();
-  const provider = document.getElementById('new-agent-provider').value;
-  const model = document.getElementById('new-agent-model').value;
+  let provider = document.getElementById('new-agent-provider').value;
+  let model = document.getElementById('new-agent-model').value;
   if (!name) { toast('Nhập tên Agent', 'error'); return; }
+  
+  // If no provider explicitly selected, inherit tenant's active provider
+  if (!provider && configData.default_provider) {
+    provider = configData.default_provider;
+    model = model || configData.default_model || '';
+  }
   
   const body = { name, role, description: desc || `A ${role} agent` };
   if (provider) body.provider = provider;
@@ -2150,7 +2170,7 @@ async function createAgent() {
       ['new-agent-name','new-agent-desc','new-agent-prompt'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('new-agent-provider').value = '';
       document.getElementById('new-agent-model').innerHTML = '<option value="">— Dùng mặc định —</option>';
-      loadAgents();
+      await loadAgents();
     } else { toast('❌ ' + r.error, 'error'); }
   } catch(e) { toast('❌ ' + e.message, 'error'); }
 }
@@ -2187,79 +2207,85 @@ async function chatWithAgent(name) {
 }
 
 async function editAgent(name) {
-  const a = (_agentsList || []).find(x => x.name === name);
-  if (!a) { toast('❌ Agent not found'); return; }
-  document.getElementById('edit-agent-name-hidden').value = name;
-  document.getElementById('edit-agent-title').textContent = name;
-  document.getElementById('edit-agent-role').value = a.role || 'assistant';
-  document.getElementById('edit-agent-desc').value = a.description || '';
-  document.getElementById('edit-agent-prompt').value = a.system_prompt || '';
-  document.getElementById('edit-agent-tg-token').value = '';
-  document.getElementById('agent-edit-modal').style.display = 'flex';
-  // Populate provider dropdown — show ALL providers, pre-select saved value
-  const sel = document.getElementById('edit-agent-provider');
-  sel.innerHTML = '<option value="">— Chọn Provider —</option>';
   try {
-    if (!_providersCache) {
-      const res = await authFetch(API + '/api/v1/providers');
-      const data = await res.json();
-      if (data.providers) _providersCache = data.providers;
-    }
-    if (_providersCache) {
-      _providersCache.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.name;
-        const typeIcon = p.type === 'local' ? '🖥️' : '☁️';
-        const badge = p.status === 'active' ? ' ⚡' : '';
-        opt.textContent = `${typeIcon} ${p.name}${badge}`;
-        sel.appendChild(opt);
-      });
-    }
-  } catch(e) {}
-  // Pre-select saved provider
-  if (a.provider) {
-    sel.value = a.provider;
-    // If provider not found in list (e.g. custom), add it
-    if (sel.value !== a.provider) {
-      const opt = document.createElement('option');
-      opt.value = a.provider;
-      opt.textContent = `⚙️ ${a.provider} (đã lưu)`;
-      sel.appendChild(opt);
+    const a = (_agentsList || []).find(x => x.name === name);
+    if (!a) { toast('❌ Agent not found: ' + name); return; }
+    document.getElementById('edit-agent-name-hidden').value = name;
+    document.getElementById('edit-agent-title').textContent = name;
+    document.getElementById('edit-agent-role').value = a.role || 'assistant';
+    document.getElementById('edit-agent-desc').value = a.description || '';
+    document.getElementById('edit-agent-prompt').value = a.system_prompt || '';
+    document.getElementById('agent-edit-modal').style.display = 'flex';
+    // Populate provider dropdown — show ALL providers, pre-select saved value
+    const sel = document.getElementById('edit-agent-provider');
+    sel.innerHTML = '<option value="">— Chọn Provider —</option>';
+    try {
+      if (!_providersCache) {
+        const res = await authFetch(API + '/api/v1/providers');
+        const data = await res.json();
+        if (data.providers) _providersCache = data.providers;
+      }
+      if (_providersCache) {
+        _providersCache.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.name;
+          const typeIcon = p.type === 'local' ? '🖥️' : '☁️';
+          const badge = p.status === 'active' ? ' ⚡' : '';
+          opt.textContent = `${typeIcon} ${p.name}${badge}`;
+          sel.appendChild(opt);
+        });
+      }
+    } catch(e) { console.warn('Provider load:', e); }
+    // Pre-select saved provider
+    if (a.provider) {
       sel.value = a.provider;
-    }
-  }
-  // Populate model dropdown, pre-select saved model
-  const modelSel = document.getElementById('edit-agent-model');
-  modelSel.innerHTML = '<option value="">— Chọn Model —</option>';
-  if (a.provider) {
-    await loadAgentModels(a.provider, 'edit-agent-model');
-    if (a.model) {
-      modelSel.value = a.model;
-      // If model not found in list, add it manually
-      if (modelSel.value !== a.model) {
+      // If provider not found in list (e.g. custom), add it
+      if (sel.value !== a.provider) {
         const opt = document.createElement('option');
-        opt.value = a.model;
-        opt.textContent = `${a.model} (đã lưu)`;
-        modelSel.appendChild(opt);
-        modelSel.value = a.model;
+        opt.value = a.provider;
+        opt.textContent = `⚙️ ${a.provider} (đã lưu)`;
+        sel.appendChild(opt);
+        sel.value = a.provider;
       }
     }
+    // Populate model dropdown, pre-select saved model
+    const modelSel = document.getElementById('edit-agent-model');
+    modelSel.innerHTML = '<option value="">— Chọn Model —</option>';
+    if (a.provider) {
+      try {
+        await loadAgentModels(a.provider, 'edit-agent-model');
+      } catch(e) { console.warn('Model load:', e); }
+      if (a.model) {
+        modelSel.value = a.model;
+        // If model not found in list, add it manually
+        if (modelSel.value !== a.model) {
+          const opt = document.createElement('option');
+          opt.value = a.model;
+          opt.textContent = `${a.model} (đã lưu)`;
+          modelSel.appendChild(opt);
+          modelSel.value = a.model;
+        }
+      }
+    }
+    // Populate channel checkboxes with instance details
+    const chContainer = document.getElementById('edit-agent-channels');
+    const agentChannels = a.channels || [];
+    chContainer.innerHTML = CHANNELS.map(ch => {
+      const checked = agentChannels.includes(ch.type) ? 'checked' : '';
+      return `<div style="width:100%">
+        <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg2);border:1px solid ${checked ? 'var(--accent)' : 'var(--border)'};border-radius:8px;cursor:pointer;font-size:12px;transition:border-color .2s">
+          <input type="checkbox" value="${ch.type}" class="agent-channel-cb" ${checked} onchange="toggleChannelInstances(this,'${ch.type}')">
+          ${ch.icon} ${ch.name}
+        </label>
+        <div id="ch-instances-${ch.type}" style="display:${checked ? 'block' : 'none'};margin:4px 0 8px 20px;font-size:11px;color:var(--text2)"></div>
+      </div>`;
+    }).join('');
+    // Load instances for checked channels
+    agentChannels.forEach(chType => loadChannelInstances(chType));
+  } catch(e) {
+    console.error('editAgent error:', e);
+    toast('❌ Lỗi mở form sửa: ' + e.message, 'error');
   }
-  // Populate channel checkboxes with instance details
-  const chContainer = document.getElementById('edit-agent-channels');
-  const agentChannels = a.channels || [];
-  chContainer.innerHTML = CHANNELS.map(ch => {
-    const checked = agentChannels.includes(ch.type) ? 'checked' : '';
-    return `<div style="width:100%">
-      <label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg2);border:1px solid ${checked ? 'var(--accent)' : 'var(--border)'};border-radius:8px;cursor:pointer;font-size:12px;transition:border-color .2s">
-        <input type="checkbox" value="${ch.type}" class="agent-channel-cb" ${checked} onchange="toggleChannelInstances(this,'${ch.type}')">
-        ${ch.icon} ${ch.name}
-      </label>
-      <div id="ch-instances-${ch.type}" style="display:${checked ? 'block' : 'none'};margin:4px 0 8px 20px;font-size:11px;color:var(--text2)"></div>
-    </div>`;
-  }).join('');
-  // Load instances for checked channels
-  agentChannels.forEach(chType => loadChannelInstances(chType));
 }
 
 // Show/hide channel instances when checkbox toggled
@@ -2369,8 +2395,9 @@ async function saveAgentEdit() {
   const channels = [...document.querySelectorAll('.agent-channel-cb:checked')].map(cb => cb.value);
   // Always include provider and model (even if unchanged) to ensure they persist
   const body = { role, description: desc };
-  if (provider) body.provider = provider;
-  if (model) body.model = model;
+  // Always send provider/model so backend persists them (even empty string clears)
+  body.provider = provider || '';
+  body.model = model || '';
   body.system_prompt = prompt; // Always send system_prompt (even empty to allow clearing)
   try {
     const res = await authFetch(API + '/api/v1/agents/' + encodeURIComponent(name), {
@@ -2388,8 +2415,9 @@ async function saveAgentEdit() {
       const chLabel = channels.length > 0 ? ' (' + channels.join(', ') + ')' : '';
       toast('✅ Agent "' + name + '" đã cập nhật!' + provLabel + chLabel);
       document.getElementById('agent-edit-modal').style.display = 'none';
-      loadAgents();
-    } else toast('❌ ' + r.message);
+      // Wait for backend to complete re-creation before refreshing list
+      await loadAgents();
+    } else toast('❌ ' + (r.message || r.error));
   } catch(e) { toast('❌ ' + e.message); }
 }
 
@@ -2804,7 +2832,35 @@ async function addDocument() {
   const name = document.getElementById('kb-doc-name').value.trim();
   const content = document.getElementById('kb-doc-content').value.trim();
   const source = document.getElementById('kb-doc-source').value.trim() || 'dashboard';
-  if (!name || !content) { toast('Name and content are required', 'error'); return; }
+  const fileInput = document.getElementById('kb-doc-file');
+  const file = fileInput && fileInput.files && fileInput.files[0];
+
+  // If file is uploaded, read its content
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const fileContent = e.target.result;
+      const fileName = name || file.name;
+      try {
+        const res = await authFetch(API + '/api/v1/knowledge/documents', {
+          method: 'POST', headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ name: fileName, content: fileContent, source: source || 'file-upload' })
+        });
+        const r = await res.json();
+        if (r.ok) {
+          toast(`📚 Tài liệu "${fileName}" đã thêm (${r.chunks} chunks)`);
+          document.getElementById('kb-add-form').style.display = 'none';
+          ['kb-doc-name','kb-doc-content'].forEach(id => document.getElementById(id).value = '');
+          fileInput.value = '';
+          loadKnowledgeDocs();
+        } else { toast('❌ ' + r.error, 'error'); }
+      } catch(e) { toast('❌ ' + e.message, 'error'); }
+    };
+    reader.readAsText(file);
+    return;
+  }
+
+  if (!name || !content) { toast('Nhập tên và nội dung, hoặc upload file', 'error'); return; }
   
   try {
     const res = await authFetch(API + '/api/v1/knowledge/documents', {
@@ -2813,7 +2869,7 @@ async function addDocument() {
     });
     const r = await res.json();
     if (r.ok) {
-      toast(`📚 Document added (${r.chunks} chunks)`);
+      toast(`📚 Tài liệu đã thêm (${r.chunks} chunks)`);
       document.getElementById('kb-add-form').style.display = 'none';
       ['kb-doc-name','kb-doc-content'].forEach(id => document.getElementById(id).value = '');
       loadKnowledgeDocs();
