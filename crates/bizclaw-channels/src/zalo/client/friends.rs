@@ -13,7 +13,15 @@ impl ZaloFriends {
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),
-            base_url: "https://tt-chat-wpa.chat.zalo.me/api".into(),
+            base_url: "https://tt-friend-wpa.chat.zalo.me/api".into(),
+        }
+    }
+
+    /// Create with custom service map URL.
+    pub fn with_url(url: &str) -> Self {
+        Self {
+            client: reqwest::Client::new(),
+            base_url: url.to_string(),
         }
     }
 
