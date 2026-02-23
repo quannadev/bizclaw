@@ -327,8 +327,56 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
     };
 
     // Initialize Multi-Agent Orchestrator
-    let orchestrator = bizclaw_agent::orchestrator::Orchestrator::new();
-    tracing::info!("🤖 Multi-Agent Orchestrator initialized");
+    let mut orchestrator = bizclaw_agent::orchestrator::Orchestrator::new();
+
+    // Restore persisted agents from agents.json
+    let agents_path = config_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("agents.json");
+    let saved_agents =
+        bizclaw_agent::orchestrator::Orchestrator::load_agents_metadata(&agents_path);
+    if !saved_agents.is_empty() {
+        tracing::info!(
+            "🔄 Restoring {} agent(s) from agents.json...",
+            saved_agents.len()
+        );
+        for meta in &saved_agents {
+            let name = meta["name"].as_str().unwrap_or("agent");
+            let role = meta["role"].as_str().unwrap_or("assistant");
+            let description = meta["description"].as_str().unwrap_or("AI agent");
+            let mut agent_cfg = full_config.clone();
+            if let Some(p) = meta["provider"].as_str() {
+                if !p.is_empty() {
+                    agent_cfg.default_provider = p.to_string();
+                }
+            }
+            if let Some(m) = meta["model"].as_str() {
+                if !m.is_empty() {
+                    agent_cfg.default_model = m.to_string();
+                }
+            }
+            if let Some(sp) = meta["system_prompt"].as_str() {
+                if !sp.is_empty() {
+                    agent_cfg.identity.system_prompt = sp.to_string();
+                }
+            }
+            agent_cfg.identity.name = name.to_string();
+            match bizclaw_agent::Agent::new_with_mcp(agent_cfg).await {
+                Ok(agent) => {
+                    orchestrator.add_agent(name, role, description, agent);
+                    tracing::info!("  ✅ Agent '{}' restored ({})", name, role);
+                }
+                Err(e) => {
+                    tracing::warn!("  ⚠️ Failed to restore agent '{}': {}", name, e);
+                }
+            }
+        }
+    }
+    tracing::info!(
+        "🤖 Multi-Agent Orchestrator initialized ({} agents)",
+        orchestrator.agent_count()
+    );
 
     let state = AppState {
         gateway_config: config.clone(),

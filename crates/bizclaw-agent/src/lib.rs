@@ -650,6 +650,16 @@ impl Agent {
         self.provider.name()
     }
 
+    /// Get model name.
+    pub fn model_name(&self) -> &str {
+        &self.config.default_model
+    }
+
+    /// Get system prompt.
+    pub fn system_prompt(&self) -> &str {
+        &self.config.identity.system_prompt
+    }
+
     /// Get total tool count (native + MCP).
     pub fn tool_count(&self) -> usize {
         self.tools.list().len()

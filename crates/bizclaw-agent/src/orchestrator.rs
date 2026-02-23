@@ -69,6 +69,38 @@ impl Orchestrator {
         }
     }
 
+    /// Save agent metadata to a JSON file for persistence across restarts.
+    pub fn save_agents_metadata(&self, path: &std::path::Path) {
+        let metadata: Vec<serde_json::Value> = self
+            .agents
+            .values()
+            .map(|a| {
+                serde_json::json!({
+                    "name": a.name,
+                    "role": a.role,
+                    "description": a.description,
+                    "provider": a.agent.provider_name(),
+                    "model": a.agent.model_name(),
+                    "system_prompt": a.agent.system_prompt(),
+                })
+            })
+            .collect();
+        if let Ok(json) = serde_json::to_string_pretty(&metadata) {
+            let _ = std::fs::write(path, json);
+        }
+    }
+
+    /// Load saved agent metadata from JSON file.
+    pub fn load_agents_metadata(
+        path: &std::path::Path,
+    ) -> Vec<serde_json::Value> {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            serde_json::from_str(&content).unwrap_or_default()
+        } else {
+            Vec::new()
+        }
+    }
+
     /// Remove an agent.
     pub fn remove_agent(&mut self, name: &str) -> bool {
         let removed = self.agents.remove(name).is_some();

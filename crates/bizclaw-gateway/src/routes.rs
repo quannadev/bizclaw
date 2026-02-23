@@ -970,6 +970,11 @@ pub async fn create_agent(
         Ok(agent) => {
             let mut orch = state.orchestrator.lock().await;
             orch.add_agent(name, role, description, agent);
+            // Persist agent metadata to disk
+            let agents_path = state.config_path.parent()
+                .unwrap_or(std::path::Path::new("."))
+                .join("agents.json");
+            orch.save_agents_metadata(&agents_path);
             tracing::info!("🤖 Agent '{}' created (role={})", name, role);
             Json(serde_json::json!({
                 "ok": true,
@@ -992,6 +997,13 @@ pub async fn delete_agent(
 ) -> Json<serde_json::Value> {
     let mut orch = state.orchestrator.lock().await;
     let removed = orch.remove_agent(&name);
+    // Persist updated agent list
+    if removed {
+        let agents_path = state.config_path.parent()
+            .unwrap_or(std::path::Path::new("."))
+            .join("agents.json");
+        orch.save_agents_metadata(&agents_path);
+    }
     Json(serde_json::json!({
         "ok": removed,
         "message": if removed { format!("Agent '{}' removed", name) } else { format!("Agent '{}' not found", name) },
