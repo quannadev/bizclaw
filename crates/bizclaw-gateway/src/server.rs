@@ -306,9 +306,9 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
         BizClawConfig::default()
     };
 
-    // Try to create the Agent engine (with MCP support)
+    // Create the Agent engine (sync — no MCP to avoid startup hang)
     let agent: Option<bizclaw_agent::Agent> =
-        match bizclaw_agent::Agent::new_with_mcp(full_config.clone()).await {
+        match bizclaw_agent::Agent::new(full_config.clone()) {
             Ok(a) => {
                 let tool_count = a.tool_count();
                 tracing::info!(
