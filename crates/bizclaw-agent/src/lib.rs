@@ -174,11 +174,21 @@ impl Agent {
                 })
                 .collect();
 
-            let results = bizclaw_mcp::bridge::connect_mcp_servers(&mcp_configs).await;
+            let results = tokio::time::timeout(
+                std::time::Duration::from_secs(10),
+                bizclaw_mcp::bridge::connect_mcp_servers(&mcp_configs),
+            ).await;
             let mut total_mcp_tools = 0;
-            for (_client, bridges) in results {
-                total_mcp_tools += bridges.len();
-                tools.register_many(bridges);
+            match results {
+                Ok(connections) => {
+                    for (_client, bridges) in connections {
+                        total_mcp_tools += bridges.len();
+                        tools.register_many(bridges);
+                    }
+                }
+                Err(_) => {
+                    tracing::warn!("⚠️ MCP server connection timed out (10s), skipping");
+                }
             }
             if total_mcp_tools > 0 {
                 tracing::info!("✅ {} MCP tool(s) registered", total_mcp_tools);
