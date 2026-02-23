@@ -2094,6 +2094,10 @@ async function loadAgents() {
         <div style="font-size:12px;color:var(--text2)">${a.description}</div>
         <div style="font-size:11px;color:var(--text2);margin-top:6px">💬 ${a.messages_processed} messages • 📝 ${a.conversation_length} in context</div>
         <div id="agent-tg-badge-${a.name}" style="font-size:11px;margin-top:4px"></div>
+        ${(a.channels && a.channels.length > 0) ? '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">' + a.channels.map(ch => {
+          const chDef = CHANNELS.find(c => c.type === ch);
+          return '<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:rgba(99,102,241,.1);color:var(--accent)">' + (chDef ? chDef.icon + ' ' + chDef.name : ch) + '</span>';
+        }).join('') + '</div>' : ''}
         <div style="display:flex;gap:6px;margin-top:10px">
           <input id="agent-msg-${a.name}" placeholder="Chat with ${a.name}..." style="flex:1;font-size:12px" onkeydown="if(event.key==='Enter')chatWithAgent('${safeName}')">
           <button class="btn btn-primary btn-sm" onclick="chatWithAgent('${safeName}')" style="font-size:11px">Send</button>
@@ -2219,6 +2223,15 @@ async function editAgent(name) {
     await loadAgentModels(a.provider, 'edit-agent-model');
     if (a.model) modelSel.value = a.model;
   }
+  // Populate channel checkboxes (all channels, not just Telegram)
+  const chContainer = document.getElementById('edit-agent-channels');
+  const agentChannels = a.channels || [];
+  chContainer.innerHTML = CHANNELS.map(ch => {
+    const checked = agentChannels.includes(ch.type) ? 'checked' : '';
+    return `<label style="display:flex;align-items:center;gap:6px;padding:6px 12px;background:var(--bg2);border:1px solid ${checked ? 'var(--accent)' : 'var(--border)'};border-radius:8px;cursor:pointer;font-size:12px;transition:border-color .2s">
+      <input type="checkbox" value="${ch.type}" class="agent-channel-cb" ${checked}> ${ch.icon} ${ch.name}
+    </label>`;
+  }).join('');
   // Load telegram status
   loadTelegramStatus(name);
 }
@@ -2289,6 +2302,7 @@ async function saveAgentEdit() {
   const provider = document.getElementById('edit-agent-provider').value;
   const model = document.getElementById('edit-agent-model').value;
   const prompt = document.getElementById('edit-agent-prompt').value.trim();
+  const channels = [...document.querySelectorAll('.agent-channel-cb:checked')].map(cb => cb.value);
   const body = { role, description: desc };
   if (provider) body.provider = provider;
   if (model) body.model = model;
@@ -2300,12 +2314,19 @@ async function saveAgentEdit() {
     });
     const r = await res.json();
     if (r.ok) {
-      toast('✅ Agent "' + name + '" đã cập nhật!');
+      // Save channel bindings separately
+      await authFetch(API + '/api/v1/agents/' + encodeURIComponent(name) + '/channels', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ channels })
+      });
+      const chLabel = channels.length > 0 ? ' (' + channels.join(', ') + ')' : '';
+      toast('✅ Agent "' + name + '" đã cập nhật!' + chLabel);
       document.getElementById('agent-edit-modal').style.display = 'none';
       loadAgents();
     } else toast('❌ ' + r.message);
   } catch(e) { toast('❌ ' + e.message); }
 }
+
 
 async function broadcastMessage() {
   const msg = document.getElementById('broadcast-msg').value.trim();
@@ -2337,6 +2358,39 @@ let _activeGroupIdx = -1;
 let _chatMode = 'ws'; // 'ws' | 'agent' | 'group'
 let _chatAgentName = ''; // for agent/ws mode
 let _cachedAgents = []; // cached from last fetch
+
+// \u2550\u2550\u2550 CHAT HISTORY PERSISTENCE \u2550\u2550\u2550
+// Store chat messages per target to restore when switching
+let _chatHistoryMap = JSON.parse(sessionStorage.getItem('bizclaw_chat_history') || '{}');
+
+function _chatHistoryKey() {
+  if (_chatMode === 'ws') return 'ws:default';
+  if (_chatMode === 'agent') return 'agent:' + _chatAgentName;
+  if (_chatMode === 'group') return 'group:' + _activeGroupIdx;
+  return 'ws:default';
+}
+
+function saveChatHistory() {
+  const el = document.getElementById('chat-messages');
+  if (!el) return;
+  const key = _chatHistoryKey();
+  _chatHistoryMap[key] = el.innerHTML;
+  try { sessionStorage.setItem('bizclaw_chat_history', JSON.stringify(_chatHistoryMap)); } catch(e) {}
+}
+
+function restoreChatHistory() {
+  const key = _chatHistoryKey();
+  const saved = _chatHistoryMap[key];
+  const el = document.getElementById('chat-messages');
+  if (!el) return false;
+  if (saved) {
+    el.innerHTML = saved;
+    el.scrollTop = el.scrollHeight;
+    return true;
+  }
+  return false;
+}
+
 
 function saveGroups() {
   localStorage.setItem('bizclaw_groups', JSON.stringify(_groups));
@@ -2419,10 +2473,13 @@ async function refreshChatSidebar() {
     html += '<div class="chat-list-sep">\ud83d\udc65 Nh\u00f3m</div>';
     _groups.forEach((g, i) => {
       const isActive = _chatMode==='group' && _activeGroupIdx===i;
-      html += `<div class="chat-list-item ${isActive?'active':''}" onclick="selectGroupChat(${i})">
-        <div class="chat-list-icon">\ud83d\udc65</div>
-        <div class="chat-list-info"><div class="chat-list-name">${g.name}</div><div class="chat-list-sub">${g.agents.join(', ')}</div></div>
-        <span class="chat-list-badge" style="background:rgba(251,146,60,.12);color:var(--orange)">${g.agents.length}</span>
+      html += `<div class="chat-list-item ${isActive?'active':''}" style="position:relative">
+        <div style="display:flex;align-items:center;flex:1;gap:8px;cursor:pointer" onclick="selectGroupChat(${i})">
+          <div class="chat-list-icon">\ud83d\udc65</div>
+          <div class="chat-list-info"><div class="chat-list-name">${g.name}</div><div class="chat-list-sub">${g.agents.join(', ')}</div></div>
+          <span class="chat-list-badge" style="background:rgba(251,146,60,.12);color:var(--orange)">${g.agents.length}</span>
+        </div>
+        <button onclick="event.stopPropagation();deleteGroup(${i})" title="Xóa nhóm" style="background:none;border:none;cursor:pointer;padding:4px 6px;font-size:12px;color:var(--red);opacity:.5;transition:opacity .2s" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.5'">🗑️</button>
       </div>`;
     });
   }
@@ -2430,18 +2487,22 @@ async function refreshChatSidebar() {
 }
 
 function selectWSChat() {
+  saveChatHistory(); // save current before switching
   _chatMode = 'ws';
   _chatAgentName = '';
   _activeGroupIdx = -1;
   document.getElementById('chat-target-icon').textContent = '\ud83e\udd16';
   document.getElementById('chat-target-name').textContent = 'Default Agent';
   document.getElementById('chat-target-sub').textContent = 'WebSocket \u2022 Direct';
-  document.getElementById('chat-messages').innerHTML = '<div class="msg msg-system">' + t('chat.welcome') + '</div>';
+  if (!restoreChatHistory()) {
+    document.getElementById('chat-messages').innerHTML = '<div class="msg msg-system">' + t('chat.welcome') + '</div>';
+  }
   refreshChatSidebar();
   document.getElementById('chat-input').focus();
 }
 
 function selectAgentChat(name, role) {
+  saveChatHistory(); // save current before switching
   _chatMode = 'agent';
   _chatAgentName = name;
   _activeGroupIdx = -1;
@@ -2449,12 +2510,15 @@ function selectAgentChat(name, role) {
   document.getElementById('chat-target-icon').textContent = icon;
   document.getElementById('chat-target-name').textContent = name;
   document.getElementById('chat-target-sub').textContent = (role || 'assistant') + ' \u2022 REST API';
-  document.getElementById('chat-messages').innerHTML = '<div class="msg msg-system">\ud83e\udd16 Chat v\u1edbi agent <b>' + name + '</b> qua REST API</div>';
+  if (!restoreChatHistory()) {
+    document.getElementById('chat-messages').innerHTML = '<div class="msg msg-system">\ud83e\udd16 Chat v\u1edbi agent <b>' + name + '</b> qua REST API</div>';
+  }
   refreshChatSidebar();
   document.getElementById('chat-input').focus();
 }
 
 function selectGroupChat(idx) {
+  saveChatHistory(); // save current before switching
   _chatMode = 'group';
   _chatAgentName = '';
   _activeGroupIdx = idx;
@@ -2747,7 +2811,9 @@ function handleWS(msg) {
         const ctxInfo = `📊 ctx: ${ctx.estimated_tokens||0} tokens (${(ctx.utilization_pct||0).toFixed(1)}%) | ${ctx.message_count||0} msgs${ctx.last_tool_rounds ? ' | 🔧 ' + ctx.last_tool_rounds + ' tool round(s)' : ''}${ctx.compacted ? ' | 📦 compacted' : ''}`;
         addMsg(ctxInfo, 'system');
       }
+      saveChatHistory(); // persist streamed response
       break;
+
     case 'chat_response': addMsg(msg.content, 'bot'); break;
     case 'chat_error':
       typing.style.display = 'none';
@@ -2847,6 +2913,7 @@ function addMsg(text, role) {
   el.textContent = text;
   document.getElementById('chat-messages').appendChild(el);
   el.parentElement.scrollTop = el.parentElement.scrollHeight;
+  saveChatHistory(); // persist after adding message
 }
 
 // ═══ HELPERS ═══

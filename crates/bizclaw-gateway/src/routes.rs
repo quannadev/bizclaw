@@ -932,14 +932,37 @@ pub async fn knowledge_remove_doc(
 /// List all agents in the orchestrator.
 pub async fn list_agents(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let orch = state.orchestrator.lock().await;
+    let mut agents = orch.list_agents();
+
+    // Load channel bindings and attach to each agent
+    let bindings_path = state.config_path.parent()
+        .unwrap_or(std::path::Path::new("."))
+        .join("agent-channels.json");
+    let bindings: serde_json::Value = if bindings_path.exists() {
+        std::fs::read_to_string(&bindings_path)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+            .unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    for agent in agents.iter_mut() {
+        if let Some(name) = agent["name"].as_str() {
+            let ch = bindings.get(name).cloned().unwrap_or(serde_json::json!([]));
+            agent.as_object_mut().map(|o| o.insert("channels".into(), ch));
+        }
+    }
+
     Json(serde_json::json!({
         "ok": true,
-        "agents": orch.list_agents(),
+        "agents": agents,
         "total": orch.agent_count(),
         "default": orch.default_agent_name(),
         "recent_messages": orch.recent_messages(10),
     }))
 }
+
 
 /// Create a new named agent.
 pub async fn create_agent(
