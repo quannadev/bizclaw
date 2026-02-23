@@ -1,0 +1,128 @@
+name: BizClaw CI/CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  # ── Build & Test ──
+  test:
+    name: 🧪 Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🦀 Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📦 Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: 🔨 Build
+        run: cargo build --workspace --all-targets
+
+      - name: 🧪 Run Tests
+        run: cargo test --workspace -- --nocapture
+
+      - name: 📊 Test Summary
+        if: always()
+        run: |
+          echo "## 📊 Test Results" >> $GITHUB_STEP_SUMMARY
+          cargo test --workspace 2>&1 | grep -E "test result|running" >> $GITHUB_STEP_SUMMARY || true
+
+  # ── Clippy Lint ──
+  lint:
+    name: 🔍 Clippy Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-clippy-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: 🔍 Run Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings -A unused-imports -A dead-code
+
+  # ── Format Check ──
+  format:
+    name: 📐 Format Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: 📐 Check Formatting
+        run: cargo fmt --all -- --check
+
+  # ── Deploy to VPS ──
+  deploy:
+    name: 🚀 Deploy to Production
+    needs: [test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    timeout-minutes: 20
+
+    steps:
+      - name: 🚀 Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          timeout: 600s
+          script: |
+            set -e
+            cd /root/bizclaw
+            echo "📥 Pulling latest code..."
+            git pull origin master
+            
+            echo "🔨 Building release..."
+            source "$HOME/.cargo/env"
+            cargo build --release --bin bizclaw --bin bizclaw-platform
+            
+            echo "🔄 Deploying binaries..."
+            systemctl stop bizclaw-platform
+            sleep 1
+            cp target/release/bizclaw /usr/local/bin/bizclaw
+            cp target/release/bizclaw-platform /usr/local/bin/bizclaw-platform
+            systemctl start bizclaw-platform
+            
+            echo "✅ Verifying..."
+            sleep 3
+            systemctl is-active bizclaw-platform
+            echo "✅ Deployed at $(date)"

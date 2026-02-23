@@ -6,11 +6,11 @@ BizClaw là nền tảng AI Agent kiến trúc trait-driven, có thể chạy **
 
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-76%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-89%20passing-brightgreen)]()
 [![Crates](https://img.shields.io/badge/crates-14-success)]()
-[![LOC](https://img.shields.io/badge/lines-21375-informational)]()
+[![LOC](https://img.shields.io/badge/lines-21736-informational)]()
 
-<!-- AUTO-GENERATED STATS — updated 2026-02-23 @ 5193947 -->
+<!-- AUTO-GENERATED STATS — updated 2026-02-23 @ ca0fd34 -->
 
 ---
 
@@ -144,13 +144,13 @@ ollama pull llama3.2      # ~3.8GB
 |--------|-------|
 | **Language** | 100% Rust |
 | **Crates** | 14 |
-| **Lines of Code** | ~21375 |
-| **Tests** | 76 passing |
+| **Lines of Code** | ~21736 |
+| **Tests** | 89 passing |
 | **Providers** | 9 |
 | **Channels** | 18 |
 | **Tools** | 15 + MCP |
 | **Binary Size** | bizclaw 11M, platform 7.1M |
-| **Last Updated** | 2026-02-23 (5193947) |
+| **Last Updated** | 2026-02-23 (ca0fd34) |
 
 ---
 

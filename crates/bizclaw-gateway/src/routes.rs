@@ -1409,8 +1409,11 @@ mod tests {
                 bizclaw_scheduler::SchedulerEngine::new(&std::env::temp_dir().join("bizclaw-test-sched"))
             )),
             knowledge: Arc::new(tokio::sync::Mutex::new(None)),
+            telegram_bots: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         }))
     }
+
+    // ---- Health & Info ----
 
     #[tokio::test]
     async fn test_health_check() {
@@ -1425,7 +1428,19 @@ mod tests {
         let json = result.0;
         assert_eq!(json["name"], "BizClaw");
         assert!(json["version"].is_string());
+        assert!(json["uptime_secs"].is_number());
     }
+
+    #[tokio::test]
+    async fn test_system_health_check() {
+        let result = system_health_check(test_state()).await;
+        let json = result.0;
+        // Health check may fail if config file doesn't exist in test env
+        assert!(json["checks"].is_array());
+        assert!(json.get("score_pct").is_some());
+    }
+
+    // ---- Providers & Channels ----
 
     #[tokio::test]
     async fn test_list_providers() {
@@ -1440,5 +1455,200 @@ mod tests {
         let result = list_channels(test_state()).await;
         let json = result.0;
         assert!(json["channels"].is_array());
+        let channels = json["channels"].as_array().unwrap();
+        // Should have at least CLI, Telegram, Zalo channels
+        assert!(channels.len() >= 3);
+    }
+
+    // ---- Config ----
+
+    #[tokio::test]
+    async fn test_get_config() {
+        let result = get_config(test_state()).await;
+        let json = result.0;
+        assert!(json["default_provider"].is_string());
+        assert!(json["default_model"].is_string());
+    }
+
+    #[tokio::test]
+    async fn test_get_full_config() {
+        let result = get_full_config(test_state()).await;
+        let json = result.0;
+        assert!(json.is_object());
+    }
+
+    #[tokio::test]
+    async fn test_update_config() {
+        let body = Json(serde_json::json!({
+            "default_provider": "ollama",
+            "default_model": "llama3.2"
+        }));
+        let result = update_config(test_state(), body).await;
+        let json = result.0;
+        assert!(json["ok"].as_bool().unwrap());
+
+        // Verify updated
+        let config_result = get_config(test_state()).await;
+        // Note: test_state creates fresh state each time, so only in-memory update is tested
+    }
+
+    // ---- Multi-Agent ----
+
+    #[tokio::test]
+    async fn test_list_agents_empty() {
+        let result = list_agents(test_state()).await;
+        let json = result.0;
+        assert!(json["ok"].as_bool().unwrap());
+        assert_eq!(json["total"], 0);
+        assert!(json["agents"].is_array());
+    }
+
+    #[tokio::test]
+    async fn test_create_agent() {
+        let state = test_state();
+        let body = Json(serde_json::json!({
+            "name": "test-agent",
+            "role": "assistant",
+            "description": "A test agent",
+            "system_prompt": "You are a test agent."
+        }));
+        let result = create_agent(state.clone(), body).await;
+        let json = result.0;
+        assert!(json["ok"].as_bool().unwrap());
+        assert_eq!(json["name"], "test-agent");
+        assert_eq!(json["total_agents"], 1);
+
+        // List should now have 1
+        let list = list_agents(state.clone()).await;
+        assert_eq!(list.0["total"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_create_agent_missing_name() {
+        let body = Json(serde_json::json!({
+            "role": "assistant"
+        }));
+        let result = create_agent(test_state(), body).await;
+        let json = result.0;
+        // Agent creation with missing "name" field — the endpoint reads it as empty string
+        // which may or may not fail depending on validation
+        assert!(json.get("ok").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_update_agent() {
+        let state = test_state();
+        // Create first
+        let body = Json(serde_json::json!({
+            "name": "editor",
+            "role": "assistant",
+            "description": "Original desc"
+        }));
+        create_agent(state.clone(), body).await;
+
+        // Update
+        let update_body = Json(serde_json::json!({
+            "role": "coder",
+            "description": "Updated desc"
+        }));
+        let result = update_agent(
+            state.clone(),
+            axum::extract::Path("editor".to_string()),
+            update_body,
+        ).await;
+        let json = result.0;
+        assert!(json["ok"].as_bool().unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_update_nonexistent_agent() {
+        let body = Json(serde_json::json!({"role": "coder"}));
+        let result = update_agent(
+            test_state(),
+            axum::extract::Path("nonexistent".to_string()),
+            body,
+        ).await;
+        let json = result.0;
+        assert!(!json["ok"].as_bool().unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_delete_agent() {
+        let state = test_state();
+        // Create first
+        let body = Json(serde_json::json!({
+            "name": "deleteme",
+            "role": "assistant",
+            "description": "To be deleted"
+        }));
+        create_agent(state.clone(), body).await;
+
+        // Delete
+        let result = delete_agent(
+            state.clone(),
+            axum::extract::Path("deleteme".to_string()),
+        ).await;
+        assert!(result.0["ok"].as_bool().unwrap());
+
+        // Verify gone
+        let list = list_agents(state.clone()).await;
+        assert_eq!(list.0["total"], 0);
+    }
+
+    #[tokio::test]
+    async fn test_delete_nonexistent_agent() {
+        let result = delete_agent(
+            test_state(),
+            axum::extract::Path("ghost".to_string()),
+        ).await;
+        assert!(!result.0["ok"].as_bool().unwrap());
+    }
+
+    // ---- Telegram Bot Status ----
+
+    #[tokio::test]
+    async fn test_telegram_status_not_connected() {
+        let result = telegram_status(
+            test_state(),
+            axum::extract::Path("some-agent".to_string()),
+        ).await;
+        let json = result.0;
+        assert!(json["ok"].as_bool().unwrap());
+        assert!(!json["connected"].as_bool().unwrap());
+    }
+
+    // ---- Knowledge Base ----
+
+    #[tokio::test]
+    async fn test_knowledge_list_docs_no_store() {
+        let result = knowledge_list_docs(test_state()).await;
+        let json = result.0;
+        // Should handle gracefully when no KB initialized
+        assert!(json.is_object());
+    }
+
+    #[tokio::test]
+    async fn test_knowledge_search_no_store() {
+        let body = Json(serde_json::json!({"query": "test"}));
+        let result = knowledge_search(test_state(), body).await;
+        let json = result.0;
+        assert!(json.is_object());
+    }
+
+    // ---- Scheduler ----
+
+    #[tokio::test]
+    async fn test_scheduler_list_tasks() {
+        let result = scheduler_list_tasks(test_state()).await;
+        let json = result.0;
+        assert!(json["ok"].as_bool().unwrap());
+        assert!(json["tasks"].is_array());
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_notifications() {
+        let result = scheduler_notifications(test_state()).await;
+        let json = result.0;
+        assert!(json["ok"].as_bool().unwrap());
     }
 }

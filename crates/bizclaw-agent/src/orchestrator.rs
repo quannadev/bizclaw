@@ -216,3 +216,154 @@ impl Default for Orchestrator {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bizclaw_core::config::BizClawConfig;
+
+    fn make_test_agent() -> Agent {
+        Agent::new(BizClawConfig::default()).expect("test agent creation failed")
+    }
+
+    #[test]
+    fn test_orchestrator_new() {
+        let orch = Orchestrator::new();
+        assert_eq!(orch.agent_count(), 0);
+        assert!(orch.default_agent_name().is_none());
+        assert!(orch.message_log.is_empty());
+    }
+
+    #[test]
+    fn test_add_agent() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("researcher", "researcher", "Research agent", make_test_agent());
+        assert_eq!(orch.agent_count(), 1);
+    }
+
+    #[test]
+    fn test_first_agent_becomes_default() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("first", "assistant", "First agent", make_test_agent());
+        assert_eq!(orch.default_agent_name(), Some("first"));
+        
+        // Second agent should not override default
+        orch.add_agent("second", "coder", "Second agent", make_test_agent());
+        assert_eq!(orch.default_agent_name(), Some("first"));
+    }
+
+    #[test]
+    fn test_remove_agent() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("temp", "assistant", "Temp", make_test_agent());
+        assert_eq!(orch.agent_count(), 1);
+        
+        let removed = orch.remove_agent("temp");
+        assert!(removed);
+        assert_eq!(orch.agent_count(), 0);
+        
+        // Removing nonexistent returns false
+        let removed2 = orch.remove_agent("nonexistent");
+        assert!(!removed2);
+    }
+
+    #[test]
+    fn test_remove_default_reassigns() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("a", "assistant", "A", make_test_agent());
+        orch.add_agent("b", "coder", "B", make_test_agent());
+        assert_eq!(orch.default_agent_name(), Some("a"));
+        
+        orch.remove_agent("a");
+        // Default should reassign to remaining agent
+        assert!(orch.default_agent_name().is_some());
+    }
+
+    #[test]
+    fn test_set_default() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("a", "assistant", "A", make_test_agent());
+        orch.add_agent("b", "coder", "B", make_test_agent());
+        
+        orch.set_default("b");
+        assert_eq!(orch.default_agent_name(), Some("b"));
+        
+        // Setting nonexistent does nothing
+        orch.set_default("nonexistent");
+        assert_eq!(orch.default_agent_name(), Some("b"));
+    }
+
+    #[test]
+    fn test_update_agent() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("x", "assistant", "Original", make_test_agent());
+        
+        let updated = orch.update_agent("x", Some("coder"), Some("Updated desc"));
+        assert!(updated);
+        
+        let agents = orch.list_agents();
+        let agent = &agents[0];
+        assert_eq!(agent["role"], "coder");
+        assert_eq!(agent["description"], "Updated desc");
+    }
+
+    #[test]
+    fn test_update_nonexistent_agent() {
+        let mut orch = Orchestrator::new();
+        let updated = orch.update_agent("ghost", Some("role"), None);
+        assert!(!updated);
+    }
+
+    #[test]
+    fn test_list_agents() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("alpha", "researcher", "Alpha agent", make_test_agent());
+        orch.add_agent("beta", "writer", "Beta agent", make_test_agent());
+        
+        let agents = orch.list_agents();
+        assert_eq!(agents.len(), 2);
+        
+        // Check fields exist
+        for a in &agents {
+            assert!(a["name"].is_string());
+            assert!(a["role"].is_string());
+            assert!(a["description"].is_string());
+            assert!(a["active"].is_boolean());
+            assert!(a["tools"].is_number());
+        }
+    }
+
+    #[test]
+    fn test_agent_count() {
+        let mut orch = Orchestrator::new();
+        assert_eq!(orch.agent_count(), 0);
+        orch.add_agent("one", "a", "A", make_test_agent());
+        assert_eq!(orch.agent_count(), 1);
+        orch.add_agent("two", "b", "B", make_test_agent());
+        assert_eq!(orch.agent_count(), 2);
+        orch.remove_agent("one");
+        assert_eq!(orch.agent_count(), 1);
+    }
+
+    #[test]
+    fn test_recent_messages_empty() {
+        let orch = Orchestrator::new();
+        let msgs = orch.recent_messages(10);
+        assert!(msgs.is_empty());
+    }
+
+    #[test]
+    fn test_get_agent_mut() {
+        let mut orch = Orchestrator::new();
+        orch.add_agent("mutable", "assistant", "M", make_test_agent());
+        
+        assert!(orch.get_agent_mut("mutable").is_some());
+        assert!(orch.get_agent_mut("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_default_trait() {
+        let orch = Orchestrator::default();
+        assert_eq!(orch.agent_count(), 0);
+    }
+}
