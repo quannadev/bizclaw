@@ -1,4 +1,4 @@
-# ⚡ BizClaw — Trợ lý AI Cá Nhân cho Doanh Nghiệp
+# ⚡ BizClaw — Trợ lý AI Cá Nhân, Self-Hosted
 
 <p align="center">
   <img src="docs/images/hero-banner.png" alt="BizClaw — AI Agent bỏ túi" width="800">
@@ -9,7 +9,7 @@
   Raspberry Pi ($0) • Android (24/7) • Laptop / Mini PC
 </p>
 
-> **BizClaw** là nền tảng AI Agent self-hosted, viết hoàn toàn bằng Rust. Chạy trên bất kỳ thiết bị nào từ 512MB RAM — từ Raspberry Pi bỏ túi đến laptop cá nhân. Không cần cloud, không cần server.
+> **BizClaw** là nền tảng AI Agent self-hosted, viết hoàn toàn bằng Rust. Chạy trên bất kỳ thiết bị nào từ 512MB RAM — từ Raspberry Pi bỏ túi đến laptop cá nhân. Không cần cloud, không cần server. Dự án được xây dựng để **tự học**, **thử nghiệm AI** và **vibe coding** 🎶
 
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -24,10 +24,10 @@
 
 | Đối tượng | Lợi ích |
 |-----------|---------|
-| 🧑‍💼 **Doanh nhân nhỏ** | AI trả lời khách hàng 24/7 qua Zalo, Telegram, Email |
-| 💻 **Developer** | Self-hosted AI agent với 16 providers, 16+ tools, MCP support |
-| 🏪 **Cửa hàng / Quán** | AI hỗ trợ báo giá, lịch hẹn — chạy trên Raspberry Pi $0/tháng |
-| 📱 **Người dùng Android** | Nhắn tin nhờ Mama làm việc, Auto-Reply Zalo/Messenger/Telegram 24/7 — offline 100% |
+| 💻 **Developer** | Tự học Rust, kiến trúc AI Agent, multi-provider, MCP — bằng cách "vibe coding" thật |
+| 🧑‍🎓 **Người học AI** | Playground local chạy 15+ providers, tự thí nghiệm prompt, RAG, workflow |
+| 📱 **Tinkerer / Maker** | Chạy AI Agent trên Raspberry Pi, Android — biến thiết bị thành trợ lý cá nhân |
+| 🎙️ **IoT Enthusiast** | Kết nối ESP32 Xiaozhi (~$5) làm AI voice assistant vật lý |
 
 > 🔒 **Không telemetry. Không tracking. Không tạo tài khoản trên server trung gian.** Dữ liệu chat, API Keys mã hoá AES-256 trên ổ cứng của bạn.
 
@@ -43,12 +43,6 @@
 | 🏠 **Landing Page** | [https://bizclaw.vn](https://bizclaw.vn) |
 | 📧 **Email** | `admin@bizclaw.vn` |
 | 🔑 **Password** | `BizClaw@Demo2026` |
-
-```bash
-# Hoặc truy cập domain phụ (cùng hệ thống):
-# Dashboard:  https://apps.viagent.vn
-# Landing:    https://viagent.vn
-```
 
 > ⚠️ **Lưu ý quan trọng:**
 > - Đây là tài khoản **Admin** dùng chung cho cộng đồng — bạn sẽ thấy toàn bộ Dashboard, Agents, Providers, Channels, Knowledge Base, Scheduler...
@@ -135,9 +129,9 @@ brew install cloudflared         # macOS
 
 ```bash
 curl -sSL https://bizclaw.vn/install.sh | sudo bash -s -- \
-  --domain bot.company.vn \
-  --admin-email admin@company.vn
-# → Dashboard tại https://bot.company.vn
+  --domain bot.yourdomain.com \
+  --admin-email you@email.com
+# → Dashboard tại https://bot.yourdomain.com
 ```
 
 > 💡 **Chỉ cần 1 file `config.toml`** — không cần PostgreSQL, không cần Nginx, không cần domain.
@@ -159,147 +153,24 @@ curl -sSL https://bizclaw.vn/install.sh | sudo bash -s -- \
 | **🖐️ Autonomous Hands** | Agent chạy background 24/7 — Research, Analytics, Content, Monitoring, Security. Tự retry, tự report |
 | **🔄 Workflows** | 23 workflow templates có sẵn. Multi-step pipeline: Sequential, FanOut, Collect, Conditional, Loop, Transform |
 | **⏰ Scheduler** | Cron, interval, one-time tasks. Agent tự chạy background, gửi kết quả qua Telegram/Zalo/Email/Webhook |
-| **🎨 51 Agent Templates** | Gallery 13 danh mục nghiệp vụ: HR, Sales, Finance, Marketing, Legal, IT... cài 1 click |
+| **🎨 51 Agent Templates** | Gallery 13 danh mục: Dev, Research, Creative, Data, IoT... cài 1 click |
 | **🌐 Web Dashboard** | 20+ trang UI (VI/EN), modular lazy-loading, WebSocket real-time, Full CRUD, Dark/Light mode |
 | **🎙️ Xiaozhi Voice** | Kết nối ESP32 Xiaozhi (~$5) làm AI Assistant vật lý. Voice → Agent → Voice. OpenAI-compatible API + Webhook. $0/tháng |
 | **🔐 Vault** | Secret Vault (`vault://`) — mã hóa API keys at rest với AES-256-CBC. Config dùng `vault://key_name` → auto-resolve. CLI: `bizclaw vault set/get/list` |
-| **✅ Approval Gates** | Human-in-the-loop cho tools nhạy cảm (shell, http_request). Submit → Approve/Deny/Expire. Enterprise compliance |
+| **✅ Approval Gates** | Human-in-the-loop cho tools nhạy cảm (shell, http_request). Submit → Approve/Deny/Expire |
 | **🛠️ Custom Tools** | Agent tự tạo tools (bash/python/node) cho task lặp lại. Hot-reload, sandboxed execution (env_clear), dangerous pattern validation |
 | **📊 Progress Updates** | Mid-task status messaging — user thấy "🔍 Searching..." thay vì im lặng. ProgressSender trait cho channels |
 | **🔒 Bảo mật** | AES-256 API key encryption, Vault URI scheme, RBAC 4-tier (Admin/Manager/User/Viewer), Prompt Injection Scanner (8 patterns, 80+ keywords, EN/VI/CN/JP/KR), SSRF Protection (IPv4+IPv6), Audit Trail, Per-IP rate limiting, HMAC-SHA256, Command allowlist, Runtime sandbox, Docker non-root user |
 | **🖥️ Desktop App** | macOS (.dmg), Windows (.exe), Linux (.deb) — 13MB, auto-open browser, zero config |
-| **☁️ Cloud Platform** | *(Bản Cloud)* Multi-tenant SaaS, PaaS remote nodes, JWT SSO, PostgreSQL — [bizclaw.vn](https://bizclaw.vn) |
 | **⚡ Circuit Breaker** | Tự ngắt khi provider fail liên tục — exponential backoff, auto-recovery, zero downtime |
 | **🎯 Model Router** | Auto-chọn model tối ưu theo complexity: Simple→Fast, Standard→Primary, Complex→Premium. Hỗ trợ `!fast` / `!best` override |
-
 | **📊 Prometheus** | `/metrics` endpoint — 8 gauges/counters, OpenMetrics format, tích hợp Grafana |
-| **📋 Audit Trail** | Ghi log toàn bộ thao tác: ai làm gì, lúc nào, cái gì — compliance SOC2/ISO 27001 |
 | **💾 Backup/Restore** | Export/Import JSON — backup agents, channels, settings. Disaster recovery |
 | **👑 RBAC** | 4 tầng phân quyền: Admin → Manager → User → Viewer. 60+ routes bảo vệ |
-| **📊 RAG-from-DB** | AI tự khám phá DB → tự viết SQL → lấy data realtime → phân tích. Hỏi tiếng Việt, trả lời bằng data sống |
-| **🏭 Industry Templates** | 3 template ngành (Bán lẻ, F&B, BĐS) — cài xong chạy luôn, không cần custom |
-| **📅 Scheduled Reports** | Agent tự query + phân tích + gửi báo cáo mỗi sáng qua Telegram/Zalo/Email |
-| **📱 Zalo Power Tool** | 13 actions: watch/unwatch nhóm + DM, tóm tắt nhóm/cá nhân, gửi tin nhắn, kết bạn, gửi báo cáo tới số chỉ định |
 
 ---
 
-## 💼 Ứng Dụng RAG + Zalo cho Doanh Nghiệp SME
-
-> **Biến BizClaw thành "bộ não" AI cho doanh nghiệp nhỏ & vừa** — kết nối dữ liệu nội bộ (RAG) với kênh giao tiếp hàng ngày (Zalo) để tạo ra giá trị thực, không chỉ là chatbot.
-
-### 🎯 Case 1: CSKH Thông Minh — "AI biết tất cả về sản phẩm"
-
-```
-📚 RAG Knowledge Base           💬 Zalo Channel
-┌─────────────────────┐         ┌─────────────────┐
-│ Bảng giá sản phẩm   │         │ Khách hỏi Zalo: │
-│ Chính sách bảo hành │ ──AI──► │ "Máy X giá bao  │
-│ FAQ 200+ câu        │         │  nhiêu, bảo hành│
-│ Hướng dẫn sử dụng   │         │  mấy năm?"      │
-└─────────────────────┘         └─────────────────┘
-                                        │
-                                        ▼
-                               "Máy X giá 15.9M,
-                                bảo hành 24 tháng,
-                                freeship nội thành"
-```
-
-**Hiệu quả:** Giảm 70% nhân sự CSKH, trả lời 24/7, không sai thông tin bảng giá.
-
-### 🎯 Case 2: Quản Lý Nhóm Zalo — "AI tóm tắt, sếp đọc 2 phút"
-
-```
-  📱 Nhóm Zalo "Kinh Doanh"     📱 Nhóm "Kỹ Thuật"     📱 Nhóm "Kho Vận"
-           │                            │                       │
-           └────────────────────────────┼───────────────────────┘
-                                        │
-                                   🤖 BizClaw Agent
-                                   (Zalo Tool: watch_group)
-                                        │
-                                   📊 AI Tóm Tắt
-                                        │
-                                   📨 Gửi báo cáo
-                                        │
-                                   📱 Sếp nhận Zalo DM:
-                                   ┌────────────────────┐
-                                   │ BÁO CÁO SÁNG NAY   │
-                                   │                     │
-                                   │ 📋 Nhóm KD:         │
-                                   │ • 3 deal mới close   │
-                                   │ • KH ABC phản hồi   │
-                                   │                     │
-                                   │ 🔧 Nhóm KT:         │
-                                   │ • Bug #127 đã fix    │
-                                   │ • Deploy v2.1 OK     │
-                                   │                     │
-                                   │ 📦 Kho:              │
-                                   │ • Hết hàng SP-X      │
-                                   │ • Đơn 50 box sáng    │
-                                   └────────────────────┘
-```
-
-**Hiệu quả:** Sếp đọc 2 phút thay vì lướt 500+ tin nhắn. Không bỏ lỡ quyết định quan trọng.
-
-### 🎯 Case 3: RAG-from-DB + Zalo = "Hỏi Doanh Thu Bằng Tiếng Việt"
-
-```
-📱 CEO nhắn Zalo: "Doanh thu tuần này so tuần trước?"
-         │
-         ▼
-   🤖 Agent tự chạy pipeline:
-   1️⃣ db_schema → Tìm bảng orders, payments
-   2️⃣ db_query  → SELECT SUM(total) ... GROUP BY week
-   3️⃣ AI phân tích → "Tuần này 280M, tăng 15% so tuần trước"
-         │
-         ▼
-📱 CEO nhận Zalo: "📊 Tuần 10: 280M (+15%)
-                    Top SP: Widget Pro (45M)
-                    KH mới: 12 (tăng 20%)"
-```
-
-**Hiệu quả:** Không cần mở laptop, hỏi Zalo là có data. Real-time, chính xác 100%.
-
-### 🎯 Case 4: Outreach & Kết Bạn Tự Động
-
-```
-🤖 Agent AI:
-   1. Lấy danh sách lead từ file/CRM
-   2. zalo_tool(action="send_friend_request", user_id="...", message="Chào anh/chị...")
-   3. Sau khi accept → zalo_tool(action="send_message", content="Cảm ơn đã kết nối...")
-   4. Theo dõi phản hồi → tóm tắt gửi về Sales Manager
-```
-
-**Hiệu quả:** Tự động kết nối 50-100 lead/ngày, follow-up không bỏ sót.
-
-### 🎯 Case 5: Giám Sát DM Cá Nhân — "AI thay bạn đọc tin"
-
-```
-   📱 DM từ 10+ đối tác/khách hàng
-           │
-   🤖 Agent (watch_user cho từng người)
-           │
-   📊 Tóm tắt DM:
-   "Anh A: hỏi về báo giá lô mới
-    Chị B: xác nhận thanh toán
-    Anh C: phàn nàn giao hàng chậm ← ⚠️ CẦN XỬ LÝ"
-           │
-   📨 Gửi báo cáo DM → Số Zalo sếp / nhân viên phụ trách
-```
-
-**Hiệu quả:** Không bỏ sót tin nhắn quan trọng dù có 100+ conversation.
-
-### 📊 So Sánh: Trước vs Sau BizClaw
-
-| Hạng mục | ❌ Trước (thủ công) | ✅ Sau (BizClaw) |
-|----------|-------------------|------------------|
-| CSKH | 2-3 nhân viên trực Zalo | AI trả lời 24/7, chính xác |
-| Đọc tin nhóm | Sếp lướt 500+ tin/ngày | AI tóm tắt 2 phút |
-| Báo cáo doanh thu | Kế toán xuất Excel, email | Hỏi Zalo, có ngay |
-| Follow-up khách | Quên, bỏ sót | AI tự kết bạn + follow |
-| Giám sát DM | Đọc từng tin | AI tóm tắt, highlight urgent |
-| Chi phí | 10-15M/tháng nhân sự | **$0** (self-hosted) |
-
-### 🔌 Mở Rộng Tools với MCP Ecosystem
+## 🔌 Mở Rộng Tools với MCP Ecosystem
 
 > BizClaw hỗ trợ **Model Context Protocol (MCP)** — chuẩn kết nối mở rộng tools không giới hạn.
 
@@ -340,59 +211,20 @@ args = ["-y", "@anthropic/mcp-server-brave-search"]
 
 **1000+ MCP tools có sẵn** tại [MCP Hub](https://github.com/modelcontextprotocol/servers) — GitHub, Slack, Google Drive, Notion, PostgreSQL, Brave Search, Puppeteer, và nhiều hơn nữa.
 
-> 💡 **Nexent Compatibility**: BizClaw tương thích với [Nexent MCP Ecosystem](https://github.com/ModelEngine-Group/nexent) — cho phép dùng chung plugin tools giữa 2 platform.
-
 ---
 
-## 📊 RAG-from-DB — Hỏi Database Bằng Tiếng Việt
-
-> **Thay thế NotebookLM** nhưng mạnh hơn — data luôn realtime, không cần upload tài liệu tĩnh!
-
-```
-User: "Doanh thu tháng này so với tháng trước?"
-
-Agent flow:
-  1️⃣ db_schema → Hiểu bảng orders có cột total, created_at
-  2️⃣ db_query  → SELECT SUM(total) FROM orders WHERE ...
-  3️⃣ AI phân tích → "Tháng 3: 150M, tăng 23% so tháng 2"
-  4️⃣ api_connector → POST /reports (lưu báo cáo tự động)
-```
-
-**3 tools tạo thành pipeline:**
-| Tool | Vai trò | Bảo vệ |
-|------|---------|--------|
-| `db_schema` | 🗺️ Khám phá cấu trúc DB (tables, columns, data mẫu) | Table allowlist |
-| `db_query` | 📖 ĐỌC — query MySQL/PostgreSQL/SQLite | 5 tầng: SQL safety, row limit, Vault, PII redact, table restrict |
-| `api_connector` | ✏️ GHI — gọi REST API cập nhật data | Field allowlist, dangerous flag, approval gate |
-
-## 🏭 Industry Templates — Cài Xong Chạy Luôn
-
-| Template | File | DB + Agent + API sẵn |
-|----------|------|---------------------|
-| 🛒 **Bán lẻ** | `data/industry-templates.json` | 2 agents (Sales + Kho), POS/Inventory/Customer tables |
-| 🍜 **F&B** | `data/industry-templates.json` | Agent nhà hàng, menu/order/ingredients tables |
-| 🏠 **Bất động sản** | `data/industry-templates.json` | 2 agents (Sales + Báo cáo), lead/property/contract tables |
-
-## 📅 Scheduled Reports — Agent Tự Gửi Báo Cáo Mỗi Sáng
-
-| Report | Lịch | Kênh |
-|--------|------|------|
-| 📊 Doanh thu hàng ngày | ⏰ 8:00 sáng mỗi ngày | Telegram, Zalo |
-| 📦 Tồn kho hàng tuần | ⏰ 9:00 sáng thứ Hai | Telegram |
-| 📈 Kinh doanh tổng hợp | ⏰ 8:00 sáng ngày 1 hàng tháng | Telegram, Zalo, Email |
-
-## 🖐️ Autonomous Hands — Nhân viên AI ca đêm
+## 🖐️ Autonomous Hands — Agent chạy nền tự động
 
 > Agent tự chạy, tự retry, tự báo cáo qua Telegram/Zalo/Email — không cần ai hỏi!
 
 | Hand | Nhiệm vụ | Phases |
 |------|-----------|--------|
 | 🔍 **Research Hand** | Thu thập thông tin, phân tích, tạo báo cáo | Gather → Analyze → Report |
-| 📊 **Analytics Hand** | Thống kê, xử lý trends, report hàng ngày | Collect → Process → Report |
+| 📊 **Analytics Hand** | Thống kê, xử lý trends, report | Collect → Process → Report |
 | ✍️ **Content Hand** | Sáng tạo nội dung, self-review, kiểm duyệt | Ideate → Create → Review |
 | 🛡️ **Monitor Hand** | Giám sát hệ thống, cảnh báo anomaly | Check → Alert |
 | 🔄 **Sync Hand** | Đồng bộ dữ liệu giữa các hệ thống | Fetch → Reconcile → Push |
-| 📣 **Outreach Hand** | Soạn tin outreach, review, gửi đa kênh | Prepare → Review → Send |
+| 📣 **Outreach Hand** | Soạn tin, review, gửi đa kênh | Prepare → Review → Send |
 | 🔒 **Security Hand** | Quét bảo mật, phân tích lỗ hổng | Scan → Analyze → Report |
 
 ```
@@ -437,45 +269,9 @@ Agent flow:
   Output: Bài viết hoàn chỉnh
 ```
 
-**23 Workflow Templates có sẵn:**
-
-| # | Category | Workflow | Flow |
-|---|----------|----------|------|
-| 1 | 📝 General | **Content Pipeline** | Draft → Review → Edit → Publish |
-| 2 | 📝 General | **Expert Consensus** | 3 experts FanOut → Vote/Merge |
-| 3 | 📝 General | **Quality Pipeline** | Generate → Loop Review → Approve |
-| 4 | 📝 General | **Research Pipeline** | Search → Analyze → Synthesize → Report |
-| 5 | 📝 General | **Translation** | Translate → Verify quality |
-| 6 | 📝 General | **Code Review** | Analyze → Security → Style → Summary |
-| 7 | 📊 Slides | **AI Slide Creator** | Research → Plan → FanOut 4 nhóm → Quality Loop → PPTX |
-| 8 | 🧑‍💼 CEO | **Meeting Recap** | Tóm tắt → Trích tasks → Phân công → Gửi team |
-| 9 | 🧑‍💼 CEO | **CEO Daily Briefing** | News + KPIs + Priorities (FanOut) → Morning briefing |
-| 10 | 🧑‍💼 CEO | **Competitor Analysis** | Research → SWOT → Chiến lược cạnh tranh |
-| 11 | 🧑‍💼 CEO | **Proposal Generator** | Brief KH → Soạn → Quality Loop → Send |
-| 12 | 🧑‍💼 CEO | **Weekly Report** | Sales+Ops+Finance (FanOut) → Executive Summary |
-| 13 | 📧 Biz | **Email Drip Campaign** | 5 emails nurturing (FanOut parallel) → Assemble |
-| 14 | 👥 Biz | **Hiring Pipeline** | JD → Interview Questions → Evaluation Matrix |
-| 15 | 💬 Biz | **Customer Feedback** | Thu thập → Phân loại → Insights → Action Plan |
-| 16 | ⚖️ Biz | **Contract Review** | Đọc HĐ → Rủi ro pháp lý → Đề xuất sửa → Tóm tắt CEO |
-| 17 | 🚀 Biz | **Product Launch** | Research → Plan → Content + PR (FanOut) → Launch Kit |
-| 18 | 🤖 Agent Team | **Vigor TrendScout** | FanOut scan PH·HN·Reddit → Merge → Score Report |
-| 19 | 🤖 Agent Team | **Vigor Blog Pipeline** | Keyword Research → Draft → SEO Optimize → Quality Loop |
-| 20 | 🤖 Agent Team | **Fidus Health Check** | Instance·DB·Disk·RAM·Cache → Alert |
-| 21 | 🤖 Agent Team | **Fidus Cost Tracker** | Token usage by model → Budget tracking → Anomaly |
-| 22 | 🤖 Agent Team | **Optimo Funnel Audit** | Conversion metrics → Drop-off → A/B test recommendations |
-| 23 | 🤖 Agent Team | **Mercury Outreach** | Prospect Research → Draft Email → Opt-out Check → SES |
+**23 Workflow Templates có sẵn** — bao gồm Content Pipeline, Expert Consensus, Quality Pipeline, Research Pipeline, Code Review, AI Slide Creator, và nhiều hơn nữa.
 
 ---
-
-## 🚀 CI/CD & AI Automations (New in v1.0)
-
-BizClaw tích hợp sẵn các AI Workflow hỗ trợ Developer tự động hóa toàn bộ chu trình phát triển:
-
-| Slash Command | Vai trò | Chi tiết |
-|---------------|---------|----------|
-| `@[/git]` | **Tự động hóa Git** | AI quét code thay đổi, quét bảo mật secrets, tự động sinh Conventional Commits và push an toàn lên repo. |
-| `@[/bizclaw-deploy]` | **Zero-Downtime Deploy** | Tự động SSH vào VPS, pull code, build Docker Compose, restart services và thực hiện Health Check đa luồng. |
-| `@[/watchdog]` | **Auto-kill Process** | Giám sát và tự động dọn dẹp các tiến trình bị treo (zombie/hung) bảo vệ RAM. |
 
 ## 🤖 Multi-Agent System
 
@@ -484,10 +280,10 @@ BizClaw tích hợp sẵn các AI Workflow hỗ trợ Developer tự động hó
 ```
   ┌─────────────────── Orchestrator ───────────────────┐
   │                                                     │
-  │  🧑‍💼 Agent "Sales"     │ Ollama/qwen3    │ Zalo    │
-  │  📊 Agent "Analytics"  │ DeepSeek/chat   │ Email   │
-  │  ✍️ Agent "Content"    │ Gemini/flash    │ Telegram│
-  │  ⚖️ Agent "Legal"      │ Claude          │ Web     │
+  │  🧑‍💼 Agent "Research"  │ Gemini/flash    │ Web     │
+  │  📊 Agent "Analyst"   │ DeepSeek/chat   │ CLI     │
+  │  ✍️ Agent "Writer"    │ Claude          │ Telegram│
+  │  ⚖️ Agent "Reviewer"  │ GPT-4o          │ Email   │
   │                                                     │
   └─────────────────────────────────────────────────────┘
 ```
@@ -496,41 +292,14 @@ BizClaw tích hợp sẵn các AI Workflow hỗ trợ Developer tự động hó
 - **Provider riêng**: Mỗi agent chọn provider/model tối ưu cho vai trò
 - **Group Chat**: Nhiều agent cộng tác giải quyết 1 vấn đề
 
-### 🎯 Agent Team Orchestration — Micro SaaS Operations
-
-> 5-agent AI team tự vận hành doanh nghiệp Micro SaaS. JSON config + scheduled workflows + budget tracking.
-
-```
-  ┌───────────────── Agent Team ─────────────────┐
-  │                                               │
-  │  🎯 MAX (COO)        Claude Sonnet 4  Telegram│
-  │  ├─ 📈 VIGOR (Growth)  Gemini Flash   SEO+Blog│
-  │  ├─ 🔧 FIDUS (Ops)     DeepSeek V3    Infra   │
-  │  ├─ 🧪 OPTIMO (Opt.)   Gemini Flash   A/B Test│
-  │  └─ 📧 MERCURY (Sales) GPT-4o Mini    Email   │
-  │                                               │
-  │  Budget: Per-agent token/USD limits            │
-  │  Guard Rails: Email limits, test rules, etc.   │
-  │  Scheduler: 7 automated tasks (cron/interval)  │
-  └───────────────────────────────────────────────┘
-```
-
-| Agent | Role | Model | Specialty | Schedule |
-|-------|------|-------|-----------|----------|
-| 🎯 **Max** | COO / Orchestrator | Claude Sonnet 4 | Phân tuyến, phê duyệt, tổng hợp, Telegram | Daily briefing 7AM |
-| 📈 **Vigor** | Growth | Gemini Flash | SEO, Blog, TrendScout, Social Monitoring | Scan mỗi 2h |
-| 🔧 **Fidus** | Ops | DeepSeek V3 | Health check, Cost tracking, Cache, Runaway | Health mỗi 5 phút |
-| 🧪 **Optimo** | Optimizer | Gemini Flash | Funnel audit, A/B testing (1 test, 7 ngày, 95%) | Weekly Monday 9AM |
-| 📧 **Mercury** | Sales | GPT-4o Mini | Cold email (<100 words, <20/ngày, CAN-SPAM) | Weekday 10AM |
-
 ---
 
 ## 🍓📱💻 Chạy trên mọi thiết bị
 
 | Thiết bị | Chi phí | Use Case |
 |----------|---------|----------|
-| 🍓 **Raspberry Pi** | **$0/tháng** | Doanh nghiệp nhỏ, cá nhân — binary 12MB, 512MB RAM |
-| 📱 **Android** | **$0/tháng** | Agent bỏ túi, điều khiển Facebook/Zalo — 24/7 |
+| 🍓 **Raspberry Pi** | **$0/tháng** | Trợ lý cá nhân, IoT hub — binary 12MB, 512MB RAM |
+| 📱 **Android** | **$0/tháng** | Agent bỏ túi, auto-reply chat, điều khiển app — 24/7 |
 | 💻 **Laptop / Mini PC** | **$0/tháng** | Agent mạnh mẽ, chạy nhiều model cùng lúc |
 
 ```
@@ -568,7 +337,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 
 ---
 
-## 💰 Mỗi Agent chọn Provider riêng — Tiết kiệm 60-80%
+## 💰 Mỗi Agent chọn Provider riêng — Tiết kiệm chi phí API
 
 > Thay vì dùng 1 provider đắt tiền cho mọi việc, hãy tối ưu theo từng vai trò:
 
@@ -578,7 +347,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
   Dịch thuật      │  Ollama/qwen3         │  $0 (local)   │  Free
   Full-Stack Dev  │  Anthropic/claude     │  $$$          │  Mạnh
   Social Media    │  Gemini/flash         │  $            │  Nhanh
-  Kế toán         │  DeepSeek/chat        │  $$           │  Giá tốt
+  Research        │  DeepSeek/chat        │  $$           │  Giá tốt
   Helpdesk        │  Groq/llama-3.3-70b   │  $            │  Nhanh
   Nội bộ          │  Brain Engine         │  $0 (offline) │  Bảo mật
 ```
@@ -604,7 +373,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 
 | Tính Năng Nổi Bật | Mô tả |
 |-------------------|-------|
-| 💬 **Auto-Reply CSKH** | Tự động trả lời khách trên Zalo, Messenger, Telegram qua thông báo (chạy nền, không cướp màn hình). |
+| 💬 **Auto-Reply** | Tự động trả lời tin nhắn trên Zalo, Messenger, Telegram qua thông báo (chạy nền, không cướp màn hình). |
 | 👑 **Mama Tổng Quản** | Nhắn tin cho chính mình (hoặc cho Mama) trên Zalo để ra lệnh cho AI làm việc thay bạn từ xa. |
 | ⚡ **Flow Runner** | Macro chạy instant — Cross-post Facebook/Zalo/Instagram/Threads cùng lúc. $0, không cần LLM. |
 | 🔗 **Workflow Engine** | Chain nhiều app: Shopee → Zalo → Facebook. LLM + macro kết hợp. |
@@ -622,7 +391,6 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 | 🔧 System | `open_app`, `open_url`, `device_info`, `press_back`, `press_home`, `press_enter`, `notifications` |
 
 > Tất cả chạy 100% offline. Không cần server, không API key.
-> Flow Runner & Vision Fallback bổ sung ở v0.5.0 cho phép automation không cần LLM và xử lý app phức tạp.
 
 ---
 
@@ -660,8 +428,7 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 | 🔗 **MCP Servers** | Quản lý MCP server connections |
 | 🖐️ **Autonomous Hands** | Tạo/sửa/xoá Hands, monitor runs, cost tracking |
 | 🔄 **Workflows** | Tạo/sửa/chạy workflow multi-step, 6 template có sẵn |
-
-| 🎨 **Gallery** | 51 agent templates theo 13 ngành |
+| 🎨 **Gallery** | 51 agent templates theo 13 danh mục |
 | ⏰ **Scheduler** | Lên lịch task, cron/interval, retry config |
 | 📈 **LLM Traces** | Xem lịch sử request/response AI |
 | 💰 **Cost Tracking** | Theo dõi chi phí API theo agent |
@@ -672,12 +439,10 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 
 ---
 
-## 🏗️ Kiến trúc Cấp Doanh Nghiệp (Enterprise Architecture)
-
-BizClaw Platform được thiết kế với kiến trúc **Process-level Isolation (Cách ly cấp tiến trình)**, đảm bảo dữ liệu của mỗi tenant (doanh nghiệp) được biệt lập hoàn toàn ở level hệ điều hành (OS), loại bỏ hoàn toàn rủi ro rò rỉ dữ liệu chéo thường thấy ở các hệ thống Chatbot SaaS thông thường.
+## 🏗️ Kiến trúc hệ thống
 
 <p align="center">
-  <img src="docs/bizclaw_architecture.png" alt="BizClaw Enterprise Architecture Diagram" width="800">
+  <img src="docs/bizclaw_architecture.png" alt="BizClaw Architecture Diagram" width="800">
 </p>
 
 ```
@@ -685,12 +450,12 @@ BizClaw Platform được thiết kế với kiến trúc **Process-level Isolat
 │          bizclaw (Gateway + Dashboard)                │
 │  ┌────────────────────────────────────────────┐       │
 │  │ Axum HTTP + WebSocket + Dashboard UI (20+) │       │
-│  │ PostgreSQL + Dynamic Nginx Routing         │       │
+│  │ SQLite / PostgreSQL + Routing              │       │
 │  └────────────────────┬───────────────────────┘       │
 │    ┌──────────────────┼──────────────────┐            │
 │    ▼                  ▼                  ▼            │
 │  bizclaw-agent      bizclaw-agent      bizclaw-agent  │
-│  (Single-Tenant Process Isolation)                    │
+│  (Process Isolation)                                  │
 │    ┌──────────────────┼──────────────────┐            │
 │    ▼                  ▼                  ▼            │
 │  18 Providers      10 Channels      13 Tools + MCP    │
@@ -727,27 +492,8 @@ BizClaw Platform được thiết kế với kiến trúc **Process-level Isolat
 | `bizclaw-hands` | Autonomous Hands (7 types) | ✅ |
 | `bizclaw-workflows` | Workflow orchestration (6 step types, 23 templates) | ✅ |
 | `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor, Ticket System | ✅ |
-
 | `bizclaw-ffi` | Android FFI layer | ✅ |
 | `bizclaw-db` | Database layer (SQLite + PostgreSQL) | ✅ |
-
-> ☁️ **Cloud-only**: `bizclaw-platform` (multi-tenant management) — có trong bản [BizClaw Cloud](https://bizclaw.vn).
-
----
-
-## ☁️ Muốn dùng bản Cloud?
-
-> Nếu bạn không muốn tự cài đặt, hãy đăng ký **BizClaw Cloud** — chúng tôi lo hạ tầng, bạn chỉ cần cấu hình AI.
-
-| | Self-Hosted (Repo này) | ☁️ Cloud |
-|--|--|--|
-| **Cài đặt** | Tự cài trên thiết bị | Không cần cài — dùng ngay |
-| **Hạ tầng** | Bạn quản lý | Chúng tôi quản lý |
-| **Cập nhật** | Tự pull & build | Tự động cập nhật |
-| **Hỗ trợ** | Community (GitHub) | Hỗ trợ ưu tiên |
-| **Giá** | **Miễn phí** | Theo gói |
-
-👉 **Tìm hiểu thêm tại [bizclaw.vn](https://bizclaw.vn)** — tab "Cloud"
 
 ---
 
@@ -799,13 +545,12 @@ llm:
 | **Crates** | 18 |
 | **Lines of Code** | ~60,000+ |
 | **Tests** | 270+ passing |
-| **Workflow Templates** | 23 (incl. 6 Agent Team workflows) |
-| **Agent Team** | 5 specialized agents (Max, Vigor, Fidus, Optimo, Mercury) |
+| **Workflow Templates** | 23 |
 | **Binary Size** | bizclaw ~12MB |
 | **Dashboard Pages** | 20+ (27 lazy-loaded modules) |
 | **Agent Templates** | 51 |
 | **Security** | Vault, Approval Gates, Prompt Injection Scanner, RBAC, AES-256-CBC, SSRF Protection, Audit Trail, Prometheus |
-| **Last Updated** | 2026-03-13 |
+| **Last Updated** | 2026-03-15 |
 
 ---
 
@@ -813,7 +558,7 @@ llm:
 
 ### What is BizClaw?
 
-BizClaw is a **self-hosted AI Agent platform** built entirely in Rust. Run AI agents on your own device — no cloud, no third-party servers. Your data stays with you.
+BizClaw is a **self-hosted AI Agent platform** built entirely in Rust. Run AI agents on your own device — no cloud, no third-party servers. Your data stays with you. This is a **learning project** — built for self-education, AI experimentation, and vibe coding 🎶
 
 ### Quick Start
 
@@ -831,24 +576,20 @@ cd bizclaw && cargo build --release
 - **10 Channels** — CLI, Telegram, Discord, Email, Webhook, WhatsApp, Zalo (Personal + OA), Xiaozhi ESP32 Voice
 - **16 Tools** + Custom Tool authoring (agent self-creates tools) + MCP support for unlimited extensions
 - **Secret Vault** — `vault://` URI scheme for encrypted API key storage. AES-256-CBC at rest
-- **Approval Gates** — Human-in-the-loop for sensitive tool actions (enterprise compliance)
+- **Approval Gates** — Human-in-the-loop for sensitive tool actions
 - **Progress Updates** — Mid-task status messaging so users see what the agent is doing
 - **Multi-Agent** — Create teams of agents with different roles, assign to channels
 - **Autonomous Hands** — Background agents that run 24/7: Research, Content, Analytics, Monitoring, Security
-- **Workflows** — 23 pre-built multi-step AI pipelines (incl. 6 Agent Team workflows)
-- **Agent Team** — 5-agent AI team (COO, Growth, Ops, Optimizer, Sales) with automated scheduling, budget tracking, and guard rails
-- **51 Agent Templates** — Pre-built for HR, Sales, Finance, Marketing, Legal, IT
+- **Workflows** — 23 pre-built multi-step AI pipelines
+- **51 Agent Templates** — Pre-built for various use cases
 - **Knowledge RAG** — Hybrid FTS5 + Vector search. Upload docs, AI answers from your content
 - **Scheduler** — Cron, interval, one-time tasks with retry and multi-channel notification
 - **20+ Dashboard Pages** — Full CRUD UI with VI/EN, WebSocket real-time, Dark/Light mode
-- **Android Agent** — On-device LLM with 20 device tools, runs 100% offline
-- **Enterprise Security** — Secret Vault, Approval Gates, Prompt Injection Scanner (8 patterns, 80+ keywords), SSRF Protection, AES-256-CBC, RBAC 4-tier, audit trail, per-IP rate limiting, Docker non-root, Prometheus
-- **Circuit Breaker** — Auto-stops cascading failures when providers go down, with exponential backoff
-- **Model Router** — Intelligent model selection based on task complexity (Fast/Primary/Premium tiers)
-
-- **Xiaozhi Voice** — ESP32 device (~$5) as physical AI assistant. Voice → ASR → BizClaw Agent → TTS → Speaker. $0/month
-
-> ☁️ **Want the hosted version?** Visit [bizclaw.vn](https://bizclaw.vn) — Cloud tab.
+- **Android Agent** — On-device LLM with 28 device tools, runs 100% offline
+- **Security** — Secret Vault, Approval Gates, Prompt Injection Scanner, SSRF Protection, AES-256-CBC, RBAC 4-tier, audit trail
+- **Circuit Breaker** — Auto-stops cascading failures when providers go down
+- **Model Router** — Intelligent model selection based on task complexity
+- **Xiaozhi Voice** — ESP32 device (~$5) as physical AI assistant. $0/month
 
 ---
 
@@ -882,5 +623,4 @@ MIT License — xem chi tiết tại [LICENSE](LICENSE).
 
 ---
 
-**BizClaw** v1.0.0 — *AI riêng, chạy mọi nơi. / Your own AI, runs everywhere.*
-
+**BizClaw** v1.0.0 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
