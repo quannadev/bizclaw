@@ -31,26 +31,7 @@
 
 > 🔒 **Không telemetry. Không tracking. Không tạo tài khoản trên server trung gian.** Dữ liệu chat, API Keys mã hoá AES-256 trên ổ cứng của bạn.
 
----
 
-## 🧪 Dùng Thử Demo — Trải nghiệm ngay không cần cài đặt
-
-> **Mục đích**: Học tập, nghiên cứu và thử nghiệm. Demo server chạy trên VPS thật để cộng đồng trải nghiệm toàn bộ tính năng trước khi tự host.
-
-| Thông tin | Giá trị |
-|-----------|---------|
-| 🌐 **Demo Dashboard** | [https://apps.bizclaw.vn](https://apps.bizclaw.vn) |
-| 🏠 **Landing Page** | [https://bizclaw.vn](https://bizclaw.vn) |
-| 📧 **Email** | `admin@bizclaw.vn` |
-| 🔑 **Password** | `BizClaw@Demo2026` |
-
-> ⚠️ **Lưu ý quan trọng:**
-> - Đây là tài khoản **Admin** dùng chung cho cộng đồng — bạn sẽ thấy toàn bộ Dashboard, Agents, Providers, Channels, Knowledge Base, Scheduler...
-> - **Không nhập API Key thật** vào demo server — hãy dùng Ollama (local, miễn phí) hoặc key test.
-> - Demo server được **reset định kỳ** — dữ liệu tạo trên demo không được lưu trữ vĩnh viễn.
-> - Muốn trải nghiệm đầy đủ với dữ liệu riêng? [Tự cài đặt](#-cài-đặt--5-cách) trên máy cá nhân (5 phút).
-
----
 
 ## 🚀 Cài đặt — 5 cách
 
