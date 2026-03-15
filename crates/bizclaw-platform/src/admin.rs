@@ -761,6 +761,13 @@ async fn create_tenant(
     Extension(claims): Extension<crate::auth::Claims>,
     Json(req): Json<CreateTenantReq>,
 ) -> Json<serde_json::Value> {
+    // Demo mode: block all tenant creation
+    if std::env::var("BIZCLAW_DEMO_MODE").unwrap_or_default() == "1" {
+        return Json(
+            serde_json::json!({"ok": false, "error": "🔒 Demo server — không thể tạo tenant mới. Vui lòng tự cài đặt BizClaw để trải nghiệm đầy đủ."}),
+        );
+    }
+
     // Role check: viewer cannot create tenants
     if claims.role == "viewer" {
         return Json(
@@ -858,6 +865,11 @@ async fn delete_tenant(
     Extension(claims): Extension<crate::auth::Claims>,
     Path(id): Path<String>,
 ) -> Json<serde_json::Value> {
+    // Demo mode: block tenant deletion
+    if std::env::var("BIZCLAW_DEMO_MODE").unwrap_or_default() == "1" {
+        return Json(serde_json::json!({"ok": false, "error": "🔒 Demo server — không thể xóa tenant."}));
+    }
+
     // RBAC: only superadmin or owner-admin can delete
     if !can_write_tenant(&claims, &id, &*state.db.lock().await) {
         return Json(serde_json::json!({"ok": false, "error": "Không có quyền xóa tenant này."}));
