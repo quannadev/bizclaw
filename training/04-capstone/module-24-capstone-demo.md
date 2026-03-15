@@ -91,7 +91,7 @@
 ### Cộng đồng:
 - 🌐 [bizclaw.vn](https://bizclaw.vn)
 - 📘 [Facebook](https://www.facebook.com/bizclaw.vn)
-- 💻 [GitHub](https://github.com/nguyenduchoai/bizclaw)
+- 💻 [GitHub](https://github.com/nguyenduchoai/bizclaw-cloud)
 
 ---
 

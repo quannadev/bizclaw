@@ -75,7 +75,7 @@ Danh sách đầy đủ xem tại `Cargo.toml`.
 
 Gửi đến tất cả các maintainer mã nguồn mở, nhà nghiên cứu, và cộng đồng chia sẻ thành quả của mình — BizClaw sẽ không tồn tại nếu thiếu các bạn.
 
-Nếu bạn tin rằng dự án của mình nên được ghi nhận ở đây nhưng chưa có, vui lòng [mở issue](https://github.com/nguyenduchoai/bizclaw/issues) hoặc gửi pull request.
+Nếu bạn tin rằng dự án của mình nên được ghi nhận ở đây nhưng chưa có, vui lòng [mở issue](https://github.com/nguyenduchoai/bizclaw-cloud/issues) hoặc gửi pull request.
 
 ---
 

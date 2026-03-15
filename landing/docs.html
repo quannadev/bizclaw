@@ -101,7 +101,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--muted)}
     <div class="nav-right">
       <a href="/">Trang chủ</a>
       <a href="/docs.html" style="color:var(--accent2)">Hướng dẫn</a>
-      <a href="https://github.com/nguyenduchoai/bizclaw" target="_blank">GitHub</a>
+      <a href="https://github.com/nguyenduchoai/bizclaw-cloud" target="_blank">GitHub</a>
       <button class="lang-btn" onclick="toggleLang()">🌐 EN</button>
     </div>
   </div>
@@ -197,7 +197,7 @@ td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--muted)}
 <p data-vi="Script tự động: cài Rust, clone repo, build release, tạo systemd service, khởi chạy." data-en="Auto: install Rust, clone repo, build release, create systemd service, start.">Script tự động: cài Rust, clone repo, build release, tạo systemd service, khởi chạy.</p>
 
 <h3 data-vi="3.2 Docker Compose" data-en="3.2 Docker Compose">3.2 Docker Compose</h3>
-<pre>git clone https://github.com/nguyenduchoai/bizclaw.git
+<pre>git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw
 docker-compose up -d</pre>
 
@@ -207,7 +207,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
 <span class="cm"># Clone & build</span>
-git clone https://github.com/nguyenduchoai/bizclaw.git
+git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw
 cargo build --release
 
@@ -430,7 +430,7 @@ ollama pull qwen3</pre>
 <!-- RASPBERRY -->
 <h2 id="raspberry" data-vi="19. Raspberry Pi" data-en="19. Raspberry Pi">19. Raspberry Pi</h2>
 <pre>curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-git clone https://github.com/nguyenduchoai/bizclaw.git
+git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw && cargo build --release  <span class="cm"># ~5-10 phút trên Pi 4</span>
 ./target/release/bizclaw serve</pre>
 
@@ -558,7 +558,7 @@ sudo apt-get install -y build-essential pkg-config libssl-dev</pre>
   <p>⚡ <strong>BizClaw</strong> v0.2.0 — <span data-vi="Mã nguồn mở 100% · MIT License · Miễn phí mãi mãi" data-en="100% Open Source · MIT License · Free forever">Mã nguồn mở 100% · MIT License · Miễn phí mãi mãi</span></p>
   <p style="margin-top:8px">
     <a href="/">Trang chủ</a> ·
-    <a href="https://github.com/nguyenduchoai/bizclaw" target="_blank">GitHub</a> ·
+    <a href="https://github.com/nguyenduchoai/bizclaw-cloud" target="_blank">GitHub</a> ·
     <a href="mailto:hello@bizclaw.vn">hello@bizclaw.vn</a> ·
     © 2026 BizClaw
   </p>

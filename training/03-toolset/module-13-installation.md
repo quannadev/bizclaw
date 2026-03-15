@@ -28,14 +28,14 @@ curl -sSL https://bizclaw.vn/install.sh | sudo bash
 
 #### 1.2 Docker
 ```bash
-git clone https://github.com/nguyenduchoai/bizclaw
+git clone https://github.com/nguyenduchoai/bizclaw-cloud
 cd bizclaw && docker-compose up -d
 # → Container: bizclaw + bizclaw-platform
 ```
 
 #### 1.3 Build From Source
 ```bash
-git clone https://github.com/nguyenduchoai/bizclaw.git
+git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw
 cargo build --release
 # Binary: target/release/bizclaw (~12MB)

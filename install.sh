@@ -78,7 +78,7 @@ if [ -d "$INSTALL_DIR" ]; then
     git pull origin master 2>/dev/null || true
 else
     info "Cloning BizClaw..."
-    git clone https://github.com/nguyenduchoai/bizclaw.git "$INSTALL_DIR"
+    git clone https://github.com/nguyenduchoai/bizclaw-cloud.git "$INSTALL_DIR"
     cd "$INSTALL_DIR"
 fi
 
@@ -171,7 +171,7 @@ echo -e "${CYAN}║${NC}  4. Connect Zalo/Telegram channels               ${CYAN
 echo -e "${CYAN}║${NC}  5. Start chatting with your AI!                  ${CYAN}║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "  📖 Docs: ${BLUE}https://github.com/nguyenduchoai/bizclaw${NC}"
-echo -e "  🐛 Issues: ${BLUE}https://github.com/nguyenduchoai/bizclaw/issues${NC}"
-echo -e "  ⭐ Star us: ${BLUE}https://github.com/nguyenduchoai/bizclaw${NC}"
+echo -e "  📖 Docs: ${BLUE}https://github.com/nguyenduchoai/bizclaw-cloud${NC}"
+echo -e "  🐛 Issues: ${BLUE}https://github.com/nguyenduchoai/bizclaw-cloud/issues${NC}"
+echo -e "  ⭐ Star us: ${BLUE}https://github.com/nguyenduchoai/bizclaw-cloud${NC}"
 echo ""

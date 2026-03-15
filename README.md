@@ -62,10 +62,10 @@
 
 | Platform | Download | Size |
 |----------|----------|------|
-| 🍎 **macOS** (Apple Silicon) | [📥 bizclaw-desktop-macos-arm64.dmg](https://github.com/nguyenduchoai/bizclaw/releases/latest/download/bizclaw-desktop-macos-arm64.dmg) | ~13MB |
-| 🍎 **macOS** (Intel) | [📥 bizclaw-desktop-macos-x64.dmg](https://github.com/nguyenduchoai/bizclaw/releases/latest/download/bizclaw-desktop-macos-x64.dmg) | ~13MB |
-| 🪟 **Windows** | [📥 bizclaw-desktop-windows-x64.zip](https://github.com/nguyenduchoai/bizclaw/releases/latest/download/bizclaw-desktop-windows-x64.zip) | ~12MB |
-| 🐧 **Linux** (.deb) | [📥 bizclaw-desktop-linux-x64.deb](https://github.com/nguyenduchoai/bizclaw/releases/latest/download/bizclaw-desktop-linux-x64.deb) | ~12MB |
+| 🍎 **macOS** (Apple Silicon) | [📥 bizclaw-desktop-macos-arm64.dmg](https://github.com/nguyenduchoai/bizclaw-cloud/releases/latest/download/bizclaw-desktop-macos-arm64.dmg) | ~13MB |
+| 🍎 **macOS** (Intel) | [📥 bizclaw-desktop-macos-x64.dmg](https://github.com/nguyenduchoai/bizclaw-cloud/releases/latest/download/bizclaw-desktop-macos-x64.dmg) | ~13MB |
+| 🪟 **Windows** | [📥 bizclaw-desktop-windows-x64.zip](https://github.com/nguyenduchoai/bizclaw-cloud/releases/latest/download/bizclaw-desktop-windows-x64.zip) | ~12MB |
+| 🐧 **Linux** (.deb) | [📥 bizclaw-desktop-linux-x64.deb](https://github.com/nguyenduchoai/bizclaw-cloud/releases/latest/download/bizclaw-desktop-linux-x64.deb) | ~12MB |
 
 ```bash
 # macOS: Tải .dmg → Kéo vào Applications → Mở
@@ -79,7 +79,7 @@ bizclaw-desktop
 ### 🔧 Cách 2: Build từ Source
 
 ```bash
-git clone https://github.com/nguyenduchoai/bizclaw.git
+git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw && cargo build --release
 
 # Chạy Desktop app (auto-open browser)
@@ -93,7 +93,7 @@ cd bizclaw && cargo build --release
 ### 🐳 Cách 3: Docker Standalone (1 Tenant)
 
 ```bash
-git clone https://github.com/nguyenduchoai/bizclaw.git
+git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw && docker-compose -f docker-compose.standalone.yml up -d
 # → Dashboard tại http://localhost:3000
 ```
@@ -565,7 +565,7 @@ BizClaw is a **self-hosted AI Agent platform** built entirely in Rust. Run AI ag
 ### Quick Start
 
 ```bash
-git clone https://github.com/nguyenduchoai/bizclaw.git
+git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw && cargo build --release
 ./target/release/bizclaw init
 ./target/release/bizclaw serve
@@ -601,7 +601,7 @@ cd bizclaw && cargo build --release
 |--|--|
 | 🌐 **Website** | [https://bizclaw.vn](https://bizclaw.vn) |
 | 📘 **Fanpage** | [https://www.facebook.com/bizclaw.vn](https://www.facebook.com/bizclaw.vn) |
-| 💻 **GitHub** | [https://github.com/nguyenduchoai/bizclaw](https://github.com/nguyenduchoai/bizclaw) |
+| 💻 **GitHub** | [https://github.com/nguyenduchoai/bizclaw-cloud](https://github.com/nguyenduchoai/bizclaw-cloud) |
 
 ---
 

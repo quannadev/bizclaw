@@ -19,7 +19,7 @@
 
 ```bash
 # Bước 1: Clone
-git clone https://github.com/nguyenduchoai/bizclaw.git
+git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
 cd bizclaw
 
 # Bước 2: Build (5-10 phút lần đầu)

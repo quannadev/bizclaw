@@ -107,8 +107,8 @@ log "🔨 Installing BizClaw..."
 
 # Try to download pre-built binary
 ARCH=$(uname -m)
-BINARY_URL="https://github.com/nguyenduchoai/bizclaw/releases/latest/download/bizclaw-${ARCH}-linux"
-PLATFORM_URL="https://github.com/nguyenduchoai/bizclaw/releases/latest/download/bizclaw-platform-${ARCH}-linux"
+BINARY_URL="https://github.com/nguyenduchoai/bizclaw-cloud/releases/latest/download/bizclaw-${ARCH}-linux"
+PLATFORM_URL="https://github.com/nguyenduchoai/bizclaw-cloud/releases/latest/download/bizclaw-platform-${ARCH}-linux"
 
 if curl -fsSL -o "$INSTALL_DIR/bizclaw" "$BINARY_URL" 2>/dev/null && \
    curl -fsSL -o "$INSTALL_DIR/bizclaw-platform" "$PLATFORM_URL" 2>/dev/null; then
@@ -124,7 +124,7 @@ else
     fi
 
     cd /tmp
-    git clone --depth 1 https://github.com/nguyenduchoai/bizclaw.git bizclaw-src
+    git clone --depth 1 https://github.com/nguyenduchoai/bizclaw-cloud.git bizclaw-src
     cd bizclaw-src
     cargo build --release
     cp target/release/bizclaw "$INSTALL_DIR/"
