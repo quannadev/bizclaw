@@ -551,6 +551,34 @@ impl Provider for OpenAiCompatibleProvider {
             }
         }
 
+        // ═══ TEXT-BASED TOOL CALL FALLBACK ═══
+        // If model returned no native tool_calls but content contains structured
+        // text-based tool calls (from WebAuth proxy or text-prompted models),
+        // parse them and convert to OpenAI format.
+        if tool_calls.is_empty() && !tools.is_empty() {
+            if let Some(ref text) = content {
+                let text_calls = crate::text_tool_calls::parse_text_tool_calls(text);
+                if !text_calls.is_empty() {
+                    tracing::info!(
+                        "🔧 Parsed {} text-based tool call(s) from response",
+                        text_calls.len()
+                    );
+                    let clean_text =
+                        crate::text_tool_calls::strip_tool_call_text(text, &text_calls);
+                    return Ok(ProviderResponse {
+                        content: if clean_text.is_empty() {
+                            None
+                        } else {
+                            Some(clean_text)
+                        },
+                        tool_calls: text_calls,
+                        finish_reason: Some("tool_calls".into()),
+                        usage,
+                    });
+                }
+            }
+        }
+
         Ok(ProviderResponse {
             content,
             tool_calls,

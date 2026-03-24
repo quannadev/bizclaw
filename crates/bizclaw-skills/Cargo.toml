@@ -17,6 +17,7 @@ chrono.workspace = true
 reqwest.workspace = true
 thiserror.workspace = true
 toml.workspace = true
+shellexpand.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

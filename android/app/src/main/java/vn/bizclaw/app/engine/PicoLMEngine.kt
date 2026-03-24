@@ -299,6 +299,25 @@ data class DownloadableModel(
 
 /** Curated list of recommended GGUF models for on-device inference */
 val RECOMMENDED_MODELS = listOf(
+    // ⭐🧠 BizClaw Default Brain — Qwen3.5-4B-Neo: reasoning powerhouse with concise thinking
+    DownloadableModel(
+        name = "⭐🧠 Qwen3.5-4B-Neo Q4_K_M",
+        description = "BizClaw Brain mặc định — suy luận mạnh, think-chain gọn 57%, MMLU-Pro 82%. Lý tưởng cho agent + tool-calling (8GB+ RAM)",
+        url = "https://huggingface.co/Jackrong/Qwen3.5-4B-Neo-GGUF/resolve/main/Qwen3.5-4B.Q4_K_M.gguf",
+        sizeBytes = 2_710_000_000L,
+        paramCount = "4B",
+        quantization = "Q4_K_M",
+        chatTemplate = "qwen2",
+    ),
+    DownloadableModel(
+        name = "🧠 Qwen3.5-4B-Neo Q8_0",
+        description = "Phiên bản chất lượng cao nhất — full precision int8, cho máy mạnh (12GB+ RAM)",
+        url = "https://huggingface.co/Jackrong/Qwen3.5-4B-Neo-GGUF/resolve/main/Qwen3.5-4B.Q8_0.gguf",
+        sizeBytes = 4_480_000_000L,
+        paramCount = "4B",
+        quantization = "Q8_0",
+        chatTemplate = "qwen2",
+    ),
     DownloadableModel(
         name = "⭐ Jan-nano 4B Q4_K_M",
         description = "Best for tool-calling & agents (8GB+ RAM). DAPO-tuned, beats DeepSeek-671B on SimpleQA",

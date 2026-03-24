@@ -504,6 +504,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shellexpand",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tokio-stream",
@@ -685,6 +686,7 @@ dependencies = [
  "async-trait",
  "bizclaw-brain",
  "bizclaw-core",
+ "chrono",
  "futures",
  "reqwest",
  "serde",
@@ -758,6 +760,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "shellexpand",
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
@@ -792,6 +795,31 @@ dependencies = [
  "urlencoding",
  "uuid",
  "zip 8.1.0",
+]
+
+[[package]]
+name = "bizclaw-webauth"
+version = "1.0.0"
+dependencies = [
+ "async-trait",
+ "axum",
+ "bizclaw-core",
+ "bizclaw-providers",
+ "chrono",
+ "dirs",
+ "futures",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tokio-tungstenite 0.24.0",
+ "tower",
+ "tower-http",
+ "tracing",
+ "urlencoding",
+ "uuid",
 ]
 
 [[package]]

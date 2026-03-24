@@ -243,6 +243,15 @@ static MODELARK_MODELS: &[ModelDef] = &[
 ];
 
 static OLLAMA_MODELS: &[ModelDef] = &[
+    // ⭐🧠 BizClaw Brain — Qwen3.5-4B-Neo: reasoning-focused, concise thinking
+    // 82% MMLU-Pro, 57% shorter think-chains vs base Qwen3.5-4B
+    // https://huggingface.co/Jackrong/Qwen3.5-4B-Neo
+    ModelDef {
+        id: "qwen3.5-4b-neo",
+        name: "⭐🧠 Qwen3.5-4B-Neo (Brain — Reasoning)",
+        context_length: 32768,
+        max_output_tokens: Some(8192),
+    },
     // ⭐ Recommended: Jan-nano — 4B, DAPO-optimized for tool-calling & search
     // https://huggingface.co/Menlo/Jan-nano
     ModelDef {
@@ -295,12 +304,21 @@ static OLLAMA_MODELS: &[ModelDef] = &[
     },
 ];
 
-static LLAMACPP_MODELS: &[ModelDef] = &[ModelDef {
-    id: "local-model",
-    name: "Local llama.cpp Model",
-    context_length: 4096,
-    max_output_tokens: Some(4096),
-}];
+static LLAMACPP_MODELS: &[ModelDef] = &[
+    // Qwen3.5-4B-Neo — recommended brain model for llama.cpp
+    ModelDef {
+        id: "Qwen3.5-4B.Q4_K_M",
+        name: "⭐🧠 Qwen3.5-4B-Neo Q4_K_M (Brain)",
+        context_length: 32768,
+        max_output_tokens: Some(8192),
+    },
+    ModelDef {
+        id: "local-model",
+        name: "Local llama.cpp Model",
+        context_length: 4096,
+        max_output_tokens: Some(4096),
+    },
+];
 
 static COHERE_MODELS: &[ModelDef] = &[
     ModelDef {

@@ -6,6 +6,7 @@
 pub mod circuit_breaker;
 pub mod config;
 pub mod error;
+pub mod session_store;
 pub mod traits;
 pub mod types;
 pub mod utils;

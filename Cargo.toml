@@ -22,6 +22,7 @@ members = [
     "crates/bizclaw-orchestrator",
     "crates/bizclaw-platform",
     "crates/bizclaw-skills",
+    "crates/bizclaw-webauth",
 ]
 
 [workspace.package]
@@ -94,6 +95,9 @@ sqlx = { version = "0.8", features = ["runtime-tokio-native-tls", "postgres", "m
 pdf_oxide = "0.3"
 zip = "2"
 tempfile = "3"
+urlencoding = "2.1.3"
+regex = "1"
+cookie_store = "0.21"
 
 # Internal crates
 bizclaw-core = { path = "crates/bizclaw-core" }
@@ -113,6 +117,7 @@ bizclaw-db = { path = "crates/bizclaw-db" }
 bizclaw-orchestrator = { path = "crates/bizclaw-orchestrator" }
 bizclaw-platform = { path = "crates/bizclaw-platform" }
 bizclaw-skills = { path = "crates/bizclaw-skills" }
+bizclaw-webauth = { path = "crates/bizclaw-webauth" }
 
 [package]
 name = "bizclaw"

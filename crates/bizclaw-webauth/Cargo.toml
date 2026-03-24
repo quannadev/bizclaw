@@ -1,0 +1,43 @@
+[package]
+name = "bizclaw-webauth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "WebAuth browser-based AI provider proxy for BizClaw — use web chat models (Gemini, Claude, ChatGPT, DeepSeek, Grok) without API keys"
+
+[dependencies]
+bizclaw-core.workspace = true
+bizclaw-providers.workspace = true
+
+# HTTP server (proxy)
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+
+# HTTP client
+reqwest.workspace = true
+
+# Async
+tokio.workspace = true
+tokio-stream.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Misc
+uuid.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+
+# WebSocket for CDP
+tokio-tungstenite.workspace = true
+
+# URL encoding for Gemini batchexecute
+urlencoding.workspace = true
+regex.workspace = true

@@ -8,8 +8,10 @@
 
 pub mod brain;
 pub mod failover;
+pub mod llm_tracing;
 pub mod openai_compatible;
 pub mod provider_registry;
+pub mod text_tool_calls;
 
 use bizclaw_core::config::BizClawConfig;
 use bizclaw_core::error::{BizClawError, Result};
