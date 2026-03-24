@@ -4,6 +4,7 @@
 pub mod brain;
 pub mod noop;
 pub mod sqlite;
+pub mod structured;
 pub mod vector;
 
 use bizclaw_core::config::MemoryConfig;

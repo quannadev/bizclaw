@@ -18,10 +18,12 @@ pub mod context;
 pub mod discovery;
 pub mod engine;
 pub mod loop_detector;
+pub mod middleware;
 pub mod model_router;
 pub mod orchestrator;
 pub mod proactive;
 pub mod progress;
+pub mod subagent;
 // stealth_browser removed — anti-detection scraping is not suitable for a business platform
 
 use bizclaw_core::config::BizClawConfig;
