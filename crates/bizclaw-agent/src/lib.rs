@@ -15,8 +15,10 @@
 
 pub mod circuit_breaker;
 pub mod context;
+pub mod context_summarizer;
 pub mod discovery;
 pub mod engine;
+pub mod file_upload;
 pub mod loop_detector;
 pub mod middleware;
 pub mod model_router;

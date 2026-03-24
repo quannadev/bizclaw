@@ -427,17 +427,22 @@ dependencies = [
  "bizclaw-providers",
  "bizclaw-security",
  "bizclaw-tools",
+ "calamine",
  "chrono",
  "dirs",
  "futures",
+ "pdf-extract",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
+ "shellexpand",
  "thiserror 2.0.18",
  "tokio",
  "tokio-stream",
  "tracing",
  "uuid",
+ "zip 8.1.0",
 ]
 
 [[package]]
