@@ -26,6 +26,7 @@ deploy-landing.sh
 deploy*.sh
 scripts/
 !scripts/install.sh
+!scripts/bump-version.sh
 
 # Production infrastructure — NEVER commit to public
 deploy/nginx/
