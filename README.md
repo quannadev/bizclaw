@@ -15,8 +15,8 @@
 
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-199%2B%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v1.0.0-purple)]()
+[![Tests](https://img.shields.io/badge/tests-619%20passing-brightgreen)]()
+[![Version](https://img.shields.io/badge/version-v1.0.3-purple)]()
 [![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
 [![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
 
@@ -146,12 +146,16 @@ curl -sSL https://bizclaw.vn/install.sh | sudo bash -s -- \
 | Hạng mục | Chi tiết |
 |----------|----------|
 | **🔌 18 Providers** | OpenAI, Anthropic, Gemini, DeepSeek, Groq, OpenRouter, Together, MiniMax, xAI (Grok), Mistral, BytePlus ModelArk, Cohere, Perplexity, DashScope/Qwen, Ollama, llama.cpp, Brain Engine, CLIProxy, vLLM |
+| **🌐 WebAuth** | Dùng AI miễn phí qua browser session (Gemini, Claude, ChatGPT, DeepSeek, Grok) — không cần API key |
 | **💬 10 Channels** | CLI, Telegram, Discord, Email (IMAP/SMTP), Webhook, WhatsApp, Zalo (Personal + OA), **🎙️ Xiaozhi ESP32 Voice** |
-| **🛠️ 16+ Tools** | Shell, File, Edit File, Glob, Grep, Web Search, HTTP, Config Manager, Plan, Group Summarizer, **Zalo Tool** (13 actions), Calendar, Doc Reader, **DB Schema** (auto-discover tables/columns), **DB Query** (MySQL/PostgreSQL/SQLite read-only), **API Connector** (safe WRITE via pre-configured endpoints), **Custom Tool** (agent self-creates) |
+| **🛠️ 29 Tools** | Shell, File, Edit File, Glob, Grep, Web Search, HTTP, Config Manager, Plan, Group Summarizer, **Zalo Tool** (13 actions), Calendar, Doc Reader, **DB Schema** (auto-discover tables/columns), **DB Query** (MySQL/PostgreSQL/SQLite read-only), **API Connector** (safe WRITE via pre-configured endpoints), **Custom Tool** (agent self-creates) |
 | **🔗 MCP** | Model Context Protocol — kết nối MCP servers bên ngoài, mở rộng tools không giới hạn |
-| **🧠 Brain Engine** | GGUF inference offline: mmap, quantization, Flash Attention, SIMD (ARM NEON, x86 AVX2) |
-| **🤖 Multi-Agent** | Tạo nhiều agent với vai trò khác nhau, gán vào kênh. Orchestrator quản lý N agents |
+| **🧠 Brain Engine** | GGUF inference offline: mmap, quantization, Flash Attention, SIMD (ARM NEON, x86 AVX2). Hỗ trợ Qwen3.5-4B-Neo |
+| **🤖 Multi-Agent** | Tạo nhiều agent với vai trò khác nhau, gán vào kênh. Sub-Agent system (fan-out, dual semaphore) |
 | **📚 Knowledge RAG** | Hybrid search (FTS5 + Vector). Multi-model embedding, Nudges, MCP server, Signal Logger (OpenClaw-RL), Folder Watcher, DOCX/PDF parser |
+| **🔀 Middleware Pipeline** | Composable before/after-model hooks: Guardrail, Summarization, DanglingToolCall, SubagentLimit, Memory |
+| **📄 File Upload Pipeline** | Auto-detect file path → convert PDF/DOCX/XLSX/PPTX/CSV/Code → inject Markdown vào context |
+| **📦 Context Summarizer** | Nén context thông minh: trích xuất key facts (decisions, file paths, flow) thay vì truncate |
 | **🖐️ Autonomous Hands** | Agent chạy background 24/7 — Research, Analytics, Content, Monitoring, Security. Tự retry, tự report |
 | **🔄 Workflows** | 23 workflow templates có sẵn. Multi-step pipeline: Sequential, FanOut, Collect, Conditional, Loop, Transform |
 | **⏰ Scheduler** | Cron, interval, one-time tasks. Agent tự chạy background, gửi kết quả qua Telegram/Zalo/Email/Webhook |
@@ -363,7 +367,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="releases/bizclaw-android-debug.apk"><b>📥 Tải xuống APK v0.5.0 (Bản Test / Debug)</b></a><br>
+  <a href="android/app/build/outputs/apk/debug/app-debug.apk"><b>📥 Tải xuống APK v1.0.3 (Debug Build — 44MB)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
@@ -476,26 +480,29 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 
 ## 📦 Crate Map
 
-| Crate | Mô tả | Status |
-|-------|--------|--------|
-| `bizclaw-core` | Traits, types, config, errors | ✅ |
-| `bizclaw-brain` | GGUF inference + SIMD | ✅ |
-| `bizclaw-providers` | 18 LLM providers | ✅ |
-| `bizclaw-channels` | 10 channel types (incl. Zalo OA, Xiaozhi Voice) | ✅ |
-| `bizclaw-memory` | SQLite + FTS5, Brain workspace | ✅ |
-| `bizclaw-tools` | 16 native tools + Custom Tool authoring + MCP bridge | ✅ |
-| `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | ✅ |
-| `bizclaw-security` | Secret Vault (`vault://`), Approval Gates, AES-256-CBC, Prompt Injection Scanner, SSRF Protection, Sandbox, Allowlists | ✅ |
-| `bizclaw-agent` | Think-Act-Observe loop, Progress Updates, Circuit Breaker, Model Router | ✅ |
-| `bizclaw-gateway` | HTTP + WS + Dashboard (20+ pages) | ✅ |
-| `bizclaw-knowledge` | Knowledge RAG (FTS5 + Vector + Multi-Embed + Nudges + MCP + Signals + Watcher + DOCX) | ✅ |
-| `bizclaw-scheduler` | Scheduled tasks + Retry + Notifications | ✅ |
-| `bizclaw-runtime` | Agent runtime lifecycle | ✅ |
-| `bizclaw-hands` | Autonomous Hands (7 types) | ✅ |
-| `bizclaw-workflows` | Workflow orchestration (6 step types, 23 templates) | ✅ |
-| `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor, Ticket System | ✅ |
-| `bizclaw-ffi` | Android FFI layer | ✅ |
-| `bizclaw-db` | Database layer (SQLite + PostgreSQL) | ✅ |
+| Crate | Mô tả | Lines | Tests | Status |
+|-------|--------|-------|-------|--------|
+| `bizclaw-core` | Traits, types, config, errors | 2,397 | 38 | ✅ Production |
+| `bizclaw-agent` | Think-Act-Observe loop, Middleware Pipeline, Sub-Agent, File Upload, Context Summarizer, Circuit Breaker, Model Router | 6,259 | 62 | ✅ Production |
+| `bizclaw-providers` | 18 LLM providers + failover chain | 3,146 | 26 | ✅ Production |
+| `bizclaw-tools` | 29 native tools + Custom Tool authoring + MCP bridge | 10,097 | 70 | ✅ Production |
+| `bizclaw-memory` | Session store (JSONL) + Structured long-term memory | 2,067 | 18 | ✅ Production |
+| `bizclaw-security` | Vault, Approval Gates, AES-256, Injection Scanner, SSRF, Sandbox | 1,687 | 34 | ✅ Production |
+| `bizclaw-knowledge` | Knowledge RAG (FTS5 + Vector + DOCX/PDF parser) | 4,430 | 66 | ✅ Production |
+| `bizclaw-channels` | 10 channel types (Zalo OA, Telegram, Discord, Xiaozhi Voice...) | 3,515 | 28 | 🟡 Functional |
+| `bizclaw-gateway` | HTTP + WS + Dashboard (20+ pages) | 10,716 | 14 | 🟡 Functional |
+| `bizclaw-db` | Database layer (SQLite + PostgreSQL) | 1,974 | 0 | 🟡 Functional |
+| `bizclaw-webauth` | Free LLM access via browser session (Gemini, Claude, ChatGPT) | 1,536 | 11 | 🟡 Functional |
+| `bizclaw-brain` | GGUF inference + SIMD (Qwen3.5-4B-Neo) | 3,031 | 19 | 🟡 Functional |
+| `bizclaw-workflows` | Workflow orchestration (6 step types, 23 templates) | 2,888 | 31 | 🟡 Functional |
+| `bizclaw-scheduler` | Scheduled tasks + Retry + Notifications | 2,907 | 21 | 🟡 Functional |
+| `bizclaw-hands` | Autonomous Hands (7 types) | 1,370 | 13 | 🟡 Functional |
+| `bizclaw-skills` | Skill registry + gating | 1,306 | 24 | 🟡 Functional |
+| `bizclaw-platform` | Multi-tenant SaaS (billing, onboarding) | 8,767 | 15 | 🔵 Alpha |
+| `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor | 1,897 | 9 | 🔵 Alpha |
+| `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | 799 | 2 | 🔵 Alpha |
+| `bizclaw-ffi` | Android FFI layer (UniFFI) | 343 | 0 | 🔵 Alpha |
+| `bizclaw-runtime` | Agent runtime lifecycle | 280 | 1 | 🔵 Alpha |
 
 ---
 
@@ -543,16 +550,17 @@ llm:
 
 | Metric | Value |
 |--------|-------|
+| **Version** | v1.0.3 |
 | **Language** | 100% Rust + Kotlin (Android) |
-| **Crates** | 18 |
-| **Lines of Code** | ~60,000+ |
-| **Tests** | 270+ passing |
+| **Crates** | 21 |
+| **Lines of Code** | 71,412 |
+| **Tests** | 619 passing |
 | **Workflow Templates** | 23 |
-| **Binary Size** | bizclaw ~12MB |
+| **Binary Size** | bizclaw ~12MB, Android APK ~44MB |
 | **Dashboard Pages** | 20+ (27 lazy-loaded modules) |
 | **Agent Templates** | 51 |
 | **Security** | Vault, Approval Gates, Prompt Injection Scanner, RBAC, AES-256-CBC, SSRF Protection, Audit Trail, Prometheus |
-| **Last Updated** | 2026-03-15 |
+| **Last Updated** | 2026-03-26 |
 
 ---
 
@@ -625,4 +633,4 @@ MIT License — xem chi tiết tại [LICENSE](LICENSE).
 
 ---
 
-**BizClaw** v1.0.0 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
+**BizClaw** v1.0.3 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶

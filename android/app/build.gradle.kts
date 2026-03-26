@@ -13,14 +13,14 @@ android {
         applicationId = "vn.bizclaw.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // BizClaw server defaults
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"http://localhost:3001\"")
-        buildConfigField("String", "APP_VERSION", "\"1.0.3\"")
+        buildConfigField("String", "APP_VERSION", "\"1.0.4\"")
 
         // NDK — only ARM64 (primary) + x86_64 (emulator)
         ndk {
