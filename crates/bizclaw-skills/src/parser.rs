@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Skill metadata from YAML frontmatter.
+/// Compatible with both BizClaw and OpenClaw/ClawHub SKILL.md format.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillMetadata {
     /// Unique skill name (lowercase, hyphenated).
@@ -24,7 +25,7 @@ pub struct SkillMetadata {
     /// Category (e.g., "coding", "writing", "devops").
     #[serde(default)]
     pub category: String,
-    /// Required tools for this skill.
+    /// Required tools for this skill (BizClaw native).
     #[serde(default)]
     pub requires_tools: Vec<String>,
     /// Compatible providers.
@@ -33,6 +34,26 @@ pub struct SkillMetadata {
     /// Icon emoji.
     #[serde(default = "default_icon")]
     pub icon: String,
+
+    // ── OpenClaw/ClawHub-compatible fields ──
+    /// Required environment variables (from metadata.openclaw.requires.env).
+    #[serde(default)]
+    pub requires_env: Vec<String>,
+    /// Required CLI binaries (from metadata.openclaw.requires.bins).
+    #[serde(default)]
+    pub requires_bins: Vec<String>,
+    /// Primary env var credential (from metadata.openclaw.primaryEnv).
+    #[serde(default)]
+    pub primary_env: String,
+    /// Homepage URL (from metadata.openclaw.homepage).
+    #[serde(default)]
+    pub homepage: String,
+    /// OS restrictions (from metadata.openclaw.os), e.g. ["macos", "linux"].
+    #[serde(default)]
+    pub os: Vec<String>,
+    /// Source registry: "clawhub", "bizclaw", or "local".
+    #[serde(default)]
+    pub source: String,
 }
 
 fn default_version() -> String {
@@ -212,6 +233,12 @@ impl SkillManifest {
             requires_tools,
             compatible_providers,
             icon,
+            requires_env: Vec::new(),
+            requires_bins: Vec::new(),
+            primary_env: String::new(),
+            homepage: String::new(),
+            os: Vec::new(),
+            source: "local".to_string(),
         })
     }
 

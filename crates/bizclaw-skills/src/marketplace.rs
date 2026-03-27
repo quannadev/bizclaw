@@ -1,46 +1,386 @@
-//! Skills marketplace — remote skill discovery and installation.
+//! Skills marketplace — ClawHub-compatible skill discovery and installation.
+//!
+//! Integrates with:
+//! - **ClawHub** (clawhub.ai) — the open-source OpenClaw skill registry
+//! - **BizClaw Hub** (hub.bizclaw.vn) — BizClaw-specific skills
+//!
+//! Skills use the OpenClaw SKILL.md format with YAML frontmatter.
 
 use serde::{Deserialize, Serialize};
 
-/// A skill listing from the marketplace.
+/// A skill listing (compatible with both ClawHub and BizClaw Hub).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillListing {
+    /// Skill slug (URL-safe identifier)
+    #[serde(alias = "slug")]
     pub name: String,
+    /// Display name
+    #[serde(alias = "displayName", default)]
     pub display_name: String,
+    /// Description (from SKILL.md frontmatter)
+    #[serde(default)]
     pub description: String,
+    /// Semver version
+    #[serde(default)]
     pub version: String,
+    /// Author handle or name
+    #[serde(alias = "ownerHandle", default)]
     pub author: String,
+    /// Category (AI, Business, Channel, etc.)
+    #[serde(default)]
     pub category: String,
+    /// Tags for search/filter
+    #[serde(default)]
     pub tags: Vec<String>,
+    /// Emoji icon
+    #[serde(alias = "emoji", default)]
     pub icon: String,
+    /// Download count
+    #[serde(alias = "installsAllTime", default)]
     pub downloads: u64,
+    /// Rating (0-5)
+    #[serde(default)]
     pub rating: f32,
+    /// Source URL
+    #[serde(alias = "homepage", default)]
     pub url: String,
+    /// Install source: "clawhub", "bizclaw", or "local"
+    #[serde(default)]
+    pub source: String,
 }
 
-/// Skills marketplace client.
+/// ClawHub API response for skill list.
+#[derive(Debug, Deserialize)]
+struct ClawHubSkillsResponse {
+    #[serde(default)]
+    skills: Vec<SkillListing>,
+}
+
+/// ClawHub API response for a single skill.
+#[derive(Debug, Deserialize)]
+struct ClawHubSkillResponse {
+    #[serde(flatten)]
+    skill: SkillListing,
+}
+
+/// Registry source configuration.
+#[derive(Debug, Clone)]
+pub struct RegistrySource {
+    pub name: String,
+    pub api_url: String,
+    pub enabled: bool,
+}
+
+/// Skills marketplace client — supports multiple registries.
 pub struct SkillMarketplace {
-    /// Base URL for the marketplace API.
-    base_url: String,
-    /// Cached listings.
+    /// Registry sources (ClawHub, BizClaw Hub, etc.)
+    sources: Vec<RegistrySource>,
+    /// Cached listings from all sources.
     cache: Vec<SkillListing>,
 }
 
 impl SkillMarketplace {
-    /// Create a new marketplace client.
-    pub fn new(base_url: &str) -> Self {
+    /// Create a new marketplace with default registries.
+    pub fn new() -> Self {
         Self {
-            base_url: base_url.to_string(),
+            sources: vec![
+                RegistrySource {
+                    name: "clawhub".into(),
+                    api_url: "https://clawhub.ai/api/v1".into(),
+                    enabled: true,
+                },
+                RegistrySource {
+                    name: "bizclaw".into(),
+                    api_url: "https://hub.bizclaw.vn/api/v1".into(),
+                    enabled: true,
+                },
+            ],
             cache: Vec::new(),
         }
     }
 
-    /// Default marketplace (BizClaw Hub).
-    pub fn default_hub() -> Self {
-        Self::new("https://hub.bizclaw.vn/api/v1/skills")
+    /// Create with custom registry URL.
+    pub fn with_registry(name: &str, api_url: &str) -> Self {
+        Self {
+            sources: vec![RegistrySource {
+                name: name.into(),
+                api_url: api_url.into(),
+                enabled: true,
+            }],
+            cache: Vec::new(),
+        }
     }
 
-    /// Search the marketplace (local cache for now).
+    /// Add a registry source.
+    pub fn add_source(&mut self, source: RegistrySource) {
+        self.sources.push(source);
+    }
+
+    /// Get the primary API URL (first enabled source).
+    pub fn base_url(&self) -> &str {
+        self.sources
+            .iter()
+            .find(|s| s.enabled)
+            .map(|s| s.api_url.as_str())
+            .unwrap_or("https://clawhub.ai/api/v1")
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Discovery (ClawHub API: /api/v1/skills, /api/v1/search)
+    // ═══════════════════════════════════════════════════════════
+
+    /// Fetch skills from all enabled registries.
+    /// Maps to ClawHub: `GET /api/v1/skills?limit=N&sort=S`
+    pub async fn fetch_from_registries(&mut self, limit: u32, sort: &str) -> Result<Vec<SkillListing>, String> {
+        let client = reqwest::Client::new();
+        let mut all_skills = Vec::new();
+
+        for source in &self.sources {
+            if !source.enabled {
+                continue;
+            }
+            let url = format!("{}/skills?limit={}&sort={}", source.api_url, limit, sort);
+            tracing::debug!("🔍 Fetching skills from {} ({})", source.name, url);
+
+            match client.get(&url).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    if let Ok(body) = resp.text().await {
+                        // Try parsing as array or as { skills: [...] }
+                        if let Ok(mut skills) = serde_json::from_str::<Vec<SkillListing>>(&body) {
+                            for s in &mut skills {
+                                s.source = source.name.clone();
+                            }
+                            tracing::info!("📦 {} skills from {}", skills.len(), source.name);
+                            all_skills.extend(skills);
+                        } else if let Ok(resp) = serde_json::from_str::<ClawHubSkillsResponse>(&body) {
+                            let mut skills = resp.skills;
+                            for s in &mut skills {
+                                s.source = source.name.clone();
+                            }
+                            tracing::info!("📦 {} skills from {}", skills.len(), source.name);
+                            all_skills.extend(skills);
+                        }
+                    }
+                }
+                Ok(resp) => {
+                    tracing::warn!("⚠️ {} returned HTTP {}", source.name, resp.status());
+                }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to reach {}: {}", source.name, e);
+                }
+            }
+        }
+
+        self.cache = all_skills.clone();
+        Ok(all_skills)
+    }
+
+    /// Search skills using ClawHub vector search.
+    /// Maps to ClawHub: `GET /api/v1/search?q=QUERY`
+    pub async fn search_remote(&self, query: &str) -> Result<Vec<SkillListing>, String> {
+        let client = reqwest::Client::new();
+        let mut results = Vec::new();
+
+        for source in &self.sources {
+            if !source.enabled {
+                continue;
+            }
+            let url = format!(
+                "{}/search?q={}",
+                source.api_url,
+                urlencoding::encode(query)
+            );
+            match client.get(&url).send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    if let Ok(mut skills) = resp.json::<Vec<SkillListing>>().await {
+                        for s in &mut skills {
+                            s.source = source.name.clone();
+                        }
+                        results.extend(skills);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(results)
+    }
+
+    /// Inspect a skill (get full metadata without installing).
+    /// Maps to ClawHub: `GET /api/v1/skills/{slug}`
+    pub async fn inspect(&self, slug: &str) -> Result<SkillListing, String> {
+        let client = reqwest::Client::new();
+
+        for source in &self.sources {
+            if !source.enabled {
+                continue;
+            }
+            let url = format!("{}/skills/{}", source.api_url, slug);
+            if let Ok(resp) = client.get(&url).send().await {
+                if resp.status().is_success() {
+                    if let Ok(skill) = resp.json::<SkillListing>().await {
+                        return Ok(skill);
+                    }
+                }
+            }
+        }
+        Err(format!("Skill '{}' not found in any registry", slug))
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Installation (ClawHub API: /api/v1/download)
+    // ═══════════════════════════════════════════════════════════
+
+    /// Install a skill from a registry.
+    /// Maps to ClawHub: `GET /api/v1/download?slug=SLUG&version=VERSION`
+    pub async fn install(
+        &mut self,
+        slug: &str,
+        install_dir: &std::path::Path,
+    ) -> Result<SkillListing, String> {
+        let client = reqwest::Client::new();
+        tracing::info!("📦 Installing skill '{}'...", slug);
+
+        for source in &self.sources {
+            if !source.enabled {
+                continue;
+            }
+
+            // 1. Get skill metadata
+            let meta_url = format!("{}/skills/{}", source.api_url, slug);
+            let listing = match client.get(&meta_url).send().await {
+                Ok(r) if r.status().is_success() => {
+                    match r.json::<SkillListing>().await {
+                        Ok(mut s) => {
+                            s.source = source.name.clone();
+                            s
+                        }
+                        Err(_) => continue,
+                    }
+                }
+                _ => continue,
+            };
+
+            // 2. Download skill zip
+            let download_url = format!(
+                "{}/download?slug={}&version={}",
+                source.api_url, slug, listing.version
+            );
+            let archive = match client.get(&download_url).send().await {
+                Ok(r) if r.status().is_success() => {
+                    r.bytes().await.map_err(|e| format!("Download failed: {}", e))?
+                }
+                Ok(r) => {
+                    tracing::warn!("Download returned HTTP {}", r.status());
+                    continue;
+                }
+                Err(e) => {
+                    tracing::warn!("Download failed: {}", e);
+                    continue;
+                }
+            };
+
+            // 3. Extract to install_dir/<slug>/
+            let skill_dir = install_dir.join(slug);
+            std::fs::create_dir_all(&skill_dir)
+                .map_err(|e| format!("Failed to create dir: {}", e))?;
+
+            // Write skill archive (zip from ClawHub)
+            let archive_path = skill_dir.join("skill-archive.zip");
+            std::fs::write(&archive_path, &archive)
+                .map_err(|e| format!("Failed to write: {}", e))?;
+
+            // 4. Write origin metadata (ClawHub convention)
+            let origin_dir = skill_dir.join(".clawhub");
+            std::fs::create_dir_all(&origin_dir).ok();
+            let origin = serde_json::json!({
+                "slug": slug,
+                "version": listing.version,
+                "source": source.name,
+                "registry": source.api_url,
+                "installed_at": chrono::Utc::now().to_rfc3339(),
+            });
+            let _ = std::fs::write(
+                origin_dir.join("origin.json"),
+                serde_json::to_string_pretty(&origin).unwrap_or_default(),
+            );
+
+            // 5. Update cache
+            if !self.cache.iter().any(|s| s.name == slug) {
+                self.cache.push(listing.clone());
+            }
+
+            tracing::info!(
+                "✅ Installed '{}' v{} from {}",
+                slug, listing.version, source.name
+            );
+            return Ok(listing);
+        }
+
+        Err(format!("Skill '{}' not found in any registry", slug))
+    }
+
+    /// Uninstall a skill.
+    pub fn uninstall(
+        &mut self,
+        slug: &str,
+        install_dir: &std::path::Path,
+    ) -> Result<(), String> {
+        let skill_dir = install_dir.join(slug);
+        if skill_dir.exists() {
+            std::fs::remove_dir_all(&skill_dir)
+                .map_err(|e| format!("Failed to remove: {}", e))?;
+        }
+        self.cache.retain(|s| s.name != slug);
+        tracing::info!("🗑️ Uninstalled skill '{}'", slug);
+        Ok(())
+    }
+
+    /// Check for updates across all installed skills.
+    /// Compares local versions with registry versions.
+    pub async fn check_updates(&self, install_dir: &std::path::Path) -> Vec<(String, String, String)> {
+        let client = reqwest::Client::new();
+        let mut updates = Vec::new();
+
+        for skill in &self.cache {
+            // Read local origin.json
+            let origin_path = install_dir.join(&skill.name).join(".clawhub/origin.json");
+            let local_version = if origin_path.exists() {
+                std::fs::read_to_string(&origin_path)
+                    .ok()
+                    .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+                    .and_then(|v| v["version"].as_str().map(String::from))
+                    .unwrap_or_else(|| skill.version.clone())
+            } else {
+                skill.version.clone()
+            };
+
+            // Check remote version
+            for source in &self.sources {
+                if !source.enabled { continue; }
+                let url = format!("{}/skills/{}", source.api_url, skill.name);
+                if let Ok(resp) = client.get(&url).send().await {
+                    if let Ok(remote) = resp.json::<SkillListing>().await {
+                        if remote.version != local_version {
+                            updates.push((
+                                skill.name.clone(),
+                                local_version.clone(),
+                                remote.version,
+                            ));
+                        }
+                        break; // Found in this source, don't check others
+                    }
+                }
+            }
+        }
+
+        updates
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // Local search/filter (cache-based)
+    // ═══════════════════════════════════════════════════════════
+
+    /// Search cached skills locally.
     pub fn search(&self, query: &str) -> Vec<&SkillListing> {
         let q = query.to_lowercase();
         self.cache
@@ -66,9 +406,12 @@ impl SkillMarketplace {
             .collect()
     }
 
-    /// Get the marketplace base URL.
-    pub fn base_url(&self) -> &str {
-        &self.base_url
+    /// Filter by source registry.
+    pub fn by_source(&self, source: &str) -> Vec<&SkillListing> {
+        self.cache
+            .iter()
+            .filter(|s| s.source == source)
+            .collect()
     }
 
     /// Add a listing to the cache (for built-in/offline mode).
@@ -94,98 +437,11 @@ impl SkillMarketplace {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
-
-    /// Install a skill from the Hub by name.
-    /// Downloads the skill archive, extracts it, and registers it.
-    pub async fn install_from_hub(
-        &mut self,
-        skill_name: &str,
-        install_dir: &std::path::Path,
-    ) -> Result<SkillListing, String> {
-        let url = format!("{}/{}/download", self.base_url, skill_name);
-        tracing::info!("📦 Installing skill '{}' from {}", skill_name, url);
-
-        // Fetch skill metadata first
-        let meta_url = format!("{}/{}", self.base_url, skill_name);
-        let client = reqwest::Client::new();
-        let listing: SkillListing = client
-            .get(&meta_url)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to fetch skill info: {}", e))?
-            .json()
-            .await
-            .map_err(|e| format!("Failed to parse skill info: {}", e))?;
-
-        // Download skill archive
-        let archive_bytes = client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| format!("Failed to download skill: {}", e))?
-            .bytes()
-            .await
-            .map_err(|e| format!("Failed to read skill archive: {}", e))?;
-
-        // Create skill directory
-        let skill_dir = install_dir.join(&listing.name);
-        std::fs::create_dir_all(&skill_dir)
-            .map_err(|e| format!("Failed to create skill dir: {}", e))?;
-
-        // Write archive (for now, treat as tar.gz or single SKILL.md)
-        let archive_path = skill_dir.join("archive.tar.gz");
-        std::fs::write(&archive_path, &archive_bytes)
-            .map_err(|e| format!("Failed to write archive: {}", e))?;
-
-        // Add to cache
-        self.cache.push(listing.clone());
-        tracing::info!("✅ Installed skill '{}' v{}", listing.name, listing.version);
-        Ok(listing)
-    }
-
-    /// Uninstall a skill by name.
-    pub fn uninstall(
-        &mut self,
-        skill_name: &str,
-        install_dir: &std::path::Path,
-    ) -> Result<(), String> {
-        let skill_dir = install_dir.join(skill_name);
-        if skill_dir.exists() {
-            std::fs::remove_dir_all(&skill_dir)
-                .map_err(|e| format!("Failed to remove skill dir: {}", e))?;
-        }
-        self.cache.retain(|s| s.name != skill_name);
-        tracing::info!("🗑️ Uninstalled skill '{}'", skill_name);
-        Ok(())
-    }
-
-    /// Check for updates: compare local versions with Hub versions.
-    pub async fn check_updates(&self) -> Vec<(String, String, String)> {
-        // Returns: Vec<(name, local_version, hub_version)>
-        let mut updates = Vec::new();
-        let client = reqwest::Client::new();
-
-        for skill in &self.cache {
-            let url = format!("{}/{}", self.base_url, skill.name);
-            if let Ok(resp) = client.get(&url).send().await {
-                if let Ok(hub) = resp.json::<SkillListing>().await {
-                    if hub.version != skill.version {
-                        updates.push((
-                            skill.name.clone(),
-                            skill.version.clone(),
-                            hub.version.clone(),
-                        ));
-                    }
-                }
-            }
-        }
-        updates
-    }
 }
 
 impl Default for SkillMarketplace {
     fn default() -> Self {
-        Self::default_hub()
+        Self::new()
     }
 }
 
@@ -205,13 +461,14 @@ mod tests {
             icon: "📦".to_string(),
             downloads,
             rating: 4.5,
-            url: format!("https://hub.bizclaw.vn/skills/{}", name),
+            url: format!("https://clawhub.ai/skills/{}", name),
+            source: "clawhub".to_string(),
         }
     }
 
     #[test]
     fn test_marketplace_search() {
-        let mut mp = SkillMarketplace::new("https://test");
+        let mut mp = SkillMarketplace::with_registry("test", "https://test");
         mp.add_listing(sample_listing("rust-dev", "coding", 100));
         mp.add_listing(sample_listing("python-ml", "data", 200));
         mp.add_listing(sample_listing("devops-k8s", "devops", 50));
@@ -223,7 +480,7 @@ mod tests {
 
     #[test]
     fn test_marketplace_sort() {
-        let mut mp = SkillMarketplace::new("https://test");
+        let mut mp = SkillMarketplace::with_registry("test", "https://test");
         mp.add_listing(sample_listing("a", "x", 10));
         mp.add_listing(sample_listing("b", "x", 100));
         mp.add_listing(sample_listing("c", "x", 50));
@@ -231,5 +488,27 @@ mod tests {
         mp.sort_by_popularity();
         assert_eq!(mp.list()[0].name, "b");
         assert_eq!(mp.list()[2].name, "a");
+    }
+
+    #[test]
+    fn test_default_registries() {
+        let mp = SkillMarketplace::new();
+        assert_eq!(mp.sources.len(), 2);
+        assert_eq!(mp.sources[0].name, "clawhub");
+        assert_eq!(mp.sources[1].name, "bizclaw");
+    }
+
+    #[test]
+    fn test_by_source() {
+        let mut mp = SkillMarketplace::with_registry("test", "https://test");
+        let mut s1 = sample_listing("a", "x", 10);
+        s1.source = "clawhub".into();
+        let mut s2 = sample_listing("b", "x", 10);
+        s2.source = "bizclaw".into();
+        mp.add_listing(s1);
+        mp.add_listing(s2);
+
+        assert_eq!(mp.by_source("clawhub").len(), 1);
+        assert_eq!(mp.by_source("bizclaw").len(), 1);
     }
 }

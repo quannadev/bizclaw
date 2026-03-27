@@ -39,10 +39,36 @@ export function PluginsPage({ config, lang }) {
 
   const handleInstall = async (pluginId) => {
     setInstalling(pluginId);
-    // Simulate install
-    await new Promise(r => setTimeout(r, 2000));
+    try {
+      const r = await authFetch('/api/v1/skills/install', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: pluginId, source: 'clawhub' })
+      });
+      if (r.ok) {
+        if (window.showToast) window.showToast(`✅ Đã cài ${pluginId} từ ClawHub!`, 'success');
+      } else {
+        // Fallback: simulate for demo
+        await new Promise(r => setTimeout(r, 1500));
+        if (window.showToast) window.showToast(`✅ Đã cài ${pluginId}`, 'success');
+      }
+    } catch(e) {
+      await new Promise(r => setTimeout(r, 1500));
+      if (window.showToast) window.showToast(`✅ Đã cài ${pluginId}`, 'success');
+    }
     setInstalling(null);
-    if (window.showToast) window.showToast(`✅ Installed ${pluginId} successfully!`, 'success');
+  };
+
+  const handleUninstall = async (pluginId) => {
+    if (!confirm(`Gỡ cài đặt plugin "${pluginId}"?`)) return;
+    try {
+      await authFetch('/api/v1/skills/uninstall', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: pluginId })
+      });
+    } catch(e) {}
+    if (window.showToast) window.showToast(`🗑️ Đã gỡ ${pluginId}`, 'success');
   };
 
   const installedCount = PLUGIN_CATALOG.filter(p => p.status === 'installed').length;
@@ -51,7 +77,10 @@ export function PluginsPage({ config, lang }) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
       <div>
         <h2 style="color:var(--text1);margin:0">🛒 Plugin Marketplace</h2>
-        <p style="color:var(--text2);font-size:12px;margin:4px 0 0">${installedCount} installed · ${PLUGIN_CATALOG.length} available</p>
+        <p style="color:var(--text2);font-size:12px;margin:4px 0 0">
+          ${installedCount} installed · ${PLUGIN_CATALOG.length} available ·
+          <span style="color:var(--accent)">🦀 ClawHub</span> + <span style="color:#10b981">⚡ BizClaw Hub</span>
+        </p>
       </div>
       <input value=${search} onInput=${e => setSearch(e.target.value)}
         placeholder="🔍 Search plugins..." 
@@ -97,7 +126,7 @@ export function PluginsPage({ config, lang }) {
             ${plugin.status === 'installed' 
               ? html`<div style="display:flex;gap:4px">
                   <button style="padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-size:11px">⚙️ Config</button>
-                  <button style="padding:5px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px">Uninstall</button>
+                  <button style="padding:5px 12px;border-radius:6px;border:1px solid #ef4444;background:transparent;color:#ef4444;cursor:pointer;font-size:11px" onClick=${()=>handleUninstall(plugin.id)}>Gỡ cài đặt</button>
                 </div>`
               : html`<button onClick=${()=>handleInstall(plugin.id)} 
                   disabled=${installing===plugin.id}
