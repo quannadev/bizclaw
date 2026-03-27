@@ -19,6 +19,11 @@ pub fn dashboard_v2_html() -> &'static str {
     include_str!("dashboard/index.html")
 }
 
+/// Public Hub page — skill marketplace (no auth required).
+pub fn hub_html() -> &'static str {
+    include_str!("dashboard/hub.html")
+}
+
 /// Static files for the new dashboard (served at /static/dashboard/*).
 /// Returns a HashMap of (path, content, content_type).
 pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static str)> {

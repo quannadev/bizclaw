@@ -80,6 +80,15 @@ async fn legacy_dashboard_page() -> axum::response::Response {
         .expect("static response")
 }
 
+/// Serve the public Hub page at /hub (no auth required).
+async fn hub_page() -> axum::response::Response {
+    axum::response::Response::builder()
+        .header("Content-Type", "text/html; charset=utf-8")
+        .header("Cache-Control", "public, max-age=300")
+        .body(axum::body::Body::from(super::dashboard::hub_html()))
+        .expect("static response")
+}
+
 /// Serve embedded dashboard static files (/static/dashboard/*).
 async fn dashboard_static(
     axum::extract::Path(path): axum::extract::Path<String>,
@@ -451,7 +460,7 @@ async fn security_headers(
     // CSP — restrict script/style sources (includes esm.sh for Preact CDN)
     // SECURITY: removed 'unsafe-eval' — only 'unsafe-inline' kept for embedded Preact dashboard
     headers.insert("Content-Security-Policy",
-        "default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' ws: wss: https://esm.sh; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' ws: wss: https://esm.sh https://clawhub.ai; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
         .parse().expect("static CSP header"));
     // Permissions-Policy — restrict browser features not needed by the dashboard
     headers.insert("Permissions-Policy",
@@ -845,6 +854,7 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
     // Public routes — no auth
     let public = Router::new()
         .route("/", get(dashboard_page))
+        .route("/hub", get(hub_page))
         .route("/legacy", get(legacy_dashboard_page))
         .route("/static/dashboard/{*path}", get(dashboard_static))
         .route("/health", get(super::routes::health_check))
