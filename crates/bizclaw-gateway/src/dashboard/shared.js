@@ -87,6 +87,7 @@ export const PAGES = [
   { id: 'dashboard', icon: '📊', label: 'nav.dashboard' },
   { id: 'chat', icon: '💬', label: 'nav.webchat' },
   { id: 'sep1', sep: true },
+  // AI & Content
   { id: 'agents', icon: '🤖', label: 'nav.agents' },
   { id: 'knowledge', icon: '📚', label: 'nav.knowledge' },
   { id: 'channels', icon: '📱', label: 'nav.channels' },
@@ -97,6 +98,7 @@ export const PAGES = [
   { id: 'mcp', icon: '🔗', label: 'nav.mcp' },
   { id: 'wiki', icon: '📖', label: 'Wiki & Guide' },
   { id: 'sep2', sep: true },
+  // Automation
   { id: 'hands', icon: '🤚', label: 'Autonomous Hands' },
   { id: 'workflows', icon: '🔄', label: 'nav.workflows' },
   { id: 'orchestration', icon: '🔀', label: 'nav.orchestration' },
@@ -104,19 +106,22 @@ export const PAGES = [
   { id: 'kanban', icon: '📋', label: 'Kanban Board' },
   { id: 'gallery', icon: '📦', label: 'nav.gallery' },
   { id: 'scheduler', icon: '⏰', label: 'nav.scheduler' },
-  { id: 'traces', icon: '📊', label: 'LLM Traces' },
-  { id: 'cost', icon: '💰', label: 'Cost Tracking' },
-  { id: 'activity', icon: '⚡', label: 'Activity Feed' },
   { id: 'sep3', sep: true },
+  // Monitoring & Analytics
+  { id: 'traces', icon: '🔍', label: 'nav.traces' },
+  { id: 'cost', icon: '💰', label: 'nav.cost' },
+  { id: 'activity', icon: '⚡', label: 'activity.title' },
+  { id: 'usage', icon: '📊', label: 'Usage & Quotas' },
   { id: 'analytics', icon: '📈', label: 'Analytics' },
+  { id: 'sep4', sep: true },
+  // Enterprise
   { id: 'plugins', icon: '🛒', label: 'Plugin Marketplace' },
   { id: 'sso', icon: '🔐', label: 'Enterprise SSO' },
   { id: 'finetuning', icon: '🧪', label: 'Fine-Tuning' },
   { id: 'edgegateway', icon: '📡', label: 'Edge IoT Gateway' },
-  { id: 'sep4', sep: true },
-  { id: 'apikeys', icon: '🔑', label: 'API Keys' },
-  { id: 'usage', icon: '📊', label: 'Usage & Quotas' },
   { id: 'sep5', sep: true },
+  // System
+  { id: 'apikeys', icon: '🔑', label: 'API Keys' },
   { id: 'configfile', icon: '📄', label: 'nav.config' },
 ];
 

@@ -39,6 +39,12 @@ a{color:var(--accent2);text-decoration:none}
 .card-value{font-size:26px;font-weight:700}
 .card-sub{font-size:11px;color:var(--text2);margin-top:3px}
 
+/* Stats Cards */
+.stats-card{position:relative;overflow:hidden}
+.stats-card::before{content:'';position:absolute;top:-50%;right:-50%;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,var(--accent-glow),transparent 70%);pointer-events:none;opacity:0.5}
+.stats-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+.stats-value{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-0.5px}
+
 /* Colors */
 .green{color:var(--green)}.red{color:var(--red)}.orange{color:var(--orange)}.blue{color:var(--blue)}.accent{color:var(--accent2)}.cyan{color:var(--cyan)}
 

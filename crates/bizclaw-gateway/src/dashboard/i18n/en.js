@@ -138,4 +138,20 @@ export const en = {
   'skill.api_desc':'API design: REST, OpenAPI, authentication',
   'skill.vnbiz_desc':'Vietnamese business: tax law, labor, accounting',
   'skill.git_desc':'Git workflow: branching, commits, code review',
+  // Dashboard Monitoring (enhanced)
+  'dash.today':'Today','dash.avg_response':'Avg Response','dash.cost':'Cost',
+  'dash.token_trend':'Token Usage (7 days)','dash.response_trend':'Response Time (7 days)',
+  'dash.token_7d':'Tokens (7d)','dash.viewall':'View All',
+  'dash.recent_activity':'Recent Activity','dash.offline':'Offline',
+  'dash.degraded':'Degraded','nav.traces':'LLM Traces','nav.cost':'Cost',
+  // Alerts
+  'alert.high_token':'High token usage today',
+  'alert.slow_response':'Multiple slow responses (>5s)',
+  'alert.errors':'Recent API errors detected',
+  // Activity Timeline
+  'activity.title':'Activity Timeline','activity.subtitle':'Real-time system events — auto-refreshes',
+  'activity.all':'All','activity.errors':'Errors','activity.total':'Total Events',
+  'activity.loading':'Loading...','activity.empty':'No activity yet',
+  'activity.empty_hint':'Start a conversation or run a scheduled task to see activity!',
+  'activity.clear_confirm':'Clear all activity?','activity.cleared':'Cleared',
 };

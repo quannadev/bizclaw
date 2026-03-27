@@ -138,4 +138,20 @@ export const vi = {
   'skill.api_desc':'Thiết kế API: REST, OpenAPI, authentication',
   'skill.vnbiz_desc':'Luật doanh nghiệp VN: thuế, lao động, kế toán',
   'skill.git_desc':'Git workflow: branching, commit, code review',
+  // Dashboard Monitoring (enhanced)
+  'dash.today':'Hôm nay','dash.avg_response':'Phản hồi TB','dash.cost':'Chi phí',
+  'dash.token_trend':'Token 7 ngày qua','dash.response_trend':'Thời gian phản hồi 7 ngày',
+  'dash.token_7d':'Token 7 ngày','dash.viewall':'Xem tất cả',
+  'dash.recent_activity':'Hoạt động gần đây','dash.offline':'Ngoại tuyến',
+  'dash.degraded':'Chậm','nav.traces':'LLM Traces','nav.cost':'Chi phí',
+  // Alerts
+  'alert.high_token':'Token sử dụng cao hôm nay',
+  'alert.slow_response':'Nhiều request phản hồi chậm (>5s)',
+  'alert.errors':'Có lỗi API gần đây',
+  // Activity Timeline
+  'activity.title':'Dòng thời gian','activity.subtitle':'Hoạt động hệ thống real-time — cập nhật tự động',
+  'activity.all':'Tất cả','activity.errors':'Lỗi','activity.total':'Tổng events',
+  'activity.loading':'Đang tải...','activity.empty':'Chưa có hoạt động nào',
+  'activity.empty_hint':'Bắt đầu trò chuyện hoặc chạy lịch trình để xem activity!',
+  'activity.clear_confirm':'Xoá tất cả hoạt động?','activity.cleared':'Đã xoá',
 };
