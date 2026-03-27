@@ -64,6 +64,7 @@ class BizClawDaemonService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var commandReceiver: CommandReceiver? = null
     private var jobScheduler: AutomationJobScheduler? = null
+    private var platformSync: PlatformSync? = null
 
     private fun getCommandServerUrl(): String {
         val prefs = getSharedPreferences("bizclaw", MODE_PRIVATE)
@@ -116,6 +117,15 @@ class BizClawDaemonService : Service() {
         jobScheduler?.start()
         android.util.Log.i("BizClaw", "⏰ Job scheduler started")
 
+        // Start Platform Sync (agents, knowledge, server-pushed tasks)
+        try {
+            platformSync = PlatformSync(this)
+            platformSync?.start()
+            android.util.Log.i("BizClaw", "🔗 Platform Sync started")
+        } catch (e: Exception) {
+            android.util.Log.e("BizClaw", "⚠️ Platform Sync failed: ${e.message}")
+        }
+
         isRunning = true
         updateNotification("Đang chạy — sẵn sàng nhận lệnh")
 
@@ -123,6 +133,10 @@ class BizClawDaemonService : Service() {
     }
 
     private fun stopDaemon() {
+        // Stop Platform Sync
+        platformSync?.stop()
+        platformSync = null
+
         // Stop automation scheduler
         jobScheduler?.stop()
         jobScheduler = null

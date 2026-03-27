@@ -443,6 +443,21 @@ object CommandExecutor {
             }
             "zalo_timeline" -> AutomationResult.error("zalo_timeline is no longer supported")
 
+            // Zalo OA (server-side, no UI needed)
+            "zalo_oa_send" -> {
+                val userId = cmd.params["user_id"] ?: return errorResult(cmd, "Missing 'user_id'")
+                val message = cmd.params["message"] ?: return errorResult(cmd, "Missing 'message'")
+                val zaloOA = ZaloOA(context)
+                val result = zaloOA.sendMessage(userId, message)
+                AutomationResult(result.success, result.message)
+            }
+            "zalo_oa_broadcast" -> {
+                val message = cmd.params["message"] ?: return errorResult(cmd, "Missing 'message'")
+                val zaloOA = ZaloOA(context)
+                val result = zaloOA.broadcast(message)
+                AutomationResult(result.success, result.message)
+            }
+
             // Instagram
             "instagram_post" -> {
                 val caption = cmd.params["caption"] ?: return errorResult(cmd, "Missing 'caption'")

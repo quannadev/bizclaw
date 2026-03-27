@@ -51,9 +51,19 @@ You have access to these tools to control the Android device:
 - `press_home()` — Press Home button
 - `press_enter()` — Press Enter/Send
 
+### Zalo OA API Tools (server-side, no UI automation needed)
+- `zalo_oa_send(user_id: string, message: string)` — Send message via Zalo OA API
+- `zalo_oa_broadcast(message: string)` — Broadcast to all OA followers
+- `zalo_oa_followers()` — List OA followers
+
 ### Flow & Workflow Tools
 - `flow_run(flow_type: string, content: string)` — Run instant macro (no LLM): cross_post, broadcast
 - `flow_list()` — List all saved flows
+
+### Platform Sync Tools
+- `sync_agents()` — Sync agents between device and server
+- `sync_knowledge()` — Pull knowledge base from server
+- `push_chat(agent_name: string, message: string, response: string)` — Push chat to server
 
 ### App & System Tools
 - `open_app(package_name: string)` — Open an app (e.g. com.facebook.katana)
@@ -101,9 +111,19 @@ When you're done and have the final answer, respond normally without tool_call t
                 "press_home" -> pressHome()
                 "press_enter" -> pressEnter()
 
+                // Zalo OA (server-side)
+                "zalo_oa_send" -> zaloOaSend(args)
+                "zalo_oa_broadcast" -> zaloOaBroadcast(args)
+                "zalo_oa_followers" -> zaloOaFollowers()
+
                 // Flow & Workflow
                 "flow_run" -> flowRun(args)
                 "flow_list" -> flowList()
+
+                // Platform Sync
+                "sync_agents" -> syncAgents()
+                "sync_knowledge" -> syncKnowledge()
+                "push_chat" -> pushChat(args)
 
                 // App & system
                 "open_app" -> openApp(args)
@@ -347,6 +367,59 @@ When you're done and have the final answer, respond normally without tool_call t
     private fun openNotifications(): ToolResult {
         val ok = BizClawAccessibilityService.openNotifications()
         return ToolResult(ok, if (ok) "Opened notification shade" else "Failed to open notifications")
+    }
+
+    // ── Zalo OA API ──────────────────────────────────────────
+
+    private suspend fun zaloOaSend(args: JsonObject): ToolResult {
+        val userId = args["user_id"]?.jsonPrimitive?.content ?: return ToolResult(false, "Missing 'user_id'")
+        val message = args["message"]?.jsonPrimitive?.content ?: return ToolResult(false, "Missing 'message'")
+        val zaloOA = ZaloOA(context)
+        val result = zaloOA.sendMessage(userId, message)
+        return ToolResult(result.success, result.message)
+    }
+
+    private suspend fun zaloOaBroadcast(args: JsonObject): ToolResult {
+        val message = args["message"]?.jsonPrimitive?.content ?: return ToolResult(false, "Missing 'message'")
+        val zaloOA = ZaloOA(context)
+        val result = zaloOA.broadcast(message)
+        return ToolResult(result.success, result.message)
+    }
+
+    private suspend fun zaloOaFollowers(): ToolResult {
+        val zaloOA = ZaloOA(context)
+        val followers = zaloOA.getFollowers()
+        return if (followers.isNotEmpty()) {
+            ToolResult(true, "📋 ${followers.size} followers:\n${followers.joinToString("\n") { "• $it" }}")
+        } else {
+            ToolResult(true, "Chưa có follower hoặc chưa cấu hình Zalo OA")
+        }
+    }
+
+    // ── Platform Sync ────────────────────────────────────────
+
+    private suspend fun syncAgents(): ToolResult {
+        val sync = PlatformSync.instance
+            ?: return ToolResult(false, "Platform Sync chưa được cấu hình. Vào Settings → Platform Sync")
+        val result = sync.syncAgents()
+        return ToolResult(true, "$result")
+    }
+
+    private suspend fun syncKnowledge(): ToolResult {
+        val sync = PlatformSync.instance
+            ?: return ToolResult(false, "Platform Sync chưa được cấu hình")
+        val count = sync.syncKnowledge()
+        return ToolResult(true, "📚 Synced $count knowledge documents from server")
+    }
+
+    private suspend fun pushChat(args: JsonObject): ToolResult {
+        val agentName = args["agent_name"]?.jsonPrimitive?.content ?: return ToolResult(false, "Missing 'agent_name'")
+        val message = args["message"]?.jsonPrimitive?.content ?: return ToolResult(false, "Missing 'message'")
+        val response = args["response"]?.jsonPrimitive?.content ?: ""
+        val sync = PlatformSync.instance
+            ?: return ToolResult(false, "Platform Sync chưa được cấu hình")
+        val ok = sync.pushChatMessage(agentName, message, response)
+        return ToolResult(ok, if (ok) "📤 Chat pushed to server" else "❌ Failed to push chat")
     }
 }
 
