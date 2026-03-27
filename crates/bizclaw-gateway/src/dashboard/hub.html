@@ -416,30 +416,40 @@
     let allSkills = [];
     let currentSort = 'newest';
 
-    // ── Fetch skills from ClawHub ──
-    async function fetchClawHubSkills(sort = 'newest', limit = 100) {
-      try {
-        const res = await fetch(`${CLAWHUB_API}/skills?limit=${limit}&sort=${sort}`);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        // ClawHub returns an array or { skills: [...] }
-        const skills = Array.isArray(data) ? data : (data.skills || []);
-        return skills.map(s => ({
-          ...s,
-          name: s.slug || s.name || 'unknown',
-          description: s.description || s.summary || '',
-          version: s.version || s.latestVersion || '—',
-          author: s.ownerHandle || s.author || 'Community',
-          icon: s.emoji || '📦',
-          downloads: s.installsAllTime || s.downloads || 0,
-          rating: s.rating || 0,
-          source: 'clawhub',
-          homepage: s.homepage || `https://clawhub.ai/skills/${s.slug || s.name}`,
-        }));
-      } catch (e) {
-        console.warn('ClawHub fetch failed:', e);
-        return [];
+    // ── Fetch skills from ClawHub using search API (more reliable) ──
+    async function fetchClawHubSkills() {
+      const categories = ['coding', 'devops', 'writing', 'research', 'github', 'database', 'api', 'docker', 'productivity', 'data'];
+      const allResults = new Map(); // slug → skill (dedup)
+
+      // Fire parallel searches for popular categories
+      const promises = categories.map(async (q) => {
+        try {
+          const res = await fetch(`${CLAWHUB_API}/search?q=${encodeURIComponent(q)}`);
+          if (!res.ok) return [];
+          const data = await res.json();
+          return (data.results || data.items || []);
+        } catch { return []; }
+      });
+
+      const results = await Promise.all(promises);
+      for (const batch of results) {
+        for (const s of batch) {
+          if (s.slug && !allResults.has(s.slug)) {
+            allResults.set(s.slug, {
+              name: s.slug || s.name || 'unknown',
+              description: s.summary || s.description || '',
+              version: s.version || s.latestVersion || '—',
+              author: s.ownerHandle || s.author || 'Community',
+              icon: s.emoji || '📦',
+              downloads: s.installsAllTime || s.installs || s.downloads || 0,
+              rating: s.score ? Math.min(5, s.score) : 0,
+              source: 'clawhub',
+              homepage: `https://clawhub.ai/skills/${s.slug}`,
+            });
+          }
+        }
       }
+      return Array.from(allResults.values());
     }
 
     // ── Fetch local BizClaw skills ──
@@ -561,7 +571,7 @@
     async function init() {
       // Fetch from both sources in parallel
       const [clawHubSkills, bizClawSkills] = await Promise.all([
-        fetchClawHubSkills(currentSort),
+        fetchClawHubSkills(),
         fetchBizClawSkills()
       ]);
 
