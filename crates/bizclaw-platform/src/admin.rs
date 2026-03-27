@@ -245,6 +245,7 @@ impl AdminServer {
                 post(accept_invitation),
             )
             .route("/pixel-office", get(pixel_office_page))
+            .route("/hub", get(hub_skills_page))
             .route("/", get(admin_dashboard_page));
 
         // SPA fallback — serve dashboard HTML for all non-API paths
@@ -1175,6 +1176,18 @@ async fn admin_dashboard_page() -> impl axum::response::IntoResponse {
 
 async fn pixel_office_page() -> axum::response::Html<&'static str> {
     axum::response::Html(include_str!("../../../data/pixel_office.html"))
+}
+
+async fn hub_skills_page() -> impl axum::response::IntoResponse {
+    (
+        [
+            (axum::http::header::CACHE_CONTROL, "public, max-age=300"),
+            (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
+        ],
+        axum::response::Html(include_str!(
+            "../../bizclaw-gateway/src/dashboard/hub.html"
+        )),
+    )
 }
 
 // ── Channel Configuration Handlers ────────────────────────────────────
