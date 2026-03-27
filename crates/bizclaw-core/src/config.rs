@@ -537,6 +537,8 @@ pub struct ZaloChannelConfig {
     #[serde(default)]
     pub personal: ZaloPersonalConfig,
     #[serde(default)]
+    pub official: ZaloOfficialConfig,
+    #[serde(default)]
     pub rate_limit: ZaloRateLimitConfig,
     #[serde(default)]
     pub allowlist: ZaloAllowlistConfig,
@@ -559,10 +561,44 @@ impl Default for ZaloChannelConfig {
             enabled: false,
             mode: default_zalo_mode(),
             personal: ZaloPersonalConfig::default(),
+            official: ZaloOfficialConfig::default(),
             rate_limit: ZaloRateLimitConfig::default(),
             allowlist: ZaloAllowlistConfig::default(),
             oa_access_token: String::new(),
             notify_user_id: String::new(),
+        }
+    }
+}
+
+/// Zalo Official Account (OA) API configuration — server-side, no Android needed.
+/// Register at https://oa.zalo.me to get credentials.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ZaloOfficialConfig {
+    /// Zalo App ID (from developers.zalo.me).
+    #[serde(default)]
+    pub app_id: String,
+    /// Zalo App Secret — used for webhook MAC signature verification.
+    #[serde(default)]
+    pub app_secret: String,
+    /// OA Access Token — for sending messages via OA API.
+    #[serde(default)]
+    pub access_token: String,
+    /// OA Refresh Token — for auto-renewal of access_token.
+    #[serde(default)]
+    pub refresh_token: String,
+    /// OA ID — your Official Account identifier.
+    #[serde(default)]
+    pub oa_id: String,
+}
+
+impl Default for ZaloOfficialConfig {
+    fn default() -> Self {
+        Self {
+            app_id: String::new(),
+            app_secret: String::new(),
+            access_token: String::new(),
+            refresh_token: String::new(),
+            oa_id: String::new(),
         }
     }
 }

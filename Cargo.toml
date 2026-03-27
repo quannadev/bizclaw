@@ -173,6 +173,10 @@ path = "src/platform_main.rs"
 name = "bizclaw-desktop"
 path = "src/desktop_main.rs"
 
+[[bin]]
+name = "bizclaw-local"
+path = "src/local_main.rs"
+
 [profile.release]
 opt-level = 3
 lto = true

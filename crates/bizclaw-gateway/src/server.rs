@@ -866,6 +866,11 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             "/api/v1/xiaozhi/webhook",
             post(super::routes::xiaozhi_webhook),
         )
+        // Zalo OA webhook — public, auth via OA app_secret MAC
+        .route(
+            "/api/v1/webhook/zalo-oa",
+            post(super::routes::zalo_oa_webhook),
+        )
         // OpenAI-Compatible API — public with own auth (Bearer token)
         .route(
             "/v1/chat/completions",

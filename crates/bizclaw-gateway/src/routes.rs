@@ -6072,3 +6072,205 @@ pub async fn nl_query_examples_get(
     Json(serde_json::json!({"examples": examples}))
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// ZALO OA WEBHOOK — Server-side Zalo without Android bridge
+// ═══════════════════════════════════════════════════════════════════════
+
+/// POST /api/v1/webhook/zalo-oa — Receive messages from Zalo Official Account.
+///
+/// Zalo OA sends webhook events when users message the OA:
+/// - `user_send_text` — User sends a text message
+/// - `user_send_image` — User sends an image
+/// - `follow` / `unfollow` — User follows/unfollows the OA
+///
+/// This handler:
+/// 1. Validates the MAC signature (HMAC-SHA256 with app_secret)
+/// 2. Extracts sender_id and content
+/// 3. Routes to the bound agent for AI processing
+/// 4. Replies back via Zalo OA API
+///
+/// Setup:
+/// 1. Register at https://oa.zalo.me → get app_id, app_secret, access_token
+/// 2. Set webhook URL: https://apps.viagent.vn/api/v1/webhook/zalo-oa
+/// 3. Configure in BizClaw: channel settings → Zalo → mode=official, set tokens
+pub async fn zalo_oa_webhook(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Json<serde_json::Value> {
+    let body_str = String::from_utf8_lossy(&body);
+
+    tracing::info!("[zalo-oa] Webhook received: {} bytes", body.len());
+
+    // ── 1. Validate MAC signature (optional but recommended) ──
+    let cfg = state.full_config.lock().unwrap().clone();
+    let zalo_configs = &cfg.channel.zalo;
+    let oa_config = zalo_configs.iter().find(|z| z.mode == "official");
+
+    if let Some(mac_header) = headers.get("X-ZaloOA-Signature").or(headers.get("mac")) {
+        if let (Some(config), Ok(mac_value)) = (oa_config, mac_header.to_str()) {
+            let app_secret = &config.official.app_secret;
+            if !app_secret.is_empty() {
+                use hmac::Mac;
+                type HmacSha256 = hmac::Hmac<sha2::Sha256>;
+                if let Ok(mut mac) = HmacSha256::new_from_slice(app_secret.as_bytes()) {
+                    mac.update(body_str.as_bytes());
+                    let expected = hex::encode(mac.finalize().into_bytes());
+                    if mac_value != expected {
+                        tracing::warn!("[zalo-oa] Invalid MAC signature");
+                        return Json(serde_json::json!({"error": "Invalid signature"}));
+                    }
+                    tracing::debug!("[zalo-oa] MAC signature validated ✓");
+                }
+            }
+        }
+    }
+
+    // ── 2. Parse the webhook event ──
+    let event: serde_json::Value = match serde_json::from_str(&body_str) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("[zalo-oa] Failed to parse webhook body: {e}");
+            return Json(serde_json::json!({"ok": false, "error": "Invalid JSON"}));
+        }
+    };
+
+    let event_name = event["event_name"].as_str().unwrap_or("");
+    let timestamp = event["timestamp"].as_str().unwrap_or("");
+
+    tracing::info!("[zalo-oa] Event: {} at {}", event_name, timestamp);
+
+    match event_name {
+        // ── User sends a text message ──
+        "user_send_text" => {
+            let sender_id = event["sender"]["id"].as_str().unwrap_or("");
+            let message_text = event["message"]["text"].as_str().unwrap_or("");
+            let msg_id = event["message"]["msg_id"].as_str().unwrap_or("");
+
+            if sender_id.is_empty() || message_text.is_empty() {
+                return Json(serde_json::json!({"ok": false, "error": "Missing sender or text"}));
+            }
+
+            tracing::info!(
+                "[zalo-oa] Text from {}: '{}' (msg_id={})",
+                sender_id,
+                if message_text.len() > 50 { &message_text[..50] } else { message_text },
+                msg_id
+            );
+
+            // ── 3. Route to bound agent ──
+            let agent_response = {
+                let mut agent_guard = state.agent.lock().await;
+                if let Some(ref mut agent) = *agent_guard {
+                    match agent.process(message_text).await {
+                        Ok(response) => response,
+                        Err(e) => format!("⚠️ Agent error: {e}"),
+                    }
+                } else {
+                    "⚠️ Chưa có agent được cấu hình. Vui lòng thiết lập trong Dashboard.".to_string()
+                }
+            };
+
+            // ── 4. Reply back via Zalo OA API ──
+            if let Some(config) = oa_config {
+                let access_token = &config.official.access_token;
+                if !access_token.is_empty() {
+                    let reply_payload = serde_json::json!({
+                        "recipient": { "user_id": sender_id },
+                        "message": { "text": agent_response }
+                    });
+
+                    let client = reqwest::Client::new();
+                    match client
+                        .post("https://openapi.zalo.me/v3.0/oa/message/cs")
+                        .header("access_token", access_token.as_str())
+                        .json(&reply_payload)
+                        .send()
+                        .await
+                    {
+                        Ok(resp) => {
+                            let status = resp.status();
+                            let reply_body = resp.json::<serde_json::Value>().await.unwrap_or_default();
+                            if status.is_success() && reply_body["error"].as_i64().unwrap_or(-1) == 0 {
+                                tracing::info!("[zalo-oa] ✅ Replied to {} successfully", sender_id);
+                            } else {
+                                let err_msg = reply_body["message"].as_str().unwrap_or("Unknown");
+                                tracing::error!("[zalo-oa] Reply failed: {} (code: {})", err_msg, reply_body["error"]);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("[zalo-oa] Reply request failed: {e}");
+                        }
+                    }
+                } else {
+                    tracing::warn!("[zalo-oa] No access_token configured — cannot reply");
+                }
+            }
+
+            Json(serde_json::json!({
+                "ok": true,
+                "event": "user_send_text",
+                "sender": sender_id,
+                "replied": true
+            }))
+        }
+
+        // ── User sends an image ──
+        "user_send_image" => {
+            let sender_id = event["sender"]["id"].as_str().unwrap_or("");
+            let image_url = event["message"]["attachments"]
+                .as_array()
+                .and_then(|a| a.first())
+                .and_then(|a| a["payload"]["url"].as_str())
+                .unwrap_or("");
+
+            tracing::info!("[zalo-oa] Image from {}: {}", sender_id, image_url);
+
+            Json(serde_json::json!({
+                "ok": true,
+                "event": "user_send_image",
+                "sender": sender_id
+            }))
+        }
+
+        // ── User follows/unfollows ──
+        "follow" => {
+            let follower_id = event["follower"]["id"].as_str().unwrap_or("");
+            tracing::info!("[zalo-oa] 🎉 New follower: {}", follower_id);
+
+            // Send welcome message
+            if let Some(config) = oa_config {
+                let access_token = &config.official.access_token;
+                if !access_token.is_empty() {
+                    let welcome = serde_json::json!({
+                        "recipient": { "user_id": follower_id },
+                        "message": { "text": "Xin chào! 👋 Cảm ơn bạn đã quan tâm. Tôi là trợ lý AI, hãy gửi tin nhắn để bắt đầu trò chuyện!" }
+                    });
+                    let client = reqwest::Client::new();
+                    let _ = client
+                        .post("https://openapi.zalo.me/v3.0/oa/message/cs")
+                        .header("access_token", access_token.as_str())
+                        .json(&welcome)
+                        .send()
+                        .await;
+                    tracing::info!("[zalo-oa] Welcome message sent to {}", follower_id);
+                }
+            }
+
+            Json(serde_json::json!({"ok": true, "event": "follow", "follower": follower_id}))
+        }
+
+        "unfollow" => {
+            let follower_id = event["follower"]["id"].as_str().unwrap_or("");
+            tracing::info!("[zalo-oa] 👋 Unfollowed by: {}", follower_id);
+            Json(serde_json::json!({"ok": true, "event": "unfollow"}))
+        }
+
+        // ── Unknown event — acknowledge anyway ──
+        _ => {
+            tracing::debug!("[zalo-oa] Unhandled event: {}", event_name);
+            Json(serde_json::json!({"ok": true, "event": event_name, "handled": false}))
+        }
+    }
+}
+
