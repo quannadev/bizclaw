@@ -1,0 +1,341 @@
+{
+  "version": "1.0.0",
+  "description": "6 Application Template Bundles cho SME — chọn 1 là đầy đủ cấu hình",
+  "bundles": [
+    {
+      "id": "retail",
+      "name": "Bán hàng & CRM",
+      "icon": "🛒",
+      "tagline": "AI quản lý bán hàng, kho hàng, chăm sóc khách hàng",
+      "description": "Giải pháp toàn diện cho cửa hàng bán lẻ, TMĐT, B2B: tự động tư vấn sản phẩm, theo dõi đơn hàng, cảnh báo tồn kho, phân tích doanh số.",
+      "tier": "free",
+      "color": "#4CAF50",
+      "industries": ["Bán lẻ", "TMĐT", "B2B", "Siêu thị mini"],
+      "config": {
+        "identity": {
+          "name": "BizShop",
+          "persona": "Trợ lý bán hàng AI chuyên nghiệp",
+          "system_prompt": "Bạn là BizShop — trợ lý AI cho cửa hàng. Xưng 'em', gọi 'anh/chị'. Hỗ trợ: tư vấn sản phẩm, kiểm tra tồn kho, theo dõi đơn hàng, phân tích doanh số. Luôn dùng dữ liệu thật từ database."
+        },
+        "agents": [
+          {
+            "id": "sales_assistant",
+            "name": "Trợ lý Bán hàng",
+            "icon": "🛍️",
+            "persona": "Nhân viên bán hàng giỏi, tư vấn sản phẩm, kiểm tra tồn kho",
+            "system_prompt": "Bạn là trợ lý bán hàng AI. Khi khách hỏi sản phẩm:\n1. Dùng db_query tìm sản phẩm phù hợp\n2. Kiểm tra tồn kho real-time\n3. Tư vấn dựa trên lịch sử mua hàng\n4. Đề xuất upsell/cross-sell thông minh",
+            "tools": ["db_schema", "db_query", "api_connector"],
+            "channels": ["zalo", "telegram"]
+          },
+          {
+            "id": "inventory_manager",
+            "name": "Quản lý Kho",
+            "icon": "📦",
+            "persona": "Quản lý kho thông minh, cảnh báo tồn kho",
+            "system_prompt": "Bạn là quản lý kho AI. Mỗi sáng:\n1. Kiểm tra tồn kho dưới ngưỡng\n2. Tạo cảnh báo sản phẩm sắp hết\n3. Đề xuất đặt hàng bổ sung\n4. Gửi báo cáo tồn kho cho sếp",
+            "tools": ["db_schema", "db_query", "api_connector"],
+            "channels": ["telegram"]
+          }
+        ],
+        "db_connections": [
+          {
+            "id": "retail_main",
+            "db_type": "mysql",
+            "description": "Database chính cửa hàng",
+            "tables": ["orders", "order_items", "products", "categories", "customers", "inventory"],
+            "sensitive_columns": ["phone", "email", "address", "cccd"]
+          }
+        ],
+        "api_endpoints": [
+          { "id": "update_order", "method": "PATCH", "description": "Cập nhật trạng thái đơn hàng" },
+          { "id": "inventory_alert", "method": "POST", "description": "Tạo cảnh báo tồn kho" }
+        ],
+        "channels": ["zalo", "telegram"],
+        "mcp_servers": ["sqlite", "puppeteer", "brave-search"],
+        "gallery_skills": ["sales-crm", "sales-report", "sales-quote", "ops-inventory", "cs-support"],
+        "scheduled_tasks": [
+          { "name": "Báo cáo doanh số", "schedule": "0 18 * * *", "description": "Tổng hợp doanh thu cuối ngày" },
+          { "name": "Cảnh báo tồn kho", "schedule": "0 7 * * *", "description": "Kiểm tra sản phẩm sắp hết hàng" },
+          { "name": "Nhắc follow-up", "schedule": "0 9 * * 1-5", "description": "Nhắc chăm sóc khách hàng cũ" }
+        ]
+      },
+      "onboarding": {
+        "welcome": {
+          "title": "🛒 Chào mừng đến BizShop!",
+          "subtitle": "AI bán hàng thông minh cho cửa hàng của bạn",
+          "description": "BizShop sẽ giúp bạn:\n• Tự động tư vấn sản phẩm cho khách qua Zalo/Telegram\n• Theo dõi đơn hàng & tồn kho real-time\n• Phân tích doanh số, đề xuất kinh doanh\n• Cảnh báo sớm hàng sắp hết",
+          "estimated_time": "5 phút"
+        },
+        "steps": [
+          {
+            "id": "connect_db",
+            "step": 1,
+            "title": "📊 Kết nối Database",
+            "description": "Kết nối hệ thống POS/quản lý bán hàng hiện tại",
+            "type": "form",
+            "fields": [
+              { "name": "db_type", "label": "Loại database", "type": "select", "options": ["MySQL", "PostgreSQL", "SQLite"], "required": true },
+              { "name": "connection_string", "label": "Connection string", "type": "text", "placeholder": "mysql://user:pass@localhost/shop_db", "required": true },
+              { "name": "test_connection", "label": "Test kết nối", "type": "button", "action": "test_db" }
+            ],
+            "skip_allowed": true,
+            "skip_note": "Bạn có thể dùng database mẫu để thử nghiệm trước"
+          },
+          {
+            "id": "connect_channel",
+            "step": 2,
+            "title": "💬 Kết nối Kênh Chat",
+            "description": "Chọn kênh để AI trả lời khách hàng tự động",
+            "type": "checklist",
+            "options": [
+              { "id": "zalo", "name": "Zalo", "icon": "💙", "description": "Kênh phổ biến nhất VN", "setup_guide": "Quét QR từ app Zalo" },
+              { "id": "telegram", "name": "Telegram", "icon": "✈️", "description": "Nhanh, ổn định", "setup_guide": "Tạo bot từ @BotFather" },
+              { "id": "email", "name": "Email", "icon": "📧", "description": "Hỗ trợ qua email", "setup_guide": "Nhập IMAP/SMTP credentials" }
+            ]
+          },
+          {
+            "id": "customize",
+            "step": 3,
+            "title": "✨ Tùy chỉnh AI",
+            "description": "Điều chỉnh tính cách AI phù hợp với thương hiệu",
+            "type": "form",
+            "fields": [
+              { "name": "business_name", "label": "Tên cửa hàng", "type": "text", "required": true },
+              { "name": "tone", "label": "Giọng điệu", "type": "select", "options": ["Thân thiện", "Chuyên nghiệp", "Năng động"], "default": "Thân thiện" },
+              { "name": "greeting", "label": "Lời chào khách", "type": "textarea", "placeholder": "Chào anh/chị! Em là trợ lý AI của [tên shop]..." }
+            ]
+          },
+          {
+            "id": "test_drive",
+            "step": 4,
+            "title": "🚀 Thử nghiệm ngay!",
+            "description": "Hỏi thử AI vài câu để xem cách hoạt động",
+            "type": "interactive",
+            "sample_queries": [
+              "Top 10 sản phẩm bán chạy nhất tháng này?",
+              "Doanh thu hôm nay so với hôm qua?",
+              "Sản phẩm nào sắp hết hàng?",
+              "Khách hàng nào mua nhiều nhất?",
+              "Đơn hàng nào chưa giao?"
+            ]
+          }
+        ],
+        "completion": {
+          "title": "🎉 BizShop đã sẵn sàng!",
+          "message": "AI bán hàng của bạn đã được cấu hình xong. Bắt đầu sử dụng ngay!",
+          "next_actions": [
+            "Mở Dashboard để xem tổng quan",
+            "Gửi tin nhắn thử qua Zalo/Telegram",
+            "Xem báo cáo doanh số tự động"
+          ]
+        }
+      }
+    },
+
+    {
+      "id": "fnb",
+      "name": "F&B Manager",
+      "icon": "🍜",
+      "tagline": "AI quản lý nhà hàng, quán café",
+      "description": "Giải pháp cho nhà hàng, quán café: tư vấn menu, nhận order, kiểm tra nguyên liệu, phân tích doanh thu.",
+      "tier": "free",
+      "color": "#FF9800",
+      "industries": ["Nhà hàng", "Quán café", "Quán ăn", "Bar", "Bakery"],
+      "config": {
+        "identity": {
+          "name": "BizFood",
+          "persona": "Trợ lý AI nhà hàng thông minh",
+          "system_prompt": "Bạn là BizFood — trợ lý AI cho nhà hàng/quán café. Tư vấn menu, kiểm tra nguyên liệu, phân tích doanh thu. Thân thiện, nhanh gọn."
+        },
+        "agents": [
+          {
+            "id": "restaurant_assistant",
+            "name": "Trợ lý Nhà hàng",
+            "icon": "🍽️",
+            "persona": "Phục vụ thông minh, tư vấn menu",
+            "system_prompt": "Tư vấn menu, kiểm tra nguyên liệu, gợi ý món tương tự khi hết, thông báo bếp.",
+            "tools": ["db_schema", "db_query", "api_connector"],
+            "channels": ["zalo", "telegram"]
+          },
+          {
+            "id": "kitchen_manager",
+            "name": "Quản lý Bếp",
+            "icon": "👨‍🍳",
+            "persona": "Theo dõi nguyên liệu, đề xuất mua hàng",
+            "system_prompt": "Kiểm tra nguyên liệu tồn, cảnh báo sắp hết, đề xuất đặt hàng nhà cung cấp.",
+            "tools": ["db_schema", "db_query"],
+            "channels": ["telegram"]
+          }
+        ],
+        "db_connections": [{ "id": "fnb_main", "db_type": "mysql", "tables": ["menu_items", "orders", "ingredients", "tables", "staff", "shifts"] }],
+        "channels": ["zalo", "telegram"],
+        "mcp_servers": ["sqlite"],
+        "gallery_skills": ["ops-inventory", "ops-procurement", "cs-support", "fin-cashflow"],
+        "scheduled_tasks": [
+          { "name": "Báo cáo doanh thu", "schedule": "0 22 * * *", "description": "Tổng hợp doanh thu cuối ngày" },
+          { "name": "Cảnh báo nguyên liệu", "schedule": "0 6 * * *", "description": "Kiểm tra nguyên liệu sắp hết" }
+        ]
+      },
+      "onboarding": {
+        "welcome": {
+          "title": "🍜 Chào mừng đến BizFood!",
+          "subtitle": "AI quản lý nhà hàng/quán café",
+          "description": "BizFood giúp bạn:\n• Tự động tư vấn menu cho khách\n• Theo dõi nguyên liệu tồn kho\n• Phân tích doanh thu & món bán chạy\n• Quản lý ca làm việc",
+          "estimated_time": "5 phút"
+        },
+        "steps": [
+          { "id": "connect_db", "step": 1, "title": "📊 Kết nối POS", "type": "form", "description": "Kết nối hệ thống POS nhà hàng" },
+          { "id": "connect_channel", "step": 2, "title": "💬 Kênh đặt bàn", "type": "checklist", "description": "Kênh để khách đặt bàn/hỏi menu" },
+          { "id": "menu_setup", "step": 3, "title": "📋 Cập nhật Menu", "type": "form", "description": "Import menu từ file hoặc nhập tay" },
+          { "id": "test_drive", "step": 4, "title": "🚀 Thử nghiệm", "type": "interactive", "sample_queries": ["Món nào bán chạy nhất tuần này?", "Nguyên liệu nào sắp hết?", "Doanh thu quán hôm nay?"] }
+        ],
+        "completion": { "title": "🎉 BizFood sẵn sàng!", "message": "AI nhà hàng đã cấu hình xong!" }
+      }
+    },
+
+    {
+      "id": "realestate",
+      "name": "Bất động sản",
+      "icon": "🏠",
+      "tagline": "AI tư vấn, quản lý lead, chốt deal BĐS",
+      "description": "Giải pháp cho công ty BĐS: tự động tư vấn dự án, quản lý pipeline lead, đặt lịch xem nhà, phân tích thị trường.",
+      "tier": "pro",
+      "color": "#2196F3",
+      "industries": ["Môi giới BĐS", "Chủ đầu tư", "Sàn giao dịch"],
+      "config": {
+        "identity": { "name": "BizRealty", "persona": "Chuyên viên tư vấn BĐS AI" },
+        "agents": [
+          { "id": "sales_bds", "name": "Tư vấn Sales", "icon": "🏘️", "tools": ["db_schema", "db_query", "api_connector"], "channels": ["zalo", "telegram", "email"] },
+          { "id": "report_bds", "name": "Báo cáo BĐS", "icon": "📊", "tools": ["db_schema", "db_query"], "channels": ["telegram"] }
+        ],
+        "db_connections": [{ "id": "bds_main", "db_type": "postgresql", "tables": ["leads", "properties", "projects", "contracts", "agents", "appointments"] }],
+        "channels": ["zalo", "telegram", "email"],
+        "mcp_servers": ["postgres", "google-maps", "brave-search"],
+        "gallery_skills": ["sales-crm", "sales-report", "sales-quote", "legal-contract"],
+        "scheduled_tasks": [
+          { "name": "Pipeline hàng ngày", "schedule": "0 8 * * *", "description": "Báo cáo lead pipeline mỗi sáng" },
+          { "name": "Nhắc chăm lead", "schedule": "0 9 * * 1-5", "description": "Nhắc lead chưa chăm > 3 ngày" }
+        ]
+      },
+      "onboarding": {
+        "welcome": { "title": "🏠 Chào mừng đến BizRealty!", "subtitle": "AI tư vấn BĐS chuyên nghiệp", "estimated_time": "5 phút" },
+        "steps": [
+          { "id": "connect_crm", "step": 1, "title": "📊 Kết nối CRM", "type": "form" },
+          { "id": "connect_channel", "step": 2, "title": "💬 Kênh tiếp nhận lead", "type": "checklist" },
+          { "id": "project_setup", "step": 3, "title": "🏗️ Thêm dự án", "type": "form" },
+          { "id": "test_drive", "step": 4, "title": "🚀 Thử nghiệm", "type": "interactive", "sample_queries": ["Lead mới hôm nay?", "Agent nào chốt nhiều nhất?", "Dự án nào còn nhiều căn?"] }
+        ],
+        "completion": { "title": "🎉 BizRealty sẵn sàng!" }
+      }
+    },
+
+    {
+      "id": "healthcare",
+      "name": "Phòng khám",
+      "icon": "🏥",
+      "tagline": "AI lễ tân, nhắc lịch, quản lý bệnh nhân",
+      "description": "Giải pháp cho phòng khám, nha khoa, thẩm mỹ viện: đặt lịch hẹn tự động, nhắc lịch bệnh nhân, tư vấn dịch vụ.",
+      "tier": "pro",
+      "color": "#E91E63",
+      "industries": ["Phòng khám", "Nha khoa", "Thẩm mỹ viện", "Spa"],
+      "config": {
+        "identity": { "name": "BizClinic", "persona": "Lễ tân AI phòng khám thân thiện" },
+        "agents": [
+          { "id": "receptionist", "name": "Lễ tân AI", "icon": "👩‍⚕️", "tools": ["db_schema", "db_query", "api_connector"], "channels": ["zalo", "telegram"] },
+          { "id": "reminder", "name": "Nhắc lịch tự động", "icon": "🔔", "tools": ["db_schema", "db_query", "api_connector"], "channels": ["zalo", "telegram"] }
+        ],
+        "db_connections": [{ "id": "clinic_main", "db_type": "mysql", "tables": ["patients", "appointments", "services", "doctors", "treatments", "invoices"] }],
+        "channels": ["zalo", "telegram"],
+        "mcp_servers": ["sqlite", "google-maps"],
+        "gallery_skills": ["cs-support", "cs-ticket", "fin-invoice"],
+        "scheduled_tasks": [
+          { "name": "Nhắc lịch hẹn", "schedule": "0 7 * * *", "description": "Gửi nhắc hẹn cho bệnh nhân hôm nay" },
+          { "name": "Báo cáo ngày", "schedule": "0 18 * * *", "description": "Tổng hợp lượt khám trong ngày" }
+        ]
+      },
+      "onboarding": {
+        "welcome": { "title": "🏥 Chào mừng đến BizClinic!", "subtitle": "AI lễ tân thông minh cho phòng khám", "estimated_time": "5 phút" },
+        "steps": [
+          { "id": "connect_db", "step": 1, "title": "📊 Kết nối phần mềm quản lý", "type": "form" },
+          { "id": "connect_channel", "step": 2, "title": "💬 Kênh đặt hẹn", "type": "checklist" },
+          { "id": "service_setup", "step": 3, "title": "🩺 Cập nhật dịch vụ & bác sĩ", "type": "form" },
+          { "id": "test_drive", "step": 4, "title": "🚀 Thử nghiệm", "type": "interactive", "sample_queries": ["Bác sĩ Nguyễn còn lịch lúc mấy giờ?", "Tẩy trắng răng giá bao nhiêu?", "Bệnh nhân mới tháng này?"] }
+        ],
+        "completion": { "title": "🎉 BizClinic sẵn sàng!" }
+      }
+    },
+
+    {
+      "id": "education",
+      "name": "Giáo dục & Đào tạo",
+      "icon": "🎓",
+      "tagline": "AI tuyển sinh, quản lý học viên, báo cáo đào tạo",
+      "description": "Giải pháp cho trung tâm đào tạo, ngoại ngữ, STEM: tư vấn tuyển sinh tự động, quản lý lớp học, báo cáo điểm danh.",
+      "tier": "free",
+      "color": "#9C27B0",
+      "industries": ["Trung tâm ngoại ngữ", "STEM", "Đào tạo nghề", "Mầm non"],
+      "config": {
+        "identity": { "name": "BizEdu", "persona": "Tư vấn viên đào tạo AI nhiệt tình" },
+        "agents": [
+          { "id": "admission", "name": "Tư vấn tuyển sinh", "icon": "📚", "tools": ["db_schema", "db_query", "api_connector"], "channels": ["zalo", "telegram"] },
+          { "id": "edu_report", "name": "Báo cáo đào tạo", "icon": "📊", "tools": ["db_schema", "db_query"], "channels": ["telegram"] }
+        ],
+        "db_connections": [{ "id": "edu_main", "db_type": "mysql", "tables": ["students", "classes", "courses", "enrollments", "payments", "teachers", "schedules"] }],
+        "channels": ["zalo", "telegram"],
+        "mcp_servers": ["sqlite"],
+        "gallery_skills": ["cs-support", "train-lms", "fin-invoice", "mkt-social"],
+        "scheduled_tasks": [
+          { "name": "Báo cáo điểm danh", "schedule": "0 17 * * 1-5", "description": "Gửi điểm danh cho phụ huynh" },
+          { "name": "Nhắc học phí", "schedule": "0 9 1 * *", "description": "Nhắc đóng học phí đầu tháng" }
+        ]
+      },
+      "onboarding": {
+        "welcome": { "title": "🎓 Chào mừng đến BizEdu!", "subtitle": "AI tuyển sinh & quản lý đào tạo", "estimated_time": "5 phút" },
+        "steps": [
+          { "id": "connect_db", "step": 1, "title": "📊 Kết nối hệ thống quản lý", "type": "form" },
+          { "id": "connect_channel", "step": 2, "title": "💬 Kênh tuyển sinh", "type": "checklist" },
+          { "id": "course_setup", "step": 3, "title": "📋 Cập nhật khóa học", "type": "form" },
+          { "id": "test_drive", "step": 4, "title": "🚀 Thử nghiệm", "type": "interactive", "sample_queries": ["Khóa IELTS khi nào? Học phí?", "Lớp A1 còn chỗ không?", "Học viên vắng nhiều nhất?"] }
+        ],
+        "completion": { "title": "🎉 BizEdu sẵn sàng!" }
+      }
+    },
+
+    {
+      "id": "professional",
+      "name": "Dịch vụ Chuyên nghiệp",
+      "icon": "💼",
+      "tagline": "AI quản lý dự án, khách hàng, hóa đơn cho Agency/Tư vấn",
+      "description": "Giải pháp cho công ty tư vấn, kế toán, pháp lý, agency: quản lý dự án, timesheet, hóa đơn, báo cáo khách hàng.",
+      "tier": "pro",
+      "color": "#607D8B",
+      "industries": ["Agency", "Tư vấn", "Kế toán", "Luật", "Marketing"],
+      "config": {
+        "identity": { "name": "BizPro", "persona": "Trợ lý quản lý dự án AI chuyên nghiệp" },
+        "agents": [
+          { "id": "project_mgr", "name": "Quản lý Dự án", "icon": "📋", "tools": ["db_schema", "db_query", "api_connector"], "channels": ["telegram", "email"] },
+          { "id": "client_mgr", "name": "Chăm sóc Khách hàng", "icon": "🤝", "tools": ["db_schema", "db_query"], "channels": ["zalo", "telegram", "email"] }
+        ],
+        "db_connections": [{ "id": "pro_main", "db_type": "postgresql", "tables": ["clients", "projects", "tasks", "timesheets", "invoices", "team_members", "contracts"] }],
+        "channels": ["telegram", "email", "zalo"],
+        "mcp_servers": ["postgres", "github", "notion", "google-drive"],
+        "gallery_skills": ["mgmt-project", "mgmt-report", "fin-invoice", "legal-contract", "sales-crm"],
+        "scheduled_tasks": [
+          { "name": "Weekly report", "schedule": "0 9 * * 1", "description": "Báo cáo tiến độ dự án hàng tuần" },
+          { "name": "Invoice reminder", "schedule": "0 9 1,15 * *", "description": "Nhắc gửi hóa đơn cho khách" },
+          { "name": "Timesheet check", "schedule": "0 17 * * 5", "description": "Nhắc team log timesheet cuối tuần" }
+        ]
+      },
+      "onboarding": {
+        "welcome": { "title": "💼 Chào mừng đến BizPro!", "subtitle": "AI quản lý dự án & khách hàng", "estimated_time": "5 phút" },
+        "steps": [
+          { "id": "connect_db", "step": 1, "title": "📊 Kết nối hệ thống", "type": "form" },
+          { "id": "connect_channel", "step": 2, "title": "💬 Kênh giao tiếp", "type": "checklist" },
+          { "id": "team_setup", "step": 3, "title": "👥 Thêm Team & Dự án", "type": "form" },
+          { "id": "test_drive", "step": 4, "title": "🚀 Thử nghiệm", "type": "interactive", "sample_queries": ["Dự án nào đang chậm tiến độ?", "Hóa đơn nào chưa thu?", "Team log timesheet tuần này chưa?"] }
+        ],
+        "completion": { "title": "🎉 BizPro sẵn sàng!" }
+      }
+    }
+  ]
+}

@@ -12,6 +12,7 @@
 //! | web_search | DuckDuckGo search (no key needed) |
 //! | http_request | Make HTTP requests to APIs |
 //! | browser | Chrome automation via PinchTab |
+//! | bundle_provision | SME Application Bundle Provisioner |
 //! | config_manager | Read/write config.toml at runtime |
 //! | memory_search | Search past conversation memory |
 //! | plan | Structured task decomposition |
@@ -24,6 +25,7 @@
 
 pub mod api_connector;
 pub mod browser;
+pub mod bundle_provisioner;
 pub mod calendar;
 pub mod custom_tool;
 pub mod config_manager;
@@ -96,6 +98,8 @@ impl ToolRegistry {
         reg.register(Box::new(http_request::HttpRequestTool::new()));
         // Browser automation (PinchTab)
         reg.register(Box::new(browser::BrowserTool::new()));
+        // Bundle Provisioner (SME App Templates)
+        reg.register(Box::new(bundle_provisioner::BundleProvisionerTool::new()));
         // Config tools
         reg.register(Box::new(config_manager::ConfigManagerTool::new()));
         // Plan mode

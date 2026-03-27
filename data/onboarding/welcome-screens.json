@@ -1,0 +1,187 @@
+{
+  "version": "1.0.0",
+  "description": "Welcome onboarding screens cho 6 SME Application Bundles",
+  "global_config": {
+    "allow_skip": true,
+    "show_progress_bar": true,
+    "auto_save_progress": true,
+    "fallback_to_demo_db": true,
+    "demo_db_path": "data/db-examples.sqlite"
+  },
+  "screens": {
+    "retail": [
+      {
+        "screen": "welcome",
+        "layout": "hero",
+        "content": {
+          "icon": "🛒",
+          "title": "Chào mừng đến BizShop!",
+          "subtitle": "AI bán hàng thông minh cho cửa hàng của bạn",
+          "features": [
+            { "icon": "🤖", "text": "Tự động tư vấn sản phẩm qua Zalo/Telegram" },
+            { "icon": "📦", "text": "Cảnh báo tồn kho real-time" },
+            { "icon": "📊", "text": "Báo cáo doanh số tự động mỗi ngày" },
+            { "icon": "🎯", "text": "Đề xuất upsell/cross-sell thông minh" }
+          ],
+          "cta": "Bắt đầu cấu hình →",
+          "time_estimate": "⏱️ Chỉ mất 5 phút"
+        }
+      },
+      {
+        "screen": "connect_data",
+        "layout": "form",
+        "content": {
+          "title": "Bước 1: Kết nối dữ liệu",
+          "description": "Kết nối database cửa hàng để AI có thể truy vấn sản phẩm, đơn hàng, tồn kho",
+          "options": [
+            { "id": "existing_db", "label": "Kết nối database hiện có", "icon": "🔗", "recommended": false },
+            { "id": "demo_db", "label": "Dùng database mẫu để thử", "icon": "🧪", "recommended": true, "note": "Database mẫu với 100+ sản phẩm, đơn hàng, khách hàng" },
+            { "id": "import_csv", "label": "Import từ file Excel/CSV", "icon": "📁", "recommended": false }
+          ]
+        }
+      },
+      {
+        "screen": "connect_channels",
+        "layout": "checklist",
+        "content": {
+          "title": "Bước 2: Kết nối kênh chat",
+          "description": "Chọn kênh để AI tự động trả lời khách hàng",
+          "channels": [
+            { "id": "zalo", "name": "Zalo", "icon": "💙", "popular": true, "guide": "1. Mở app Zalo trên điện thoại\n2. Quét QR code hiện trên màn hình\n3. Xác nhận kết nối\n✅ AI sẽ tự động trả lời tin nhắn Zalo" },
+            { "id": "telegram", "name": "Telegram", "icon": "✈️", "popular": true, "guide": "1. Mở Telegram, tìm @BotFather\n2. Gửi /newbot, đặt tên bot\n3. Copy token vào ô bên dưới\n✅ AI sẽ phản hồi qua Telegram bot" },
+            { "id": "web", "name": "Web Chat", "icon": "🌐", "popular": false, "guide": "Nhúng widget chat vào website. Copy đoạn code và dán vào <body> website." }
+          ],
+          "skip_note": "Bạn có thể thêm kênh chat sau trong Settings"
+        }
+      },
+      {
+        "screen": "personalize",
+        "layout": "form",
+        "content": {
+          "title": "Bước 3: Cá nhân hóa AI",
+          "description": "Điều chỉnh AI cho phù hợp với thương hiệu",
+          "fields": {
+            "business_name": { "label": "Tên cửa hàng/thương hiệu", "placeholder": "VD: Shop Thời Trang ABC", "required": true },
+            "tone": { "label": "Giọng điệu AI", "options": ["😊 Thân thiện, gần gũi", "👔 Chuyên nghiệp, lịch sự", "🔥 Năng động, trẻ trung"], "default": 0 },
+            "auto_greeting": { "label": "Lời chào tự động", "placeholder": "Chào anh/chị! Em là trợ lý AI của [tên shop]. Anh/chị cần tư vấn gì ạ? 🛍️", "multiline": true },
+            "business_hours": { "label": "Giờ hoạt động", "type": "time_range", "default": { "start": "08:00", "end": "22:00" } },
+            "after_hours_msg": { "label": "Tin nhắn ngoài giờ", "placeholder": "Cảm ơn anh/chị! Shop đã đóng cửa. Em sẽ phản hồi vào 8h sáng mai ạ 🌙" }
+          }
+        }
+      },
+      {
+        "screen": "test_drive",
+        "layout": "chat_demo",
+        "content": {
+          "title": "Bước 4: Thử nghiệm ngay! 🚀",
+          "description": "Hỏi thử AI vài câu – bấm vào câu hỏi mẫu hoặc tự gõ",
+          "suggested_queries": [
+            { "text": "Top 10 sản phẩm bán chạy nhất?", "icon": "🏆" },
+            { "text": "Doanh thu hôm nay bao nhiêu?", "icon": "💰" },
+            { "text": "Sản phẩm nào sắp hết hàng?", "icon": "⚠️" },
+            { "text": "Đơn hàng nào chưa giao?", "icon": "📦" }
+          ]
+        }
+      },
+      {
+        "screen": "complete",
+        "layout": "celebration",
+        "content": {
+          "title": "🎉 BizShop đã sẵn sàng!",
+          "subtitle": "AI bán hàng của bạn đã được cấu hình xong",
+          "stats": { "agents_active": 2, "channels_connected": "auto", "tasks_scheduled": 3 },
+          "next_steps": [
+            { "icon": "📊", "text": "Mở Dashboard", "action": "navigate:/dashboard" },
+            { "icon": "💬", "text": "Gửi tin nhắn thử", "action": "navigate:/chat" },
+            { "icon": "⚙️", "text": "Tùy chỉnh thêm", "action": "navigate:/settings" }
+          ],
+          "tips": [
+            "💡 AI sẽ tự động gửi báo cáo doanh số lúc 18h mỗi ngày",
+            "💡 Cảnh báo tồn kho sẽ được gửi lúc 7h sáng",
+            "💡 Bạn có thể thêm Agents mới trong phần Cấu hình"
+          ]
+        }
+      }
+    ],
+
+    "fnb": [
+      { "screen": "welcome", "layout": "hero", "content": { "icon": "🍜", "title": "Chào mừng đến BizFood!", "subtitle": "AI quản lý nhà hàng/quán café", "features": [
+        { "icon": "📋", "text": "Tư vấn menu & nhận order tự động" },
+        { "icon": "🥗", "text": "Theo dõi nguyên liệu, cảnh báo hết" },
+        { "icon": "💰", "text": "Phân tích doanh thu theo ca/ngày" },
+        { "icon": "👨‍🍳", "text": "Quản lý ca làm việc nhân viên" }
+      ]}},
+      { "screen": "connect_data", "layout": "form", "content": { "title": "Kết nối POS System", "options": [
+        { "id": "pos_api", "label": "Kết nối POS hiện có (KiotViet, Sapo...)", "icon": "🔗" },
+        { "id": "demo", "label": "Dùng data mẫu nhà hàng", "icon": "🧪", "recommended": true }
+      ]}},
+      { "screen": "menu_import", "layout": "form", "content": { "title": "Import Menu", "description": "Tải lên menu để AI tư vấn cho khách" }},
+      { "screen": "test_drive", "layout": "chat_demo", "content": { "suggested_queries": [
+        { "text": "Món gì bán chạy nhất tuần?", "icon": "🏆" },
+        { "text": "Nguyên liệu nào sắp hết?", "icon": "⚠️" },
+        { "text": "Doanh thu hôm nay?", "icon": "💰" }
+      ]}},
+      { "screen": "complete", "layout": "celebration", "content": { "title": "🎉 BizFood sẵn sàng phục vụ!" }}
+    ],
+
+    "realestate": [
+      { "screen": "welcome", "layout": "hero", "content": { "icon": "🏠", "title": "Chào mừng đến BizRealty!", "features": [
+        { "icon": "📱", "text": "Tự động tư vấn dự án cho khách qua Zalo" },
+        { "icon": "📊", "text": "Quản lý pipeline lead real-time" },
+        { "icon": "📅", "text": "Đặt lịch xem nhà tự động" },
+        { "icon": "📈", "text": "Báo cáo doanh số agent hàng ngày" }
+      ]}},
+      { "screen": "test_drive", "layout": "chat_demo", "content": { "suggested_queries": [
+        { "text": "Lead mới hôm nay bao nhiêu?", "icon": "📱" },
+        { "text": "Agent nào chốt nhiều deal nhất?", "icon": "🏆" },
+        { "text": "Căn hộ 2PN giá dưới 3 tỷ?", "icon": "🏠" }
+      ]}},
+      { "screen": "complete", "layout": "celebration", "content": { "title": "🎉 BizRealty sẵn sàng!" }}
+    ],
+
+    "healthcare": [
+      { "screen": "welcome", "layout": "hero", "content": { "icon": "🏥", "title": "Chào mừng đến BizClinic!", "features": [
+        { "icon": "📅", "text": "Đặt lịch hẹn tự động qua Zalo/Web" },
+        { "icon": "🔔", "text": "Nhắc lịch bệnh nhân trước 2 tiếng" },
+        { "icon": "💳", "text": "Tư vấn dịch vụ & bảng giá" },
+        { "icon": "📊", "text": "Thống kê lượt khám, doanh thu" }
+      ]}},
+      { "screen": "test_drive", "layout": "chat_demo", "content": { "suggested_queries": [
+        { "text": "Bác sĩ Nguyễn còn lịch hôm nay?", "icon": "👨‍⚕️" },
+        { "text": "Giá niềng răng bao nhiêu?", "icon": "💰" },
+        { "text": "Bệnh nhân mới tháng này?", "icon": "📊" }
+      ]}},
+      { "screen": "complete", "layout": "celebration", "content": { "title": "🎉 BizClinic sẵn sàng!" }}
+    ],
+
+    "education": [
+      { "screen": "welcome", "layout": "hero", "content": { "icon": "🎓", "title": "Chào mừng đến BizEdu!", "features": [
+        { "icon": "📱", "text": "Tư vấn tuyển sinh tự động 24/7" },
+        { "icon": "📋", "text": "Quản lý lớp học & điểm danh" },
+        { "icon": "💰", "text": "Theo dõi học phí & công nợ" },
+        { "icon": "📊", "text": "Báo cáo điểm danh cho phụ huynh" }
+      ]}},
+      { "screen": "test_drive", "layout": "chat_demo", "content": { "suggested_queries": [
+        { "text": "Khóa IELTS khi nào? Giá bao nhiêu?", "icon": "📚" },
+        { "text": "Lớp A1 còn chỗ không?", "icon": "👥" },
+        { "text": "Doanh thu học phí tháng này?", "icon": "💰" }
+      ]}},
+      { "screen": "complete", "layout": "celebration", "content": { "title": "🎉 BizEdu sẵn sàng!" }}
+    ],
+
+    "professional": [
+      { "screen": "welcome", "layout": "hero", "content": { "icon": "💼", "title": "Chào mừng đến BizPro!", "features": [
+        { "icon": "📋", "text": "Quản lý dự án & deadline tự động" },
+        { "icon": "⏱️", "text": "Timesheet & năng suất team" },
+        { "icon": "💳", "text": "Tạo hóa đơn & nhắc thanh toán" },
+        { "icon": "📊", "text": "Báo cáo khách hàng hàng tuần" }
+      ]}},
+      { "screen": "test_drive", "layout": "chat_demo", "content": { "suggested_queries": [
+        { "text": "Dự án nào đang chậm tiến độ?", "icon": "⚠️" },
+        { "text": "Hóa đơn nào chưa thu?", "icon": "💰" },
+        { "text": "Team đã log timesheet tuần này chưa?", "icon": "⏱️" }
+      ]}},
+      { "screen": "complete", "layout": "celebration", "content": { "title": "🎉 BizPro sẵn sàng!" }}
+    ]
+  }
+}

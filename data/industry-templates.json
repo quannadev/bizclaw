@@ -287,6 +287,65 @@
         "Doanh thu học phí tháng này so với tháng trước?",
         "Khóa học nào có tỷ lệ hoàn thành cao nhất?"
       ]
+    },
+    {
+      "id": "professional",
+      "name": "Dịch vụ Chuyên nghiệp / Professional Services",
+      "description": "Quản lý dự án, khách hàng, hóa đơn cho công ty tư vấn, kế toán, pháp lý, agency",
+      "icon": "💼",
+      "db_connections": [
+        {
+          "id": "pro_main",
+          "db_type": "postgresql",
+          "description": "Database CRM dịch vụ chuyên nghiệp",
+          "connection_string": "postgres://user:pass@localhost/professional_db",
+          "allowed_tables": ["clients", "projects", "tasks", "timesheets", "invoices", "team_members", "contracts", "milestones"],
+          "sensitive_columns": ["phone", "email", "cccd", "bank_account", "tax_code"],
+          "max_rows": 500,
+          "enabled": true
+        }
+      ],
+      "api_endpoints": [
+        {
+          "id": "create_invoice",
+          "url": "https://api.myagency.vn/invoices",
+          "method": "POST",
+          "description": "Tạo hóa đơn cho khách hàng",
+          "allowed_fields": ["client_id", "project_id", "items", "due_date", "note"],
+          "dangerous": false
+        },
+        {
+          "id": "update_project_status",
+          "url": "https://api.myagency.vn/projects/{id}/status",
+          "method": "PATCH",
+          "description": "Cập nhật trạng thái dự án",
+          "allowed_fields": ["status", "progress_percent", "note"],
+          "dangerous": false
+        }
+      ],
+      "agents": [
+        {
+          "name": "Quản lý Dự án AI",
+          "persona": "Project Manager chuyên nghiệp, theo dõi deadline và tiến độ",
+          "system_prompt": "Bạn là PM AI cho công ty dịch vụ. Tasks:\n1. Dùng db_query theo dõi tiến độ dự án (bảng projects, tasks, milestones)\n2. Cảnh báo task quá deadline\n3. Tổng hợp timesheet team (bảng timesheets)\n4. Cập nhật trạng thái qua api_connector 'update_project_status'\n5. Gửi báo cáo tuần cho sếp",
+          "tools": ["db_schema", "db_query", "api_connector"],
+          "channels": ["telegram", "email"]
+        },
+        {
+          "name": "Trợ lý Thanh toán",
+          "persona": "Kế toán AI, quản lý hóa đơn và công nợ",
+          "system_prompt": "Bạn là kế toán AI. Tasks:\n1. Theo dõi công nợ khách hàng (bảng invoices)\n2. Nhắc hóa đơn quá hạn\n3. Tạo hóa đơn mới qua api_connector 'create_invoice'\n4. Báo cáo doanh thu theo tháng/quý",
+          "tools": ["db_schema", "db_query", "api_connector"],
+          "channels": ["telegram"]
+        }
+      ],
+      "sample_queries": [
+        "Dự án nào đang chậm tiến độ?",
+        "Hóa đơn nào quá hạn chưa thanh toán?",
+        "Team đã log bao nhiêu giờ tuần này?",
+        "Doanh thu theo khách hàng Q1?",
+        "Khách hàng nào đem lại revenue cao nhất?"
+      ]
     }
   ]
 }
