@@ -85,6 +85,7 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
         ("edge_gateway.js", include_str!("dashboard/pages/edge_gateway.js")),
         ("plugins.js", include_str!("dashboard/pages/plugins.js")),
         ("db_assistant.js", include_str!("dashboard/pages/db_assistant.js")),
+        ("campaigns.js", include_str!("dashboard/pages/campaigns.js")),
     ];
 
     for (name, content) in pages {

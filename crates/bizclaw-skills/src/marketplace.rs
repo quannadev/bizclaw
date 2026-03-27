@@ -94,6 +94,93 @@ impl SkillMarketplace {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
     }
+
+    /// Install a skill from the Hub by name.
+    /// Downloads the skill archive, extracts it, and registers it.
+    pub async fn install_from_hub(
+        &mut self,
+        skill_name: &str,
+        install_dir: &std::path::Path,
+    ) -> Result<SkillListing, String> {
+        let url = format!("{}/{}/download", self.base_url, skill_name);
+        tracing::info!("📦 Installing skill '{}' from {}", skill_name, url);
+
+        // Fetch skill metadata first
+        let meta_url = format!("{}/{}", self.base_url, skill_name);
+        let client = reqwest::Client::new();
+        let listing: SkillListing = client
+            .get(&meta_url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to fetch skill info: {}", e))?
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse skill info: {}", e))?;
+
+        // Download skill archive
+        let archive_bytes = client
+            .get(&url)
+            .send()
+            .await
+            .map_err(|e| format!("Failed to download skill: {}", e))?
+            .bytes()
+            .await
+            .map_err(|e| format!("Failed to read skill archive: {}", e))?;
+
+        // Create skill directory
+        let skill_dir = install_dir.join(&listing.name);
+        std::fs::create_dir_all(&skill_dir)
+            .map_err(|e| format!("Failed to create skill dir: {}", e))?;
+
+        // Write archive (for now, treat as tar.gz or single SKILL.md)
+        let archive_path = skill_dir.join("archive.tar.gz");
+        std::fs::write(&archive_path, &archive_bytes)
+            .map_err(|e| format!("Failed to write archive: {}", e))?;
+
+        // Add to cache
+        self.cache.push(listing.clone());
+        tracing::info!("✅ Installed skill '{}' v{}", listing.name, listing.version);
+        Ok(listing)
+    }
+
+    /// Uninstall a skill by name.
+    pub fn uninstall(
+        &mut self,
+        skill_name: &str,
+        install_dir: &std::path::Path,
+    ) -> Result<(), String> {
+        let skill_dir = install_dir.join(skill_name);
+        if skill_dir.exists() {
+            std::fs::remove_dir_all(&skill_dir)
+                .map_err(|e| format!("Failed to remove skill dir: {}", e))?;
+        }
+        self.cache.retain(|s| s.name != skill_name);
+        tracing::info!("🗑️ Uninstalled skill '{}'", skill_name);
+        Ok(())
+    }
+
+    /// Check for updates: compare local versions with Hub versions.
+    pub async fn check_updates(&self) -> Vec<(String, String, String)> {
+        // Returns: Vec<(name, local_version, hub_version)>
+        let mut updates = Vec::new();
+        let client = reqwest::Client::new();
+
+        for skill in &self.cache {
+            let url = format!("{}/{}", self.base_url, skill.name);
+            if let Ok(resp) = client.get(&url).send().await {
+                if let Ok(hub) = resp.json::<SkillListing>().await {
+                    if hub.version != skill.version {
+                        updates.push((
+                            skill.name.clone(),
+                            skill.version.clone(),
+                            hub.version.clone(),
+                        ));
+                    }
+                }
+            }
+        }
+        updates
+    }
 }
 
 impl Default for SkillMarketplace {

@@ -38,3 +38,4 @@ mission-control/
 
 # Sensitive deploy workflow (credentials)
 _agents/workflows/deploy.md
+dist/

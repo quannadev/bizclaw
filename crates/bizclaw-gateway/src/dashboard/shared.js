@@ -106,6 +106,7 @@ export const PAGES = [
   { id: 'kanban', icon: '📋', label: 'Kanban Board' },
   { id: 'gallery', icon: '📦', label: 'nav.gallery' },
   { id: 'scheduler', icon: '⏰', label: 'nav.scheduler' },
+  { id: 'campaigns', icon: '📢', label: 'Broadcast' },
   { id: 'sep3', sep: true },
   // Monitoring & Analytics
   { id: 'traces', icon: '🔍', label: 'nav.traces' },
