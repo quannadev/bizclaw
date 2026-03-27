@@ -13,6 +13,7 @@
 //! | http_request | Make HTTP requests to APIs |
 //! | browser | Chrome automation via PinchTab |
 //! | bundle_provision | SME Application Bundle Provisioner |
+//! | social_post | Post to Facebook/Telegram/Webhook |
 //! | config_manager | Read/write config.toml at runtime |
 //! | memory_search | Search past conversation memory |
 //! | plan | Structured task decomposition |
@@ -50,6 +51,7 @@ pub mod plan_tool;
 pub mod registry;
 pub mod session_context;
 pub mod shell;
+pub mod social_post;
 pub mod web_search;
 pub mod zalo_tool;
 
@@ -117,6 +119,8 @@ impl ToolRegistry {
         reg.register(Box::new(document_reader::DocumentReaderTool::new()));
         // Zalo Power Tool
         reg.register(Box::new(zalo_tool::ZaloTool::new()));
+        // Social Posting (Facebook, Telegram Channel, Webhook)
+        reg.register(Box::new(social_post::SocialPostTool::new()));
         // NL Query (Text2SQL RAG pipeline)
         reg.register(Box::new(nl_query::NlQueryTool::new()));
         reg
