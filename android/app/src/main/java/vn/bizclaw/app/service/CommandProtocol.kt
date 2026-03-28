@@ -45,6 +45,7 @@ enum class CommandType {
     schedule,
     mama,
     flow,
+    voice,
 }
 
 @Serializable

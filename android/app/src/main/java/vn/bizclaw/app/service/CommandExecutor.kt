@@ -39,6 +39,7 @@ object CommandExecutor {
                 CommandType.mama -> executeMama(context, cmd)
                 CommandType.device -> executeDeviceInfo(context, cmd)
                 CommandType.flow -> executeFlow(context, cmd)
+                CommandType.voice -> executeVoice(context, cmd)
             }
             result.copy(durationMs = System.currentTimeMillis() - startTime)
         } catch (e: Exception) {
@@ -739,6 +740,156 @@ object CommandExecutor {
                 id = cmd.id,
                 status = CommandStatus.unsupported,
                 error = "Unknown mama action: ${cmd.action}. Available: setup, status, toggle, test, logs",
+            )
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Voice — record + transcribe via AudioRecorder
+    // ═══════════════════════════════════════════════════════
+
+    // Singleton recorder instance (shared across commands)
+    private var audioRecorder: AudioRecorder? = null
+
+    private fun getRecorder(context: Context): AudioRecorder {
+        if (audioRecorder == null) {
+            audioRecorder = AudioRecorder(context)
+        }
+        return audioRecorder!!
+    }
+
+    private suspend fun executeVoice(context: Context, cmd: DeviceCommand): CommandResult {
+        val recorder = getRecorder(context)
+
+        return when (cmd.action) {
+            "start" -> {
+                val started = recorder.startRecording()
+                CommandResult(
+                    id = cmd.id,
+                    status = if (started) CommandStatus.success else CommandStatus.failed,
+                    result = mapOf("message" to if (started) "🎙️ Recording started" else "Failed to start"),
+                    error = if (!started) "Cannot start recording — check RECORD_AUDIO permission" else null,
+                )
+            }
+
+            "stop" -> {
+                val result = recorder.stopRecording()
+                    ?: return errorResult(cmd, "No recording in progress or recording failed")
+
+                CommandResult(
+                    id = cmd.id,
+                    status = CommandStatus.success,
+                    result = mapOf(
+                        "file_path" to result.filePath,
+                        "file_name" to result.fileName,
+                        "duration" to result.durationFormatted,
+                        "size" to result.sizeFormatted,
+                        "message" to "✅ Recording saved: ${result.fileName} (${result.durationFormatted}, ${result.sizeFormatted})",
+                    ),
+                )
+            }
+
+            "cancel" -> {
+                recorder.cancelRecording()
+                CommandResult(
+                    id = cmd.id,
+                    status = CommandStatus.success,
+                    result = mapOf("message" to "🗑️ Recording cancelled"),
+                )
+            }
+
+            "status" -> {
+                CommandResult(
+                    id = cmd.id,
+                    status = CommandStatus.success,
+                    result = mapOf(
+                        "is_recording" to recorder.isRecording.toString(),
+                        "elapsed_ms" to recorder.getElapsedMs().toString(),
+                    ),
+                )
+            }
+
+            "list" -> {
+                val recordings = recorder.listRecordings()
+                val summary = if (recordings.isEmpty()) {
+                    "No recordings found"
+                } else {
+                    recordings.joinToString("\n") { r ->
+                        "📁 ${r.fileName} (${r.sizeFormatted})"
+                    }
+                }
+                CommandResult(
+                    id = cmd.id,
+                    status = CommandStatus.success,
+                    result = mapOf(
+                        "count" to recordings.size.toString(),
+                        "recordings" to summary,
+                    ),
+                )
+            }
+
+            "delete" -> {
+                val path = cmd.params["file_path"]
+                    ?: return errorResult(cmd, "Missing 'file_path'")
+                val deleted = recorder.deleteRecording(path)
+                CommandResult(
+                    id = cmd.id,
+                    status = if (deleted) CommandStatus.success else CommandStatus.failed,
+                    result = mapOf("message" to if (deleted) "🗑️ Deleted" else "File not found"),
+                )
+            }
+
+            "transcribe" -> {
+                // Upload audio file to gateway for transcription
+                val filePath = cmd.params["file_path"]
+                    ?: return errorResult(cmd, "Missing 'file_path'. Record first with voice.start/stop")
+
+                val file = java.io.File(filePath)
+                if (!file.exists()) {
+                    return errorResult(cmd, "Audio file not found: $filePath")
+                }
+
+                val provider = cmd.params["provider"] ?: "whisper"
+                val language = cmd.params["language"] ?: "vi"
+
+                // Use the gateway's voice_transcribe tool via agent chat
+                val message = """Hãy dùng tool voice_transcribe để:
+1. Transcribe file audio tại: $filePath
+2. Provider: $provider, Language: $language
+3. Action: both (transcribe + recap)
+4. Sau khi có transcript, tạo bản recap ngắn gọn với các điểm chính."""
+
+                val response = withContext(Dispatchers.IO) {
+                    // Route through the default agent
+                    val providerManager = ProviderManager(context)
+                    val agentManager = LocalAgentManager(context)
+                    val providers = providerManager.loadProviders()
+                    val defaultProvider = providers.firstOrNull { it.enabled }
+
+                    if (defaultProvider != null) {
+                        ProviderChat.appContext = context
+                        ProviderChat.chat(defaultProvider, "", message)
+                    } else {
+                        "⚠️ No AI provider configured. Transcript file saved at: $filePath"
+                    }
+                }
+
+                CommandResult(
+                    id = cmd.id,
+                    status = CommandStatus.success,
+                    result = mapOf(
+                        "file" to filePath,
+                        "transcript" to response,
+                        "provider" to provider,
+                        "language" to language,
+                    ),
+                )
+            }
+
+            else -> CommandResult(
+                id = cmd.id,
+                status = CommandStatus.unsupported,
+                error = "Unknown voice action: ${cmd.action}. Available: start, stop, cancel, status, list, delete, transcribe",
             )
         }
     }
