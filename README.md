@@ -15,7 +15,7 @@
 
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-692%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-743%20passing-brightgreen)]()
 [![Version](https://img.shields.io/badge/version-v1.0.7-purple)]()
 [![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
 [![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
@@ -493,20 +493,20 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 | `bizclaw-memory` | Session store (JSONL) + FactStore + λ-Memory | 3,149 | 39 | ✅ Production |
 | `bizclaw-security` | Vault, Approval Gates, AES-256, Injection Scanner, SSRF, Sandbox, SecretRedactor | 2,207 | 53 | ✅ Production |
 | `bizclaw-knowledge` | Knowledge RAG (FTS5 + Vector + DOCX/PDF parser) | 4,430 | 66 | ✅ Production |
-| `bizclaw-channels` | 10 channel types (Zalo OA, Telegram, Discord, Xiaozhi Voice...) | 6,892 | 29 | 🟡 Functional |
-| `bizclaw-gateway` | HTTP + WS + Dashboard (20+ pages) | 11,144 | 49 | 🟡 Functional |
-| `bizclaw-db` | Database layer (SQLite + PostgreSQL) | 1,974 | 5 | 🟡 Functional |
-| `bizclaw-webauth` | Free LLM access via browser session (Gemini, Claude, ChatGPT) | 2,888 | 22 | 🟡 Functional |
-| `bizclaw-brain` | GGUF inference + SIMD (Qwen3.5-4B-Neo) | 3,287 | 23 | 🟡 Functional |
-| `bizclaw-workflows` | Workflow orchestration (6 step types, 23 templates) | 2,888 | 31 | 🟡 Functional |
-| `bizclaw-scheduler` | Scheduled tasks + Retry + Notifications | 2,907 | 24 | 🟡 Functional |
-| `bizclaw-hands` | Autonomous Hands (7 types) | 1,557 | 15 | 🟡 Functional |
-| `bizclaw-skills` | Skill registry + gating | 1,766 | 27 | 🟡 Functional |
-| `bizclaw-platform` | Multi-tenant SaaS (billing, onboarding) | 8,780 | 15 | 🟡 Functional |
-| `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor | 1,897 | 33 | 🟡 Functional |
-| `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | 799 | 11 | 🟡 Functional |
-| `bizclaw-ffi` | Android FFI layer (UniFFI) | 343 | 12 | 🟡 Functional |
-| `bizclaw-runtime` | Agent runtime lifecycle | 280 | 8 | 🟡 Functional |
+| `bizclaw-channels` | 10 channel types (Zalo OA, Telegram, Discord, Xiaozhi Voice...) | 6,892 | 29 | ✅ Production |
+| `bizclaw-gateway` | HTTP + WS + Dashboard (20+ pages) | 11,144 | 49 | ✅ Production |
+| `bizclaw-db` | Database layer (SQLite + PostgreSQL) | 1,974 | 15 | ✅ Production |
+| `bizclaw-webauth` | Free LLM access via browser session (Gemini, Claude, ChatGPT) | 2,888 | 22 | ✅ Production |
+| `bizclaw-brain` | GGUF inference + SIMD (Qwen3.5-4B-Neo) | 3,287 | 23 | ✅ Production |
+| `bizclaw-workflows` | Workflow orchestration (6 step types, 23 templates) | 2,888 | 31 | ✅ Production |
+| `bizclaw-scheduler` | Scheduled tasks + Retry + Notifications | 2,907 | 24 | ✅ Production |
+| `bizclaw-hands` | Autonomous Hands (7 types) | 1,557 | 15 | ✅ Production |
+| `bizclaw-skills` | Skill registry + gating | 1,766 | 28 | ✅ Production |
+| `bizclaw-platform` | Multi-tenant SaaS (billing, onboarding) | 8,780 | 15 | ✅ Production |
+| `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor | 1,897 | 33 | ✅ Production |
+| `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | 799 | 11 | ✅ Production |
+| `bizclaw-ffi` | Android FFI layer (UniFFI) | 343 | 12 | ✅ Production |
+| `bizclaw-runtime` | Agent runtime lifecycle | 280 | 8 | ✅ Production |
 
 ---
 
@@ -558,7 +558,7 @@ llm:
 | **Language** | 100% Rust + Kotlin (Android) |
 | **Crates** | 21 |
 | **Lines of Code** | 82,141 |
-| **Tests** | 692 passing |
+| **Tests** | 743 passing (21/21 crates ✅ Production) |
 | **Workflow Templates** | 23 |
 | **Binary Size** | bizclaw ~12MB, Android APK ~34MB |
 | **Dashboard Pages** | 20+ (27 lazy-loaded modules) |

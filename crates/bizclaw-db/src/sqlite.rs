@@ -993,4 +993,163 @@ mod tests {
         let agent_traces = store.list_agent_traces("agent-1", 10).await.unwrap();
         assert_eq!(agent_traces.len(), 1);
     }
+
+    #[tokio::test]
+    async fn test_migrate_idempotent() {
+        let store = test_store().await;
+        // Calling migrate again should not error
+        store.migrate().await.unwrap();
+        store.migrate().await.unwrap();
+        assert_eq!(store.name(), "sqlite");
+    }
+
+    #[tokio::test]
+    async fn test_all_links() {
+        let store = test_store().await;
+        let l1 = AgentLink::new("a", "b", LinkDirection::Outbound);
+        let l2 = AgentLink::new("c", "d", LinkDirection::Outbound);
+        store.create_link(&l1).await.unwrap();
+        store.create_link(&l2).await.unwrap();
+
+        let all = store.all_links().await.unwrap();
+        assert_eq!(all.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_delegation_listing() {
+        let store = test_store().await;
+        let d1 = Delegation::new("boss", "worker", "task-1", DelegationMode::Sync);
+        let d2 = Delegation::new("boss", "worker", "task-2", DelegationMode::Async);
+        store.create_delegation(&d1).await.unwrap();
+        store.create_delegation(&d2).await.unwrap();
+
+        let list = store.list_delegations("boss", 10).await.unwrap();
+        assert_eq!(list.len(), 2);
+
+        // Limit works
+        let limited = store.list_delegations("boss", 1).await.unwrap();
+        assert_eq!(limited.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_active_delegation_count() {
+        let store = test_store().await;
+        let d1 = Delegation::new("a", "worker", "t1", DelegationMode::Sync);
+        let d2 = Delegation::new("b", "worker", "t2", DelegationMode::Sync);
+        store.create_delegation(&d1).await.unwrap();
+        store.create_delegation(&d2).await.unwrap();
+
+        let count = store.active_delegation_count("worker").await.unwrap();
+        assert_eq!(count, 2); // both pending
+
+        store.update_delegation(&d1.id, DelegationStatus::Completed, Some("ok"), None).await.unwrap();
+        let count = store.active_delegation_count("worker").await.unwrap();
+        assert_eq!(count, 1); // one completed
+    }
+
+    #[tokio::test]
+    async fn test_team_crud_full() {
+        let store = test_store().await;
+        let team = AgentTeam::new("test-team", "Test");
+        store.create_team(&team).await.unwrap();
+
+        let fetched = store.get_team(&team.id).await.unwrap().unwrap();
+        assert_eq!(fetched.name, "test-team");
+
+        let by_name = store.get_team_by_name("test-team").await.unwrap().unwrap();
+        assert_eq!(by_name.id, team.id);
+
+        let all = store.list_teams().await.unwrap();
+        assert_eq!(all.len(), 1);
+
+        store.delete_team(&team.id).await.unwrap();
+        let all = store.list_teams().await.unwrap();
+        assert!(all.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_agent_tasks_listing() {
+        let store = test_store().await;
+        let team = AgentTeam::new("t1", "Team");
+        store.create_team(&team).await.unwrap();
+
+        let task = TeamTask::new(&team.id, "Test", "Desc", "creator");
+        store.create_task(&task).await.unwrap();
+        store.update_task(&task.id, TaskStatus::InProgress, Some("worker"), None).await.unwrap();
+
+        let tasks = store.list_agent_tasks("worker").await.unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].title, "Test");
+    }
+
+    #[tokio::test]
+    async fn test_broadcast_message() {
+        let store = test_store().await;
+        let team = AgentTeam::new("t1", "Team");
+        store.create_team(&team).await.unwrap();
+
+        // Broadcast (to_agent=None) should be visible to all
+        let msg = TeamMessage::broadcast(&team.id, "leader", "Hello all");
+        store.send_team_message(&msg).await.unwrap();
+
+        let unread_a = store.unread_messages(&team.id, "worker-a").await.unwrap();
+        let unread_b = store.unread_messages(&team.id, "worker-b").await.unwrap();
+        assert_eq!(unread_a.len(), 1);
+        assert_eq!(unread_b.len(), 1);
+
+        // Sender should NOT see own messages
+        let unread_self = store.unread_messages(&team.id, "leader").await.unwrap();
+        assert!(unread_self.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_handoff_replacement() {
+        let store = test_store().await;
+        let h1 = Handoff::new("a", "b", "sess-1", Some("first"));
+        store.create_handoff(&h1).await.unwrap();
+
+        // Create second handoff — should deactivate the first
+        let h2 = Handoff::new("b", "c", "sess-1", Some("second"));
+        store.create_handoff(&h2).await.unwrap();
+
+        let active = store.active_handoff("sess-1").await.unwrap().unwrap();
+        assert_eq!(active.to_agent, "c"); // second one is active
+    }
+
+    #[tokio::test]
+    async fn test_multi_agent_traces() {
+        let store = test_store().await;
+        let mut t1 = LlmTrace::new("agent-x", "openai", "gpt-4");
+        t1.total_tokens = 100;
+        let mut t2 = LlmTrace::new("agent-y", "anthropic", "claude-3");
+        t2.total_tokens = 200;
+        let mut t3 = LlmTrace::new("agent-x", "openai", "gpt-4");
+        t3.total_tokens = 300;
+
+        store.record_trace(&t1).await.unwrap();
+        store.record_trace(&t2).await.unwrap();
+        store.record_trace(&t3).await.unwrap();
+
+        let all = store.list_traces(100).await.unwrap();
+        assert_eq!(all.len(), 3);
+
+        let x_traces = store.list_agent_traces("agent-x", 100).await.unwrap();
+        assert_eq!(x_traces.len(), 2);
+
+        let y_traces = store.list_agent_traces("agent-y", 100).await.unwrap();
+        assert_eq!(y_traces.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_delegation_failed_with_error() {
+        let store = test_store().await;
+        let d = Delegation::new("a", "b", "task", DelegationMode::Sync);
+        store.create_delegation(&d).await.unwrap();
+
+        store.update_delegation(&d.id, DelegationStatus::Failed, None, Some("timeout")).await.unwrap();
+        let fetched = store.get_delegation(&d.id).await.unwrap().unwrap();
+        assert_eq!(fetched.status, DelegationStatus::Failed);
+        assert_eq!(fetched.error.as_deref(), Some("timeout"));
+        assert!(fetched.completed_at.is_some());
+    }
 }
