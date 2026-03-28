@@ -16,7 +16,7 @@
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-692%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v1.0.6-purple)]()
+[![Version](https://img.shields.io/badge/version-v1.0.7-purple)]()
 [![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
 [![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
 
@@ -370,7 +370,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="https://bizclaw.vn/download/bizclaw-v1.0.6.apk"><b>📥 Tải xuống APK v1.0.6 (Signed Release — 34MB)</b></a><br>
+  <a href="https://bizclaw.vn/download/bizclaw-v1.0.7.apk"><b>📥 Tải xuống APK v1.0.7 (Signed Release — 34MB)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
@@ -388,6 +388,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 | 🔗 **Workflow Engine** | Chain nhiều app: Shopee → Zalo → Facebook. LLM + macro kết hợp. |
 | 📸 **Vision Fallback** | Chụp screenshot → Vision AI phân tích (cho WebView, Flutter, Game). |
 | 🛡️ **Stuck Detection** | Tự phát hiện agent bị kẹt, inject recovery hints. 5 chế độ phát hiện. |
+| 🎙️ **Meeting Recorder** | Ghi âm cuộc họp on-device, AI recap tự động, gửi recap qua Zalo cho số ĐT chỉ định. |
 | 📊 **Screen Diff** | Chỉ gửi thay đổi màn hình cho LLM → tiết kiệm 80% tokens. |
 
 **28 Device Tools tích hợp sẵn:**
@@ -553,7 +554,7 @@ llm:
 
 | Metric | Value |
 |--------|-------|
-| **Version** | v1.0.6 |
+| **Version** | v1.0.7 |
 | **Language** | 100% Rust + Kotlin (Android) |
 | **Crates** | 21 |
 | **Lines of Code** | 82,141 |
@@ -636,4 +637,4 @@ MIT License — xem chi tiết tại [LICENSE](LICENSE).
 
 ---
 
-**BizClaw** v1.0.6 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
+**BizClaw** v1.0.7 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶

@@ -21,6 +21,7 @@ import vn.bizclaw.app.engine.LocalAgent
 import vn.bizclaw.app.engine.ProviderChat
 import vn.bizclaw.app.ui.localllm.LocalLLMScreen
 import vn.bizclaw.app.ui.automation.AutomationScreen
+import vn.bizclaw.app.ui.meeting.MeetingScreen
 import vn.bizclaw.app.ui.settings.SettingsScreen
 import vn.bizclaw.app.ui.settings.ProviderScreen
 import vn.bizclaw.app.ui.theme.BizClawTheme
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Chat, Agents, Settings, Dashboard, LocalLLM, KnowledgeBase, Automation, Providers
+    Chat, Agents, Settings, Dashboard, LocalLLM, KnowledgeBase, Automation, Providers, Meeting
 }
 
 @Composable
@@ -104,6 +105,7 @@ fun BizClawNavHost() {
                 onOpenSettings = { navigateTo(Screen.Settings) },
                 onOpenAutomation = { navigateTo(Screen.Automation) },
                 onOpenLocalLLM = { navigateTo(Screen.LocalLLM) },
+                onOpenMeeting = { navigateTo(Screen.Meeting) },
             )
         }
 
@@ -166,6 +168,12 @@ fun BizClawNavHost() {
 
         Screen.Providers -> {
             ProviderScreen(
+                onBack = { goBack() },
+            )
+        }
+
+        Screen.Meeting -> {
+            MeetingScreen(
                 onBack = { goBack() },
             )
         }

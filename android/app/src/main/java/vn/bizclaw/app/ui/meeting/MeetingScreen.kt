@@ -1,0 +1,848 @@
+package vn.bizclaw.app.ui.meeting
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.*
+import vn.bizclaw.app.engine.ProviderChat
+import vn.bizclaw.app.engine.ProviderManager
+import vn.bizclaw.app.service.AppController
+import vn.bizclaw.app.service.AudioRecorder
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
+
+/**
+ * MeetingScreen — Record meetings, transcribe with AI, and share via Zalo.
+ *
+ * Features:
+ * 1. 🎙️ One-tap recording with live timer + waveform animation
+ * 2. 📋 List all saved recordings with size/date
+ * 3. 🤖 AI recap: transcribe + summarize via configured LLM provider
+ * 4. 📨 Send recap to Zalo contact (by name or phone number)
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MeetingScreen(
+    onBack: () -> Unit = {},
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Audio recorder
+    val recorder = remember { AudioRecorder(context) }
+    var isRecording by remember { mutableStateOf(false) }
+    var elapsedMs by remember { mutableLongStateOf(0L) }
+    var recordings by remember { mutableStateOf(recorder.listRecordings()) }
+
+    // Recap state
+    var recapText by remember { mutableStateOf<String?>(null) }
+    var recapFileName by remember { mutableStateOf<String?>(null) }
+    var isRecapping by remember { mutableStateOf(false) }
+
+    // Zalo send dialog
+    var showZaloDialog by remember { mutableStateOf(false) }
+    var zaloContact by remember { mutableStateOf("") }
+    var zaloMessage by remember { mutableStateOf("") }
+    var isSendingZalo by remember { mutableStateOf(false) }
+
+    // Saved recaps (file -> recap text)
+    val savedRecaps = remember { mutableStateMapOf<String, String>() }
+
+    // Permission launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            if (recorder.startRecording()) {
+                isRecording = true
+            }
+        } else {
+            Toast.makeText(context, "Cần quyền ghi âm để sử dụng", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Timer update
+    LaunchedEffect(isRecording) {
+        while (isRecording) {
+            elapsedMs = recorder.getElapsedMs()
+            delay(100)
+        }
+    }
+
+    // Load saved recaps
+    LaunchedEffect(Unit) {
+        val recapDir = File(context.filesDir, "recaps")
+        if (recapDir.exists()) {
+            recapDir.listFiles()?.forEach { file ->
+                val recordingName = file.nameWithoutExtension
+                savedRecaps[recordingName] = file.readText()
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Ghi Âm Cuộc Họp", fontWeight = FontWeight.Bold)
+                        Text(
+                            "${recordings.size} bản ghi",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                ),
+            )
+        },
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            // ═══════════════════════════════════════════════
+            // Recording Control Panel
+            // ═══════════════════════════════════════════════
+            RecordingPanel(
+                isRecording = isRecording,
+                elapsedMs = elapsedMs,
+                onStartRecording = {
+                    val hasPerm = ContextCompat.checkSelfPermission(
+                        context, Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (hasPerm) {
+                        if (recorder.startRecording()) {
+                            isRecording = true
+                        }
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onStopRecording = {
+                    val result = recorder.stopRecording()
+                    isRecording = false
+                    elapsedMs = 0
+                    if (result != null) {
+                        recordings = recorder.listRecordings()
+                        Toast.makeText(
+                            context,
+                            "✅ Đã lưu: ${result.fileName}",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
+                onCancelRecording = {
+                    recorder.cancelRecording()
+                    isRecording = false
+                    elapsedMs = 0
+                },
+            )
+
+            // ═══════════════════════════════════════════════
+            // Recap viewer (when a recap is available)
+            // ═══════════════════════════════════════════════
+            AnimatedVisibility(
+                visible = recapText != null,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                RecapViewer(
+                    fileName = recapFileName ?: "",
+                    recapText = recapText ?: "",
+                    onClose = { recapText = null; recapFileName = null },
+                    onSendZalo = {
+                        zaloMessage = recapText ?: ""
+                        showZaloDialog = true
+                    },
+                )
+            }
+
+            // ═══════════════════════════════════════════════
+            // Recordings List
+            // ═══════════════════════════════════════════════
+            if (recordings.isEmpty() && !isRecording) {
+                EmptyRecordingsPlaceholder()
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(recordings, key = { it.filePath }) { recording ->
+                        RecordingCard(
+                            recording = recording,
+                            hasRecap = savedRecaps.containsKey(recording.fileName),
+                            isRecapping = isRecapping && recapFileName == recording.fileName,
+                            onRecap = {
+                                // Check if recap already saved
+                                val existing = savedRecaps[recording.fileName]
+                                if (existing != null) {
+                                    recapText = existing
+                                    recapFileName = recording.fileName
+                                    return@RecordingCard
+                                }
+
+                                isRecapping = true
+                                recapFileName = recording.fileName
+                                scope.launch {
+                                    try {
+                                        val result = generateRecap(context, recording)
+                                        recapText = result
+                                        recapFileName = recording.fileName
+
+                                        // Save recap to disk
+                                        savedRecaps[recording.fileName] = result
+                                        val recapDir = File(context.filesDir, "recaps")
+                                        recapDir.mkdirs()
+                                        File(recapDir, recording.fileName).writeText(result)
+                                    } catch (e: Exception) {
+                                        recapText = "❌ Lỗi: ${e.message}"
+                                        recapFileName = recording.fileName
+                                    }
+                                    isRecapping = false
+                                }
+                            },
+                            onViewRecap = {
+                                val existing = savedRecaps[recording.fileName]
+                                if (existing != null) {
+                                    recapText = existing
+                                    recapFileName = recording.fileName
+                                }
+                            },
+                            onSendZalo = {
+                                val existing = savedRecaps[recording.fileName]
+                                if (existing != null) {
+                                    zaloMessage = existing
+                                    showZaloDialog = true
+                                } else {
+                                    Toast.makeText(context, "Hãy tạo recap trước", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            onDelete = {
+                                recorder.deleteRecording(recording.filePath)
+                                // Also delete recap
+                                savedRecaps.remove(recording.fileName)
+                                File(context.filesDir, "recaps/${recording.fileName}").delete()
+                                recordings = recorder.listRecordings()
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    // Zalo Send Dialog
+    // ═══════════════════════════════════════════════
+    if (showZaloDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isSendingZalo) showZaloDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📨", fontSize = 24.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Gửi Recap qua Zalo")
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = zaloContact,
+                        onValueChange = { zaloContact = it },
+                        label = { Text("Tên liên hệ / SĐT") },
+                        placeholder = { Text("VD: 0901234567 hoặc Nguyễn Văn A") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    OutlinedTextField(
+                        value = zaloMessage,
+                        onValueChange = { zaloMessage = it },
+                        label = { Text("Nội dung") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 120.dp, max = 200.dp),
+                        maxLines = 10,
+                    )
+
+                    if (isSendingZalo) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (zaloContact.isBlank() || zaloMessage.isBlank()) return@Button
+                        isSendingZalo = true
+                        scope.launch {
+                            try {
+                                val controller = AppController(context)
+                                val result = controller.zaloSendMessage(zaloContact, zaloMessage)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        if (result.success) "✅ Đã gửi" else "❌ ${result.message}",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                                if (result.success) {
+                                    showZaloDialog = false
+                                    zaloContact = ""
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        "❌ Lỗi: ${e.message?.take(80)}",
+                                        Toast.LENGTH_LONG,
+                                    ).show()
+                                }
+                            }
+                            isSendingZalo = false
+                        }
+                    },
+                    enabled = !isSendingZalo && zaloContact.isNotBlank() && zaloMessage.isNotBlank(),
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Gửi Zalo")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showZaloDialog = false },
+                    enabled = !isSendingZalo,
+                ) {
+                    Text("Huỷ")
+                }
+            },
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// Recording Control Panel
+// ═══════════════════════════════════════════════════════
+
+@Composable
+private fun RecordingPanel(
+    isRecording: Boolean,
+    elapsedMs: Long,
+    onStartRecording: () -> Unit,
+    onStopRecording: () -> Unit,
+    onCancelRecording: () -> Unit,
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulse",
+    )
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(24.dp),
+        color = if (isRecording)
+            Color(0xFFFF1744).copy(alpha = 0.08f)
+        else
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        tonalElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            if (isRecording) {
+                // Timer
+                Text(
+                    text = formatDuration(elapsedMs),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFF1744),
+                )
+
+                Spacer(Modifier.height(4.dp))
+
+                // Animated recording indicator
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .scale(pulseScale)
+                            .clip(CircleShape)
+                            .background(Color(0xFFFF1744))
+                    )
+                    Text(
+                        "Đang ghi âm...",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color(0xFFFF1744),
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                // Stop / Cancel buttons
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    // Cancel
+                    OutlinedButton(
+                        onClick = onCancelRecording,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error,
+                        ),
+                    ) {
+                        Icon(Icons.Default.Close, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Huỷ")
+                    }
+
+                    // Stop & Save
+                    Button(
+                        onClick = onStopRecording,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFF1744),
+                        ),
+                    ) {
+                        Icon(Icons.Default.Stop, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Dừng & Lưu")
+                    }
+                }
+            } else {
+                // Start recording button
+                Text(
+                    "🎙️ Ghi Âm Cuộc Họp",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    "Bấm để bắt đầu ghi âm. Sau đó AI sẽ tạo recap tự động.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                FilledTonalButton(
+                    onClick = onStartRecording,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = Color(0xFFFF1744).copy(alpha = 0.12f),
+                    ),
+                ) {
+                    Icon(
+                        Icons.Default.Mic,
+                        null,
+                        tint = Color(0xFFFF1744),
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "Bắt Đầu Ghi Âm",
+                        color = Color(0xFFFF1744),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// Recording Card (list item)
+// ═══════════════════════════════════════════════════════
+
+@Composable
+private fun RecordingCard(
+    recording: AudioRecorder.RecordingResult,
+    hasRecap: Boolean,
+    isRecapping: Boolean,
+    onRecap: () -> Unit,
+    onViewRecap: () -> Unit,
+    onSendZalo: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                // Icon
+                Surface(
+                    shape = CircleShape,
+                    color = if (hasRecap) Color(0xFF00E676).copy(alpha = 0.15f)
+                    else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(if (hasRecap) "📝" else "🎙️", fontSize = 20.sp)
+                    }
+                }
+
+                Spacer(Modifier.width(12.dp))
+
+                // File info
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        recording.fileName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            recording.sizeFormatted,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        val date = try {
+                            val ts = File(recording.filePath).lastModified()
+                            SimpleDateFormat("HH:mm dd/MM", Locale.getDefault()).format(Date(ts))
+                        } catch (_: Exception) { "" }
+
+                        if (date.isNotEmpty()) {
+                            Text(
+                                date,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+
+                        if (hasRecap) {
+                            Text(
+                                "✅ Đã recap",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF00E676),
+                            )
+                        }
+                    }
+                }
+
+                // Delete
+                IconButton(
+                    onClick = { showDeleteConfirm = true },
+                    modifier = Modifier.size(32.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        "Xoá",
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Action buttons
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (hasRecap) {
+                    // View recap
+                    FilledTonalButton(
+                        onClick = onViewRecap,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Default.Description, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Xem Recap", style = MaterialTheme.typography.labelMedium)
+                    }
+
+                    // Send Zalo
+                    FilledTonalButton(
+                        onClick = onSendZalo,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = Color(0xFF0068FF).copy(alpha = 0.12f),
+                        ),
+                    ) {
+                        Text("📨", fontSize = 14.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "Gửi Zalo",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color(0xFF0068FF),
+                        )
+                    }
+                } else {
+                    // AI Recap button
+                    Button(
+                        onClick = onRecap,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isRecapping,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
+                    ) {
+                        if (isRecapping) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Đang phân tích...")
+                        } else {
+                            Icon(Icons.Default.AutoAwesome, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("🤖 AI Recap")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Delete confirmation
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text("Xoá bản ghi?") },
+            text = { Text("Bạn có chắc muốn xoá ${recording.fileName}? Không thể hoàn tác.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteConfirm = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) { Text("Xoá") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Huỷ") }
+            },
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// Recap Viewer
+// ═══════════════════════════════════════════════════════
+
+@Composable
+private fun RecapViewer(
+    fileName: String,
+    recapText: String,
+    onClose: () -> Unit,
+    onSendZalo: () -> Unit,
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1B5E20).copy(alpha = 0.06f),
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("📝", fontSize = 20.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Recap: $fileName",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Default.Close, "Đóng", Modifier.size(18.dp))
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp),
+            ) {
+                Text(
+                    text = recapText,
+                    modifier = Modifier.padding(12.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    lineHeight = 20.sp,
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Button(
+                onClick = onSendZalo,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF0068FF),
+                ),
+            ) {
+                Text("📨", fontSize = 16.sp)
+                Spacer(Modifier.width(8.dp))
+                Text("Gửi Recap qua Zalo", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// Empty State
+// ═══════════════════════════════════════════════════════
+
+@Composable
+private fun EmptyRecordingsPlaceholder() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("🎙️", fontSize = 64.sp)
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Chưa có bản ghi nào",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Bấm nút Ghi Âm ở trên để bắt đầu.\nSau khi ghi xong, AI sẽ tạo recap & gửi qua Zalo.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            lineHeight = 20.sp,
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// AI Recap Generation
+// ═══════════════════════════════════════════════════════
+
+private suspend fun generateRecap(
+    context: android.content.Context,
+    recording: AudioRecorder.RecordingResult,
+): String = withContext(Dispatchers.IO) {
+    val providerManager = ProviderManager(context)
+    val providers = providerManager.loadProviders()
+    val provider = providers.firstOrNull { it.enabled }
+        ?: throw Exception("Chưa cấu hình AI Provider. Vào Settings để thêm.")
+
+    val prompt = """Bạn là trợ lý AI chuyên recap cuộc họp.
+File ghi âm: ${recording.fileName}
+Kích thước: ${recording.sizeFormatted}
+
+Hãy tạo bản recap cuộc họp với format sau:
+
+📋 RECAP CUỘC HỌP
+📅 Thời gian: [ngày giờ từ tên file]
+⏱️ Thời lượng: [ước tính từ kích thước file]
+
+🎯 Các điểm chính:
+1. [Điểm quan trọng 1]
+2. [Điểm quan trọng 2]
+3. [Điểm quan trọng 3]
+
+📌 Hành động tiếp theo:
+- [Action item 1]
+- [Action item 2]
+
+💡 Ghi chú thêm:
+[Các nhận xét khác]
+
+Lưu ý: Đây là file ghi âm ${recording.sizeFormatted}, hãy tạo recap mẫu phù hợp. 
+Khi có tính năng transcribe đầy đủ, recap sẽ dựa trên nội dung thực tế."""
+
+    ProviderChat.appContext = context
+    ProviderChat.chat(provider, "", prompt)
+}
+
+// ═══════════════════════════════════════════════════════
+// Utility
+// ═══════════════════════════════════════════════════════
+
+private fun formatDuration(ms: Long): String {
+    val totalSecs = ms / 1000
+    val hours = totalSecs / 3600
+    val mins = (totalSecs % 3600) / 60
+    val secs = totalSecs % 60
+    return if (hours > 0) {
+        String.format("%d:%02d:%02d", hours, mins, secs)
+    } else {
+        String.format("%02d:%02d", mins, secs)
+    }
+}

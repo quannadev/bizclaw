@@ -36,6 +36,7 @@ fun ChatScreen(
     onOpenSettings: () -> Unit = {},
     onOpenAutomation: () -> Unit = {},
     onOpenLocalLLM: () -> Unit = {},
+    onOpenMeeting: () -> Unit = {},
 ) {
     val messages = viewModel.messages
     val isLoading by viewModel.isLoading
@@ -143,6 +144,13 @@ fun ChatScreen(
                             Icons.Default.Memory,
                             contentDescription = "AI Cục Bộ",
                             tint = if (isLocalMode) Color(0xFF00E676) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = onOpenMeeting) {
+                        Icon(
+                            Icons.Default.Mic,
+                            contentDescription = "Ghi Âm",
+                            tint = Color(0xFFFF1744),
                         )
                     }
                     IconButton(onClick = onOpenAutomation) {
