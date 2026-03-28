@@ -22,6 +22,8 @@
 //! | zalo_tool | Zalo automation: groups, DMs, reports |
 //! | calendar | Google Calendar integration |
 //! | document_reader | Offline PDF/DOCX/XLSX/CSV reader |
+//! | voice_transcribe | Transcribe audio + AI recap |
+//! | research | Academic paper search + reports |
 //! + MCP server tools (dynamic)
 
 pub mod api_connector;
@@ -49,9 +51,11 @@ pub mod orchestration;
 pub mod plan_store;
 pub mod plan_tool;
 pub mod registry;
+pub mod research;
 pub mod session_context;
 pub mod shell;
 pub mod social_post;
+pub mod voice_transcribe;
 pub mod web_search;
 pub mod zalo_tool;
 
@@ -123,6 +127,10 @@ impl ToolRegistry {
         reg.register(Box::new(social_post::SocialPostTool::new()));
         // NL Query (Text2SQL RAG pipeline)
         reg.register(Box::new(nl_query::NlQueryTool::new()));
+        // Voice Transcription + Recap (VivaDicta-inspired)
+        reg.register(Box::new(voice_transcribe::VoiceTranscribeTool::new()));
+        // Research Tool (academic paper search)
+        reg.register(Box::new(research::ResearchTool::new()));
         reg
     }
 
