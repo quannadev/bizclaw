@@ -49,10 +49,20 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../release-keystore.jks")
+            storePassword = System.getenv("BIZCLAW_STORE_PASSWORD") ?: "bizclaw2026"
+            keyAlias = "bizclaw"
+            keyPassword = System.getenv("BIZCLAW_KEY_PASSWORD") ?: "bizclaw2026"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

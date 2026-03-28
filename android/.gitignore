@@ -4,6 +4,11 @@ build/
 .gradle/
 local.properties
 
+# Signing — NEVER commit keystores
+*.jks
+*.keystore
+keystore.properties
+
 # CMake build cache
 app/.cxx/
 
