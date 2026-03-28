@@ -36,3 +36,9 @@
 
 # Keep BizClaw native FFI (when bizclaw.so is loaded)
 -keep class vn.bizclaw.app.native.** { *; }
+
+# Suppress Google Tink / ErrorProne annotation warnings (security-crypto)
+-dontwarn com.google.errorprone.annotations.CanIgnoreReturnValue
+-dontwarn com.google.errorprone.annotations.CheckReturnValue
+-dontwarn com.google.errorprone.annotations.Immutable
+-dontwarn com.google.errorprone.annotations.RestrictedApi
