@@ -375,6 +375,12 @@ pub async fn update_config(
                     if let Err(e) = std::fs::write(&sync_path, json) {
                         tracing::warn!("Failed to write config sync file to {}: {e}", sync_path.display());
                     }
+                    // SECURITY: Set 0600 — file contains api_key
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        let _ = std::fs::set_permissions(&sync_path, std::fs::Permissions::from_mode(0o600));
+                    }
                     tracing::info!("📋 Config sync file written to {}", sync_path.display());
                 }
             }
@@ -4010,6 +4016,108 @@ mod tests {
         let json = result.0;
         assert!(json["ok"].as_bool().unwrap());
     }
+
+    // ── safe_truncate ──────────────────────────────────
+
+    #[test]
+    fn test_safe_truncate_ascii() {
+        assert_eq!(safe_truncate("hello world", 5), "hello");
+        assert_eq!(safe_truncate("hello", 100), "hello");
+        assert_eq!(safe_truncate("", 10), "");
+    }
+
+    #[test]
+    fn test_safe_truncate_utf8_vietnamese() {
+        let vn = "Chào bạn, doanh thu tháng này thế nào?";
+        let result = safe_truncate(vn, 10);
+        assert!(result.len() <= 10);
+        assert!(result.is_char_boundary(result.len()));
+    }
+
+    #[test]
+    fn test_safe_truncate_emoji() {
+        let emoji = "🚀🔥💯✅🎯";
+        let result = safe_truncate(emoji, 4);
+        assert_eq!(result, "🚀");
+    }
+
+    #[test]
+    fn test_safe_truncate_zero() {
+        assert_eq!(safe_truncate("hello", 0), "");
+    }
+
+    // ── validate_name ──────────────────────────────────
+
+    #[test]
+    fn test_validate_name_ok() {
+        assert!(validate_name("my-agent-1").is_ok());
+        assert!(validate_name("Zalo Bot").is_ok());
+        assert!(validate_name("Trợ lý AI").is_ok());
+    }
+
+    #[test]
+    fn test_validate_name_empty() {
+        assert!(validate_name("").is_err());
+    }
+
+    #[test]
+    fn test_validate_name_too_long() {
+        let long_name = "a".repeat(101);
+        assert!(validate_name(&long_name).is_err());
+    }
+
+    #[test]
+    fn test_validate_name_path_traversal() {
+        assert!(validate_name("../../../etc/passwd").is_err());
+        assert!(validate_name("..\\..\\windows\\system32").is_err());
+        assert!(validate_name("foo/bar").is_err());
+    }
+
+    #[test]
+    fn test_validate_name_html_injection() {
+        assert!(validate_name("<script>alert(1)</script>").is_err());
+        assert!(validate_name("test<img>").is_err());
+    }
+
+    #[test]
+    fn test_validate_name_null_byte() {
+        assert!(validate_name("hello\0world").is_err());
+    }
+
+    // ── mask_secret ────────────────────────────────────
+
+    #[test]
+    fn test_mask_secret_normal() {
+        assert_eq!(mask_secret("sk-proj-abc123xyz"), "sk-p••••");
+    }
+
+    #[test]
+    fn test_mask_secret_short() {
+        assert_eq!(mask_secret("abc"), "••••");
+        assert_eq!(mask_secret("abcd"), "••••");
+    }
+
+    #[test]
+    fn test_mask_secret_empty() {
+        assert_eq!(mask_secret(""), "");
+    }
+
+    #[test]
+    fn test_mask_secret_exactly_five() {
+        assert_eq!(mask_secret("12345"), "1234••••");
+    }
+
+    // ── internal_error ─────────────────────────────────
+
+    #[test]
+    fn test_internal_error_sanitizes() {
+        let response = internal_error("test", "SQLITE_ERROR: table 'users' not found");
+        let json = response.0;
+        assert_eq!(json["ok"], false);
+        assert!(!json["error"].as_str().unwrap().contains("SQLITE"));
+        assert!(!json["error"].as_str().unwrap().contains("users"));
+        assert_eq!(json["error"], "An internal error occurred");
+    }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -4026,7 +4134,7 @@ pub async fn gallery_list(State(state): State<Arc<AppState>>) -> Json<serde_json
 
     // Load built-in skills from embedded data
     let builtin: Vec<serde_json::Value> =
-        serde_json::from_str(include_str!("../../../data/gallery-skills.json")).unwrap_or_default();
+        serde_json::from_str(include_str!("../../../../data/gallery-skills.json")).unwrap_or_default();
 
     // Load user-created skills
     let user_skills: Vec<serde_json::Value> = if gallery_path.exists() {
@@ -6273,4 +6381,3 @@ pub async fn zalo_oa_webhook(
         }
     }
 }
-

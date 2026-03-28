@@ -12,6 +12,9 @@ pub fn dot_product_avx2(a: &[f32], b: &[f32]) -> f32 {
     debug_assert_eq!(a.len(), b.len());
     let n = a.len();
 
+    // SAFETY: Pointers are derived from valid slices with equal lengths (debug_assert).
+    // Each `loadu_ps` reads 8 contiguous f32s within the slice bounds (offset < chunks*8 <= n).
+    // Tail loop handles remaining elements with bounds-checked indexing.
     unsafe {
         let mut sum_vec = _mm256_setzero_ps();
         let chunks = n / 8;

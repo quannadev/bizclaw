@@ -2,6 +2,8 @@
 //! Memory and persistence backends with 3-tier brain architecture
 
 pub mod brain;
+pub mod facts;
+pub mod lambda;
 pub mod noop;
 pub mod sqlite;
 pub mod structured;

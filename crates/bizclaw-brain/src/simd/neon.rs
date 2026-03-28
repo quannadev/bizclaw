@@ -12,6 +12,8 @@ pub fn dot_product_neon(a: &[f32], b: &[f32]) -> f32 {
     debug_assert_eq!(a.len(), b.len());
     let n = a.len();
 
+    // SAFETY: Pointers derived from valid equal-length slices (debug_assert).
+    // vld1q_f32 reads 4 contiguous f32s within bounds. Tail uses checked indexing.
     unsafe {
         let mut sum_vec = vdupq_n_f32(0.0);
         let chunks = n / 4;

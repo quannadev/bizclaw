@@ -6,7 +6,7 @@
 //! 3. AI phân tích data → trả lời câu hỏi kinh doanh
 //!
 //! Flow cho doanh nghiệp:
-//! ```
+//! ```text
 //! User: "Doanh thu tháng này so với tháng trước?"
 //! Agent:
 //!   1. db_schema → biết bảng orders có cột total, created_at

@@ -931,4 +931,32 @@ impl Agent {
     pub fn reset_circuit_breaker(&self) {
         self.circuit_breaker.reset();
     }
+
+    /// Manually compact conversation (triggered by /compact command).
+    ///
+    /// Inspired by OpenClaw and MicroClaw's `/compact` feature.
+    /// Summarizes old messages keeping recent context intact.
+    pub async fn compact_now(&mut self) {
+        if self.conversation.len() <= 4 {
+            tracing::info!("📦 Compact skipped: too few messages ({})", self.conversation.len());
+            return;
+        }
+        tracing::info!(
+            "📦 Manual compact: {} messages before",
+            self.conversation.len()
+        );
+        self.compact_conversation().await;
+        tracing::info!(
+            "📦 Manual compact: {} messages after",
+            self.conversation.len()
+        );
+    }
+
+    /// Inject a system message into the conversation (used by agent_send).
+    ///
+    /// This allows inter-agent communication: one agent can inject
+    /// context/notifications into another agent's conversation history.
+    pub fn inject_system_message(&mut self, content: &str) {
+        self.conversation.push(Message::system(content));
+    }
 }

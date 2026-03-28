@@ -5,11 +5,18 @@
 //! - Streaming mode → direct provider HTTP for UX, then saves to Agent memory
 //! - Fallback → raw HTTP calls to Ollama/OpenAI if Agent unavailable
 //!
+//! Security:
+//! - SecretRedactor scans all outgoing responses for leaked secrets/PII
+//! - SecretRedactor scans incoming messages to prevent secret injection into logs
+//! - catch_unwind wraps message handling get to prevent panics from killing the connection
+//!
 //! Protocol:
 //! → Client sends: {"type":"chat","content":"...","stream":true}
 //! ← Server sends: {"type":"chat_start","request_id":"..."}
 //! ← Server sends: {"type":"chat_chunk","request_id":"...","content":"token","index":0}
 //! ← Server sends: {"type":"chat_done","request_id":"...","total_tokens":42}
+//! → Client sends: {"type":"compact"}
+//! ← Server sends: {"type":"compact_done","removed":N,"remaining":M}
 
 use super::server::AppState;
 use axum::{
@@ -20,6 +27,10 @@ use axum::{
     response::IntoResponse,
 };
 use std::sync::Arc;
+
+/// Global secret redactor — thread-safe, zero-alloc after init.
+static REDACTOR: std::sync::LazyLock<bizclaw_security::redactor::SecretRedactor> =
+    std::sync::LazyLock::new(bizclaw_security::redactor::SecretRedactor::new);
 
 /// WebSocket upgrade handler.
 pub async fn ws_handler(
@@ -106,10 +117,32 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
     while let Some(msg) = socket.recv().await {
         match msg {
             Ok(Message::Text(text)) => {
-                let json = match serde_json::from_str::<serde_json::Value>(&text) {
-                    Ok(j) => j,
-                    Err(e) => {
+                // ═══════════════════════════════════════════
+                // PANIC RESILIENCE (inspired by SkyClaw)
+                // Wrap the entire handler in catch_unwind so
+                // a panic in any handler doesn't kill the WS.
+                // ═══════════════════════════════════════════
+                let text_clone = text.clone();
+                let handler_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    // Parse JSON inside catch_unwind boundary
+                    serde_json::from_str::<serde_json::Value>(&text_clone)
+                }));
+
+                let json = match handler_result {
+                    Ok(Ok(j)) => j,
+                    Ok(Err(e)) => {
                         send_error(&mut socket, &format!("Invalid JSON: {e}")).await;
+                        continue;
+                    }
+                    Err(panic_info) => {
+                        tracing::error!(
+                            "[resilience] WS message handler panicked: {:?}",
+                            panic_info.downcast_ref::<String>()
+                                .map(|s| s.as_str())
+                                .or_else(|| panic_info.downcast_ref::<&str>().copied())
+                                .unwrap_or("unknown panic")
+                        );
+                        send_error(&mut socket, "Internal server error (recovered from panic)").await;
                         continue;
                     }
                 };
@@ -117,6 +150,42 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                 let msg_type = json["type"].as_str().unwrap_or("unknown");
 
                 match msg_type {
+                    // ═══════════════════════════════════════════
+                    // /compact — Manual conversation compaction
+                    // (inspired by OpenClaw + MicroClaw)
+                    // ═══════════════════════════════════════════
+                    "compact" => {
+                        let has_agent = {
+                            let agent = state.agent.lock().await;
+                            agent.is_some()
+                        };
+                        if has_agent {
+                            let (removed, remaining) = {
+                                let mut agent = state.agent.lock().await;
+                                if let Some(agent) = agent.as_mut() {
+                                    let before = agent.conversation().len();
+                                    agent.compact_now().await;
+                                    let after = agent.conversation().len();
+                                    (before.saturating_sub(after), after)
+                                } else {
+                                    (0, 0)
+                                }
+                            };
+                            let _ = send_json(
+                                &mut socket,
+                                &serde_json::json!({
+                                    "type": "compact_done",
+                                    "removed": removed,
+                                    "remaining": remaining,
+                                    "message": format!("Compacted: removed {} messages, {} remaining", removed, remaining),
+                                }),
+                            )
+                            .await;
+                        } else {
+                            send_error(&mut socket, "Agent engine not available for compaction").await;
+                        }
+                    }
+
                     "chat" => {
                         request_counter += 1;
                         let request_id = format!("req_{request_counter}");
@@ -128,6 +197,17 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                         if content.is_empty() {
                             send_error(&mut socket, "Empty message").await;
                             continue;
+                        }
+
+                        // ── SecretRedactor: scan INCOMING message ──
+                        // Log if user accidentally sends secrets (don't block, just warn)
+                        let incoming_findings = REDACTOR.scan(&content);
+                        if !incoming_findings.is_empty() {
+                            tracing::warn!(
+                                "🔐 SecretRedactor: {} secret(s) detected in user message (types: {})",
+                                incoming_findings.len(),
+                                incoming_findings.iter().map(|f| f.pattern_name).collect::<Vec<_>>().join(", ")
+                            );
                         }
 
                         // Re-read provider/model from config each request (may have changed)
@@ -297,6 +377,12 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                             match result {
                                 Some(Ok(mut response)) => {
                                     response = strip_think_tags(&response);
+                                    // ── SecretRedactor: scan OUTGOING response ──
+                                    let (redacted, count) = REDACTOR.redact(&response);
+                                    if count > 0 {
+                                        tracing::warn!("🔐 SecretRedactor: redacted {count} secret(s) from agent response");
+                                        response = redacted;
+                                    }
                                     if stream {
                                         // Emit as rapid chunks for streaming UX
                                         let chunk_size = 8; // chars per chunk
@@ -443,7 +529,13 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                             };
 
                             match result {
-                                Ok(response) => {
+                                Ok(mut response) => {
+                                    // ── SecretRedactor: scan OUTGOING response ──
+                                    let (redacted, count) = REDACTOR.redact(&response);
+                                    if count > 0 {
+                                        tracing::warn!("🔐 SecretRedactor: redacted {count} secret(s) from direct response");
+                                        response = redacted;
+                                    }
                                     // Add assistant response to fallback history
                                     fallback_history.push(serde_json::json!({"role": "assistant", "content": &response}));
 

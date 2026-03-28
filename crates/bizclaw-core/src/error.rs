@@ -138,6 +138,15 @@ impl BizClawError {
     pub fn security(msg: impl Into<String>) -> Self {
         Self::Security(msg.into())
     }
+
+    /// Create a sanitized tool error — logs the real error, returns generic message.
+    ///
+    /// Use this instead of `BizClawError::Tool(e.to_string())` to prevent
+    /// internal error details from leaking to the LLM / end user.
+    pub fn tool_error(context: &str, real_error: impl std::fmt::Display) -> Self {
+        tracing::error!("[Tool:{context}] {real_error}");
+        Self::Tool(format!("{context}: operation failed"))
+    }
 }
 
 #[cfg(test)]
@@ -234,6 +243,18 @@ mod tests {
     fn test_config_constructor() {
         let err = BizClawError::config("bad config");
         assert_eq!(err.to_string(), "Configuration error: bad config");
+    }
+
+    #[test]
+    fn test_tool_error_sanitizes() {
+        let err = BizClawError::tool_error("db_query", "SQLITE_ERROR: no such table 'internal_secrets'");
+        let display = err.to_string();
+        // Should NOT contain the real internal error detail
+        assert!(!display.contains("internal_secrets"));
+        assert!(!display.contains("SQLITE_ERROR"));
+        // Should contain sanitized context
+        assert!(display.contains("db_query"));
+        assert!(display.contains("operation failed"));
     }
 
     #[test]

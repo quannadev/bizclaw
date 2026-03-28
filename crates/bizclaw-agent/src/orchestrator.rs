@@ -867,6 +867,87 @@ impl Orchestrator {
         }
         md
     }
+
+    // ── Agent-to-Agent Sessions (Priority 5) ───────────────
+
+    /// Send a message from one agent to another (fire-and-forget).
+    ///
+    /// Inspired by CrawBot/SkyClaw `agent_send` pattern.
+    /// The `from` agent injects a message into `to` agent's context
+    /// without waiting for a response. Useful for notifications,
+    /// status updates, and loose coupling between agents.
+    pub async fn agent_send(
+        &mut self,
+        from_agent: &str,
+        to_agent: &str,
+        message: &str,
+    ) -> Result<()> {
+        if !self.agents.contains_key(from_agent) {
+            return Err(BizClawError::AgentNotFound(from_agent.to_string()));
+        }
+        let to = self.agents.get_mut(to_agent).ok_or_else(|| {
+            BizClawError::AgentNotFound(to_agent.to_string())
+        })?;
+
+        // Inject as a system message into the target agent's conversation
+        let injected = format!(
+            "[Inter-agent message from '{from_agent}']\n{message}"
+        );
+        to.agent.inject_system_message(&injected);
+
+        self.message_log.push(AgentMessage {
+            from: from_agent.to_string(),
+            to: to_agent.to_string(),
+            content: message.to_string(),
+            response: None, // fire-and-forget
+            timestamp: chrono::Utc::now(),
+        });
+
+        tracing::info!("📨 agent_send: {} → {} ({} chars)", from_agent, to_agent, message.len());
+        Ok(())
+    }
+
+    /// Ask another agent a question and get a response (request-reply).
+    ///
+    /// Unlike `delegate`, this is a lightweight "ask" that doesn't
+    /// create delegation records or check permission links. It's
+    /// designed for quick inter-agent queries during processing.
+    pub async fn agent_ask(
+        &mut self,
+        from_agent: &str,
+        to_agent: &str,
+        question: &str,
+    ) -> Result<String> {
+        if !self.agents.contains_key(from_agent) {
+            return Err(BizClawError::AgentNotFound(from_agent.to_string()));
+        }
+
+        let to = self.agents.get_mut(to_agent).ok_or_else(|| {
+            BizClawError::AgentNotFound(to_agent.to_string())
+        })?;
+
+        let prompt = format!(
+            "[Quick question from agent '{from_agent}']\n{question}\n\n\
+             Please respond concisely."
+        );
+
+        to.message_count += 1;
+        let response = to.agent.process(&prompt).await?;
+
+        self.message_log.push(AgentMessage {
+            from: from_agent.to_string(),
+            to: to_agent.to_string(),
+            content: question.to_string(),
+            response: Some(response.clone()),
+            timestamp: chrono::Utc::now(),
+        });
+
+        tracing::info!(
+            "💬 agent_ask: {} → {} (reply: {} chars)",
+            from_agent, to_agent, response.len()
+        );
+        Ok(response)
+    }
 }
 
 impl Default for Orchestrator {

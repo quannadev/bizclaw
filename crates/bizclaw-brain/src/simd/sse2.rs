@@ -11,6 +11,8 @@ pub fn dot_product_sse2(a: &[f32], b: &[f32]) -> f32 {
     debug_assert_eq!(a.len(), b.len());
     let n = a.len();
 
+    // SAFETY: Pointers derived from valid equal-length slices (debug_assert).
+    // _mm_loadu_ps reads 4 contiguous f32s within bounds. Tail uses checked indexing.
     unsafe {
         let mut sum_vec = _mm_setzero_ps();
         let chunks = n / 4;

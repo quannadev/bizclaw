@@ -10,6 +10,16 @@
 use async_trait::async_trait;
 use bizclaw_core::error::Result;
 use bizclaw_core::traits::Tool;
+
+/// Safely truncate a string at a character boundary (UTF-8 safe).
+fn truncate_safe(s: &str, max_chars: usize) -> String {
+    let truncated: String = s.chars().take(max_chars).collect();
+    if truncated.len() < s.len() {
+        format!("{}...", truncated)
+    } else {
+        truncated
+    }
+}
 use bizclaw_core::types::{ToolDefinition, ToolResult};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -482,7 +492,7 @@ impl ZaloTool {
             thread_id,
             thread_type,
             if content.len() > 100 {
-                format!("{}...", &content[..100])
+                truncate_safe(content, 100)
             } else {
                 content.to_string()
             },

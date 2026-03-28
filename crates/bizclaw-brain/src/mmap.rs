@@ -43,7 +43,9 @@ impl MmapModel {
             gguf.data_offset
         );
 
-        // Memory-map the entire file
+        // SAFETY: Mmap::map requires the file to remain open for the lifetime
+        // of the mapping. `MmapModel` keeps `mmap` (and thus the mapping) alive.
+        // The data is read-only and never mutated through the mapping.
         let mmap = unsafe {
             Mmap::map(&file).map_err(|e| BizClawError::ModelLoad(format!("mmap failed: {e}")))?
         };

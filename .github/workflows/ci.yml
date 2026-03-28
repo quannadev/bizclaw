@@ -73,6 +73,21 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -A unused-imports -A dead-code -A private_interfaces -A private_bounds
 
   # ══════════════════════════════════════════════
+  #  🔒 Security Audit (dependency vulnerabilities)
+  # ══════════════════════════════════════════════
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: 🔒 Install cargo-audit
+        run: cargo install cargo-audit --locked || true
+      - name: 🔒 Audit Dependencies
+        run: cargo audit
+
+  # ══════════════════════════════════════════════
   #  📦 Cross-Platform Release Builds
   # ══════════════════════════════════════════════
   build-release:

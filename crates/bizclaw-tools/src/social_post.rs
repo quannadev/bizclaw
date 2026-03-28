@@ -9,6 +9,16 @@ use bizclaw_core::traits::Tool;
 use bizclaw_core::types::{ToolDefinition, ToolResult};
 use serde::{Deserialize, Serialize};
 
+/// Safely truncate a string at a character boundary (UTF-8 safe).
+fn truncate_safe(s: &str, max_chars: usize) -> String {
+    let truncated: String = s.chars().take(max_chars).collect();
+    if truncated.len() < s.len() {
+        format!("{}...", truncated)
+    } else {
+        truncated
+    }
+}
+
 /// Social Posting Tool for AI agents.
 pub struct SocialPostTool {
     client: reqwest::Client,
@@ -84,11 +94,7 @@ impl SocialPostTool {
                                  • Nội dung: {}",
                                 post_id,
                                 post_id,
-                                if req.content.len() > 100 {
-                                    format!("{}...", &req.content[..100])
-                                } else {
-                                    req.content.clone()
-                                }
+                                truncate_safe(&req.content, 100)
                             )
                         } else {
                             let err = body["error"]["message"]
@@ -138,11 +144,7 @@ impl SocialPostTool {
                                  • Nội dung: {}",
                                 msg_id,
                                 req.chat_id,
-                                if req.content.len() > 100 {
-                                    format!("{}...", &req.content[..100])
-                                } else {
-                                    req.content.clone()
-                                }
+                                truncate_safe(&req.content, 100)
                             )
                         } else {
                             let err = result["description"]
@@ -177,11 +179,7 @@ impl SocialPostTool {
                          • Platform: {}\n\
                          • Nội dung: {}",
                         req.platform,
-                        if req.content.len() > 100 {
-                            format!("{}...", &req.content[..100])
-                        } else {
-                            req.content.clone()
-                        }
+                        truncate_safe(&req.content, 100)
                     )
                 } else {
                     format!("❌ Webhook error: HTTP {}", resp.status())
@@ -203,11 +201,7 @@ impl SocialPostTool {
         let mut result = format!(
             "📅 Gợi ý lịch đăng bài:\n\
              📝 Nội dung: \"{}\"\n\n",
-            if content.len() > 80 {
-                format!("{}...", &content[..80])
-            } else {
-                content.to_string()
-            }
+            truncate_safe(content, 80)
         );
 
         for (time, label) in &suggestions {

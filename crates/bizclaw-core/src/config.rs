@@ -202,6 +202,150 @@ impl BizClawConfig {
     }
 }
 
+// ─────────────────────────────────────────────────────────────
+// Hot-Reload Config — DeerFlow-inspired mtime-based auto-reload
+// ─────────────────────────────────────────────────────────────
+
+/// A config wrapper that automatically reloads when the file changes.
+///
+/// Inspired by DeerFlow 2.0's `get_app_config()` which caches the parsed config
+/// and automatically reloads when the file's mtime increases. This provides
+/// zero-downtime config changes without requiring process restarts.
+///
+/// ## Usage
+/// ```rust,no_run
+/// use bizclaw_core::config::HotConfig;
+///
+/// let hot = HotConfig::new();
+/// // First call loads from disk, subsequent calls return cached version
+/// let config = hot.get().unwrap();
+/// // After user edits config.toml, next call auto-detects the change
+/// let fresh_config = hot.get().unwrap();
+/// ```
+pub struct HotConfig {
+    inner: std::sync::Mutex<HotConfigInner>,
+}
+
+struct HotConfigInner {
+    cached: Option<BizClawConfig>,
+    path: PathBuf,
+    last_mtime: Option<std::time::SystemTime>,
+}
+
+impl HotConfig {
+    /// Create a HotConfig watching the default config path.
+    pub fn new() -> Self {
+        Self {
+            inner: std::sync::Mutex::new(HotConfigInner {
+                cached: None,
+                path: BizClawConfig::default_path(),
+                last_mtime: None,
+            }),
+        }
+    }
+
+    /// Create a HotConfig watching a specific path.
+    pub fn with_path(path: impl Into<PathBuf>) -> Self {
+        Self {
+            inner: std::sync::Mutex::new(HotConfigInner {
+                cached: None,
+                path: path.into(),
+                last_mtime: None,
+            }),
+        }
+    }
+
+    /// Get the current config, auto-reloading if the file has changed.
+    ///
+    /// Returns a clone of the cached config for thread safety.
+    pub fn get(&self) -> Result<BizClawConfig> {
+        let mut inner = self.inner.lock().map_err(|e| {
+            crate::error::BizClawError::Config(format!("Config lock poisoned: {e}"))
+        })?;
+
+        let current_mtime = std::fs::metadata(&inner.path)
+            .and_then(|m| m.modified())
+            .ok();
+
+        let needs_reload = match (&inner.cached, &inner.last_mtime, &current_mtime) {
+            (None, _, _) => true, // No cached config
+            (_, None, Some(_)) => true, // File appeared
+            (_, Some(old), Some(new)) => new > old, // File modified
+            (_, Some(_), None) => false, // File disappeared, keep cached
+            (_, None, None) => inner.cached.is_none(), // No file, no cache
+        };
+
+        if needs_reload {
+            let config = if inner.path.exists() {
+                BizClawConfig::load_from(&inner.path)?
+            } else {
+                BizClawConfig::default()
+            };
+
+            tracing::info!(
+                "🔄 Config hot-reload: loaded from {}",
+                inner.path.display()
+            );
+
+            inner.cached = Some(config);
+            inner.last_mtime = current_mtime;
+        }
+
+        Ok(inner.cached.clone().unwrap_or_default())
+    }
+
+    /// Force a reload regardless of mtime.
+    pub fn reload(&self) -> Result<BizClawConfig> {
+        let mut inner = self.inner.lock().map_err(|e| {
+            crate::error::BizClawError::Config(format!("Config lock poisoned: {e}"))
+        })?;
+
+        let config = if inner.path.exists() {
+            BizClawConfig::load_from(&inner.path)?
+        } else {
+            BizClawConfig::default()
+        };
+
+        let mtime = std::fs::metadata(&inner.path)
+            .and_then(|m| m.modified())
+            .ok();
+
+        inner.cached = Some(config.clone());
+        inner.last_mtime = mtime;
+
+        tracing::info!(
+            "🔄 Config force-reload from {}",
+            inner.path.display()
+        );
+
+        Ok(config)
+    }
+
+    /// Check if a reload is pending (file changed but not yet loaded).
+    pub fn is_stale(&self) -> bool {
+        let inner = match self.inner.lock() {
+            Ok(g) => g,
+            Err(_) => return false,
+        };
+
+        let current_mtime = std::fs::metadata(&inner.path)
+            .and_then(|m| m.modified())
+            .ok();
+
+        match (&inner.last_mtime, &current_mtime) {
+            (Some(old), Some(new)) => new > old,
+            (None, Some(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Default for HotConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Brain (local LLM) configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BrainConfig {

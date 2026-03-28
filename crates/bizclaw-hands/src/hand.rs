@@ -206,6 +206,12 @@ mod tests {
             max_runtime_secs: 600,
             enabled: true,
             notify_channels: vec![],
+            tools: Default::default(),
+            dashboard: Default::default(),
+            author: Default::default(),
+            tags: Vec::new(),
+            min_version: String::new(),
+            license: String::new(),
         }
     }
 

@@ -95,6 +95,61 @@ pub fn builtin_skills() -> Vec<SkillManifest> {
             vec!["git", "version-control", "github", "workflow"],
             include_str!("skills/git_workflow.md"),
         ),
+        // ── BizClaw-Specific Skills ──────────────────────────
+        (
+            "bizclaw-test-engineer",
+            "BizClaw Test Engineer",
+            "Testing specialist for BizClaw 21-crate Rust workspace",
+            "testing",
+            "🧪",
+            vec!["bizclaw", "testing", "rust", "tokio", "security"],
+            include_str!("skills/bizclaw_test_engineer.md"),
+        ),
+        (
+            "bizclaw-deploy-engineer",
+            "BizClaw Deploy Engineer",
+            "Deployment specialist for BizClaw VPS/production targets",
+            "devops",
+            "🚀",
+            vec!["bizclaw", "deploy", "vps", "nginx", "systemd"],
+            include_str!("skills/bizclaw_deploy_engineer.md"),
+        ),
+        (
+            "bizclaw-security-hardening",
+            "BizClaw Security Hardening",
+            "Defense-in-depth security for the BizClaw AI platform",
+            "security",
+            "🛡️",
+            vec!["bizclaw", "security", "redactor", "injection", "vault"],
+            include_str!("skills/bizclaw_security_hardening.md"),
+        ),
+        (
+            "bizclaw-code-review",
+            "BizClaw Code Review",
+            "Senior code reviewer with full BizClaw architecture awareness",
+            "coding",
+            "👁️",
+            vec!["bizclaw", "review", "rust", "architecture", "patterns"],
+            include_str!("skills/bizclaw_code_review.md"),
+        ),
+        (
+            "bizclaw-feature-review",
+            "BizClaw Feature Review",
+            "Product engineer reviewing BizClaw features for completeness",
+            "product",
+            "📋",
+            vec!["bizclaw", "feature", "review", "quality", "gaps"],
+            include_str!("skills/bizclaw_feature_review.md"),
+        ),
+        (
+            "bizclaw-architecture",
+            "BizClaw Architecture Expert",
+            "Architecture expert with full system diagram and design patterns",
+            "coding",
+            "🏗️",
+            vec!["bizclaw", "architecture", "rust", "crates", "patterns"],
+            include_str!("skills/bizclaw_architecture.md"),
+        ),
     ];
 
     skill_defs
@@ -122,7 +177,7 @@ mod tests {
     #[test]
     fn test_builtin_skills_count() {
         let skills = builtin_skills();
-        assert_eq!(skills.len(), 10);
+        assert_eq!(skills.len(), 16); // 10 original + 6 BizClaw-specific
     }
 
     #[test]
@@ -139,5 +194,17 @@ mod tests {
                 skill.metadata.name
             );
         }
+    }
+
+    #[test]
+    fn test_bizclaw_skills_present() {
+        let skills = builtin_skills();
+        let names: Vec<&str> = skills.iter().map(|s| s.metadata.name.as_str()).collect();
+        assert!(names.contains(&"bizclaw-test-engineer"));
+        assert!(names.contains(&"bizclaw-deploy-engineer"));
+        assert!(names.contains(&"bizclaw-security-hardening"));
+        assert!(names.contains(&"bizclaw-code-review"));
+        assert!(names.contains(&"bizclaw-feature-review"));
+        assert!(names.contains(&"bizclaw-architecture"));
     }
 }

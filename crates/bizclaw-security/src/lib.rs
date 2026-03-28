@@ -4,6 +4,7 @@
 pub mod allowlist;
 pub mod approval;
 pub mod injection;
+pub mod redactor;
 pub mod sandbox;
 pub mod secrets;
 pub mod vault;

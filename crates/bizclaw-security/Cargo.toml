@@ -25,3 +25,4 @@ hostname.workspace = true
 whoami.workspace = true
 chrono = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["v4"] }
+regex.workspace = true

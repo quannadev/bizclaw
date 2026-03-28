@@ -140,8 +140,11 @@ pub async fn check_provider_auth(
             user_info = cookies.iter().find_map(|c| {
                 if c.get("name").and_then(|n| n.as_str()) == Some("SAPISID") {
                     c.get("value").and_then(|v| v.as_str()).map(|s| {
-                        if s.len() > 8 {
-                            format!("{}...{}", &s[..4], &s[s.len() - 4..])
+                        let chars: Vec<char> = s.chars().collect();
+                        if chars.len() > 8 {
+                            let prefix: String = chars[..4].iter().collect();
+                            let suffix: String = chars[chars.len()-4..].iter().collect();
+                            format!("{}...{}", prefix, suffix)
                         } else {
                             s.to_string()
                         }
