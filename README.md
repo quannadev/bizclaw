@@ -370,7 +370,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="android/app/build/outputs/apk/debug/app-debug.apk"><b>📥 Tải xuống APK v1.0.6 (Debug Build — 44MB)</b></a><br>
+  <a href="releases/bizclaw-v1.0.6.apk"><b>📥 Tải xuống APK v1.0.6 (Signed Release — 34MB)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
@@ -501,11 +501,11 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 | `bizclaw-scheduler` | Scheduled tasks + Retry + Notifications | 2,907 | 24 | 🟡 Functional |
 | `bizclaw-hands` | Autonomous Hands (7 types) | 1,557 | 15 | 🟡 Functional |
 | `bizclaw-skills` | Skill registry + gating | 1,766 | 27 | 🟡 Functional |
-| `bizclaw-platform` | Multi-tenant SaaS (billing, onboarding) | 8,780 | 15 | 🔵 Alpha |
-| `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor | 1,897 | 18 | 🔵 Alpha |
-| `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | 799 | 2 | 🔵 Alpha |
-| `bizclaw-ffi` | Android FFI layer (UniFFI) | 343 | 3 | 🔵 Alpha |
-| `bizclaw-runtime` | Agent runtime lifecycle | 280 | 8 | 🔵 Alpha |
+| `bizclaw-platform` | Multi-tenant SaaS (billing, onboarding) | 8,780 | 15 | 🟡 Functional |
+| `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor | 1,897 | 33 | 🟡 Functional |
+| `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | 799 | 11 | 🟡 Functional |
+| `bizclaw-ffi` | Android FFI layer (UniFFI) | 343 | 12 | 🟡 Functional |
+| `bizclaw-runtime` | Agent runtime lifecycle | 280 | 8 | 🟡 Functional |
 
 ---
 
@@ -559,7 +559,7 @@ llm:
 | **Lines of Code** | 82,141 |
 | **Tests** | 692 passing |
 | **Workflow Templates** | 23 |
-| **Binary Size** | bizclaw ~12MB, Android APK ~44MB |
+| **Binary Size** | bizclaw ~12MB, Android APK ~34MB |
 | **Dashboard Pages** | 20+ (27 lazy-loaded modules) |
 | **Agent Templates** | 51 |
 | **Security** | Vault, Approval Gates, Prompt Injection Scanner, RBAC, AES-256-CBC, SSRF Protection, Audit Trail, Prometheus |

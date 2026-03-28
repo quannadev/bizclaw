@@ -363,4 +363,48 @@ mod tests {
         monitor.mark_offline("agent-1").await;
         assert_eq!(monitor.status("agent-1").await, Some(HealthStatus::Offline));
     }
+
+    #[tokio::test]
+    async fn test_heartbeat_summary() {
+        let monitor = HeartbeatMonitor::default();
+        monitor.register("agent-1", vec!["zalo".into()], 30).await;
+        monitor.register("agent-2", vec!["telegram".into()], 60).await;
+        monitor.mark_offline("agent-2").await;
+
+        let summary = monitor.summary().await;
+        assert_eq!(summary["total"], 2);
+        assert_eq!(summary["healthy"], 1);
+        assert_eq!(summary["offline"], 1);
+    }
+
+    #[tokio::test]
+    async fn test_check_all_empty() {
+        let monitor = HeartbeatMonitor::default();
+        let changes = monitor.check_all().await;
+        assert!(changes.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_unknown_agent_status() {
+        let monitor = HeartbeatMonitor::default();
+        assert_eq!(monitor.status("nobody").await, None);
+    }
+
+    #[test]
+    fn test_health_status_display() {
+        assert_eq!(HealthStatus::Healthy.to_string(), "🟢 Healthy");
+        assert_eq!(HealthStatus::Degraded.to_string(), "🟡 Degraded");
+        assert_eq!(HealthStatus::Unresponsive.to_string(), "🔴 Unresponsive");
+        assert_eq!(HealthStatus::Offline.to_string(), "⚫ Offline");
+    }
+
+    #[test]
+    fn test_heartbeat_config_defaults() {
+        let config = HeartbeatConfig::default();
+        assert_eq!(config.check_interval_seconds, 30);
+        assert_eq!(config.degraded_after_misses, 2);
+        assert_eq!(config.unresponsive_after_misses, 5);
+        assert!(!config.auto_restart);
+        assert_eq!(config.max_restart_attempts, 3);
+    }
 }

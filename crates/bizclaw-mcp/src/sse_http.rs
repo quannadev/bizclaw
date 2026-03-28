@@ -218,6 +218,8 @@ pub enum McpTransport {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{McpClient, McpServerConfig, McpToolInfo};
+    use std::collections::HashMap;
 
     #[test]
     fn test_sse_transport_creation() {
@@ -232,7 +234,92 @@ mod tests {
     #[test]
     fn test_http_transport_creation() {
         let transport = HttpTransport::new("http://localhost:3000/v1/mcp").with_auth("sk-test");
-
         assert_eq!(transport.endpoint(), "http://localhost:3000/v1/mcp");
+    }
+
+    #[test]
+    fn test_sse_auth_header() {
+        let transport = SseTransport::new("http://example.com/mcp")
+            .with_auth("my-token-123");
+        assert_eq!(transport.headers.get("Authorization").unwrap(), "Bearer my-token-123");
+    }
+
+    #[test]
+    fn test_sse_custom_headers() {
+        let transport = SseTransport::new("http://example.com/mcp")
+            .with_header("X-Tenant", "tenant-1")
+            .with_header("X-Version", "2.0");
+        assert_eq!(transport.headers.len(), 2);
+        assert_eq!(transport.headers.get("X-Tenant").unwrap(), "tenant-1");
+    }
+
+    #[test]
+    fn test_sse_disconnect() {
+        let mut transport = SseTransport::new("http://example.com/mcp");
+        assert!(!transport.is_connected());
+        transport.connected = true;
+        assert!(transport.is_connected());
+        transport.disconnect();
+        assert!(!transport.is_connected());
+    }
+
+    #[test]
+    fn test_http_auth_header() {
+        let transport = HttpTransport::new("http://example.com/v1")
+            .with_auth("sk-abc")
+            .with_header("X-Custom", "val");
+        assert_eq!(transport.headers.len(), 2);
+    }
+
+    #[test]
+    fn test_json_rpc_request_builder() {
+        let req = JsonRpcRequest::new(42, "tools/list", None);
+        assert_eq!(req.id, 42);
+        assert_eq!(req.method, "tools/list");
+        assert_eq!(req.jsonrpc, "2.0");
+        assert!(req.params.is_none());
+    }
+
+    #[test]
+    fn test_json_rpc_request_with_params() {
+        let params = serde_json::json!({"name": "test_tool"});
+        let req = JsonRpcRequest::new(1, "tools/call", Some(params.clone()));
+        assert_eq!(req.params.unwrap(), params);
+    }
+
+    #[test]
+    fn test_mcp_server_config_serde() {
+        let json = r#"{"name":"test","command":"node","args":["server.js"],"enabled":true}"#;
+        let config: McpServerConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.name, "test");
+        assert_eq!(config.command, "node");
+        assert_eq!(config.args, vec!["server.js"]);
+        assert!(config.enabled);
+    }
+
+    #[test]
+    fn test_mcp_tool_info_serde() {
+        let tool = McpToolInfo {
+            name: "web_search".into(),
+            description: "Search the web".into(),
+            input_schema: serde_json::json!({"type": "object"}),
+            server_name: "test-server".into(),
+        };
+        let json = serde_json::to_string(&tool).unwrap();
+        assert!(json.contains("web_search"));
+    }
+
+    #[test]
+    fn test_mcp_client_new() {
+        let config = McpServerConfig {
+            name: "test-server".into(),
+            command: "echo".into(),
+            args: vec![],
+            env: HashMap::new(),
+            enabled: true,
+        };
+        let client = McpClient::new(config);
+        assert_eq!(client.name, "test-server");
+        assert!(client.tools().is_empty());
     }
 }

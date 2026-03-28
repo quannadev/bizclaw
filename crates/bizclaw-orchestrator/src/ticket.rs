@@ -507,4 +507,90 @@ mod tests {
         let ticket = mgr.get_ticket(&id1).await.unwrap();
         assert_eq!(ticket.message_count, 2);
     }
+
+    #[tokio::test]
+    async fn test_ticket_escalation() {
+        let mgr = TicketManager::new();
+        let id = mgr
+            .create_ticket("telegram", "t-1", "u-1", "Urgent issue")
+            .await;
+
+        mgr.update(&id, |t| t.escalate("Customer is VIP"))
+            .await;
+        let ticket = mgr.get_ticket(&id).await.unwrap();
+        assert_eq!(ticket.status, TicketStatus::Escalated);
+        // Should have 3 events: Created + Escalated + StatusChanged
+        assert!(ticket.events.len() >= 3);
+    }
+
+    #[tokio::test]
+    async fn test_ticket_token_recording() {
+        let mgr = TicketManager::new();
+        let id = mgr
+            .create_ticket("zalo", "t-2", "u-2", "Test")
+            .await;
+
+        mgr.update(&id, |t| {
+            t.record_tokens(1000, 0.01);
+            t.record_tokens(500, 0.005);
+        })
+        .await;
+
+        let ticket = mgr.get_ticket(&id).await.unwrap();
+        assert_eq!(ticket.total_tokens, 1500);
+        assert!((ticket.total_cost_usd - 0.015).abs() < 0.0001);
+    }
+
+    #[tokio::test]
+    async fn test_ticket_resolution_time() {
+        let mgr = TicketManager::new();
+        let id = mgr
+            .create_ticket("messenger", "t-3", "u-3", "Help")
+            .await;
+
+        mgr.update(&id, |t| t.resolve("agent-1")).await;
+        let ticket = mgr.get_ticket(&id).await.unwrap();
+        assert!(ticket.resolution_time_seconds().is_some());
+        assert!(ticket.resolution_time_seconds().unwrap() >= 0);
+    }
+
+    #[tokio::test]
+    async fn test_ticket_thread_lookup() {
+        let mgr = TicketManager::new();
+        let id = mgr
+            .create_ticket("zalo", "thread-xyz", "u-1", "Hello")
+            .await;
+
+        let found = mgr.ticket_for_thread("thread-xyz").await;
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().id, id);
+
+        let not_found = mgr.ticket_for_thread("nonexistent").await;
+        assert!(not_found.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_list_by_status() {
+        let mgr = TicketManager::new();
+        mgr.create_ticket("zalo", "t-1", "u-1", "A").await;
+        mgr.create_ticket("zalo", "t-2", "u-2", "B").await;
+        let id3 = mgr.create_ticket("zalo", "t-3", "u-3", "C").await;
+
+        mgr.update(&id3, |t| t.resolve("agent-1")).await;
+
+        let open = mgr.list_by_status(&TicketStatus::Open).await;
+        assert_eq!(open.len(), 2);
+        let resolved = mgr.list_by_status(&TicketStatus::Resolved).await;
+        assert_eq!(resolved.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_ticket_summary() {
+        let mgr = TicketManager::new();
+        mgr.create_ticket("zalo", "t-1", "u-1", "Test ticket").await;
+
+        let summary = mgr.summary().await;
+        assert_eq!(summary["total"], 1);
+        assert_eq!(summary["open"], 1);
+    }
 }

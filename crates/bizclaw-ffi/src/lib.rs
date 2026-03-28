@@ -325,6 +325,8 @@ mod tests {
     fn test_get_version() {
         let v = get_version();
         assert!(!v.is_empty());
+        // Must be semver format
+        assert!(v.contains('.'), "Version should be semver: {v}");
     }
 
     #[test]
@@ -332,6 +334,7 @@ mod tests {
         let status = get_status();
         let parsed: serde_json::Value = serde_json::from_str(&status).unwrap();
         assert_eq!(parsed["running"], false);
+        assert!(parsed["version"].as_str().unwrap().contains('.'));
     }
 
     #[test]
@@ -339,5 +342,95 @@ mod tests {
         let resp = send_message("hello");
         let parsed: serde_json::Value = serde_json::from_str(&resp).unwrap();
         assert_eq!(parsed["success"], false);
+        assert!(parsed["response"].as_str().unwrap().contains("not running"));
+    }
+
+    #[test]
+    fn test_stop_daemon_not_running() {
+        let result = stop_daemon();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("not running"));
+    }
+
+    #[test]
+    fn test_daemon_config_serde() {
+        let config = DaemonConfig {
+            config_path: "/etc/bizclaw.toml".into(),
+            data_dir: "/data/bizclaw".into(),
+            host: "127.0.0.1".into(),
+            port: 3001,
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        let parsed: DaemonConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.port, 3001);
+        assert_eq!(parsed.host, "127.0.0.1");
+    }
+
+    #[test]
+    fn test_daemon_status_serde() {
+        let status = DaemonStatus {
+            running: true,
+            uptime_secs: 3600,
+            agent_count: 3,
+            active_sessions: 5,
+            total_requests: 1000,
+            memory_bytes: 50 * 1024 * 1024,
+            version: "1.0.6".into(),
+        };
+        let json = serde_json::to_string(&status).unwrap();
+        let parsed: DaemonStatus = serde_json::from_str(&json).unwrap();
+        assert!(parsed.running);
+        assert_eq!(parsed.uptime_secs, 3600);
+        assert_eq!(parsed.agent_count, 3);
+    }
+
+    #[test]
+    fn test_message_response_serde() {
+        let resp = MessageResponse {
+            success: true,
+            response: "Hello from agent".into(),
+            agent: "sales-bot".into(),
+            tokens_used: 42,
+        };
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("sales-bot"));
+        let parsed: MessageResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.tokens_used, 42);
+    }
+
+    #[test]
+    fn test_register_device_tools_valid() {
+        let json = r#"{"device":{"model":"Pixel 8"},"battery":{"level":85}}"#;
+        let result = register_device_tools(json);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_register_device_tools_invalid_json() {
+        let result = register_device_tools("not valid json{{{");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid"));
+    }
+
+    #[test]
+    fn test_execute_device_action_valid() {
+        let action = r#"{"action":"vibrate","duration":500}"#;
+        let result = execute_device_action(action);
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert_eq!(parsed["action"], "vibrate");
+    }
+
+    #[test]
+    fn test_execute_device_action_invalid() {
+        let result = execute_device_action("bad json");
+        let parsed: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(parsed["success"], false);
+    }
+
+    #[test]
+    fn test_estimate_memory() {
+        let mem = estimate_memory();
+        assert!(mem > 0, "Memory estimate should be > 0");
     }
 }

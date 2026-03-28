@@ -341,4 +341,66 @@ mod tests {
         let status = mgr.record_usage("unknown-agent", 1000, 1000, 0.01).await;
         assert!(matches!(status, BudgetStatus::Unlimited));
     }
+
+    #[tokio::test]
+    async fn test_budget_summary() {
+        let mgr = BudgetManager::new();
+        mgr.set_budget(AgentBudget {
+            agent_id: "agent-1".into(),
+            monthly_token_limit: 50000,
+            monthly_usd_limit: 0.0,
+            alert_at_percent: 80.0,
+            on_exceed: BudgetExceedAction::Notify,
+            fallback_model: String::new(),
+        })
+        .await;
+
+        mgr.record_usage("agent-1", 1000, 500, 0.005).await;
+
+        let summary = mgr.summary().await;
+        assert_eq!(summary["total_agents"], 1);
+        assert_eq!(summary["total_tokens"], 1500);
+    }
+
+    #[tokio::test]
+    async fn test_budget_usd_limit() {
+        let mgr = BudgetManager::new();
+        mgr.set_budget(AgentBudget {
+            agent_id: "agent-2".into(),
+            monthly_token_limit: 0, // no token limit
+            monthly_usd_limit: 1.0, // $1 USD limit
+            alert_at_percent: 80.0,
+            on_exceed: BudgetExceedAction::HardStop,
+            fallback_model: String::new(),
+        })
+        .await;
+
+        let status = mgr.record_usage("agent-2", 5000, 5000, 0.50).await;
+        assert!(matches!(status, BudgetStatus::Ok { .. }) || matches!(status, BudgetStatus::Unlimited));
+
+        // Exceed the USD limit
+        let status = mgr.record_usage("agent-2", 10000, 10000, 0.60).await;
+        assert!(matches!(status, BudgetStatus::Exceeded { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_budget_get_usage() {
+        let mgr = BudgetManager::new();
+        mgr.record_usage("agent-x", 100, 50, 0.001).await;
+
+        let usage = mgr.get_usage("agent-x").await;
+        assert!(usage.is_some());
+        let u = usage.unwrap();
+        assert_eq!(u.tokens_used, 150);
+        assert_eq!(u.request_count, 1);
+
+        let none = mgr.get_usage("nonexistent").await;
+        assert!(none.is_none());
+    }
+
+    #[test]
+    fn test_budget_exceed_action_default() {
+        let action = BudgetExceedAction::default();
+        assert_eq!(action, BudgetExceedAction::Notify);
+    }
 }
