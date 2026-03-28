@@ -370,7 +370,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="releases/bizclaw-v1.0.6.apk"><b>📥 Tải xuống APK v1.0.6 (Signed Release — 34MB)</b></a><br>
+  <a href="https://bizclaw.vn/download/bizclaw-v1.0.6.apk"><b>📥 Tải xuống APK v1.0.6 (Signed Release — 34MB)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 

@@ -40,3 +40,4 @@ mission-control/
 _agents/workflows/deploy.md
 dist/
 Bizino-Dev_Kit-main/
+*.apk
