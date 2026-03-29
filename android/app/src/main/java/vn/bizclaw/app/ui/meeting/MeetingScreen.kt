@@ -1,6 +1,7 @@
 package vn.bizclaw.app.ui.meeting
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,14 +42,72 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+// ═══════════════════════════════════════════════════════
+// Meeting Settings — persistent config via SharedPreferences
+// ═══════════════════════════════════════════════════════
+
+private const val PREFS_NAME = "meeting_settings"
+private const val KEY_PROMPT = "recap_prompt"
+private const val KEY_ZALO_CONTACT = "default_zalo_contact"
+private const val KEY_EMAIL = "default_email"
+private const val KEY_AUTO_SEND = "auto_send_recap"
+
+private val DEFAULT_PROMPT = """Bạn là trợ lý AI chuyên recap cuộc họp.
+
+Hãy tạo bản recap cuộc họp với format sau:
+
+📋 RECAP CUỘC HỌP
+📅 Thời gian: [ngày giờ từ tên file]
+⏱️ Thời lượng: [ước tính từ kích thước file]
+
+🎯 Các điểm chính:
+1. [Điểm quan trọng 1]
+2. [Điểm quan trọng 2]
+3. [Điểm quan trọng 3]
+
+📌 Hành động tiếp theo:
+- [Action item 1]
+- [Action item 2]
+
+💡 Ghi chú thêm:
+[Các nhận xét khác]""".trimIndent()
+
+data class MeetingConfig(
+    val recapPrompt: String = DEFAULT_PROMPT,
+    val defaultZaloContact: String = "",
+    val defaultEmail: String = "",
+    val autoSendRecap: Boolean = false,
+)
+
+private fun loadMeetingConfig(context: Context): MeetingConfig {
+    val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    return MeetingConfig(
+        recapPrompt = prefs.getString(KEY_PROMPT, DEFAULT_PROMPT) ?: DEFAULT_PROMPT,
+        defaultZaloContact = prefs.getString(KEY_ZALO_CONTACT, "") ?: "",
+        defaultEmail = prefs.getString(KEY_EMAIL, "") ?: "",
+        autoSendRecap = prefs.getBoolean(KEY_AUTO_SEND, false),
+    )
+}
+
+private fun saveMeetingConfig(context: Context, config: MeetingConfig) {
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        .edit()
+        .putString(KEY_PROMPT, config.recapPrompt)
+        .putString(KEY_ZALO_CONTACT, config.defaultZaloContact)
+        .putString(KEY_EMAIL, config.defaultEmail)
+        .putBoolean(KEY_AUTO_SEND, config.autoSendRecap)
+        .apply()
+}
+
 /**
- * MeetingScreen — Record meetings, transcribe with AI, and share via Zalo.
+ * MeetingScreen — Record meetings, transcribe with AI, and share via Zalo/Email.
  *
  * Features:
  * 1. 🎙️ One-tap recording with live timer + waveform animation
  * 2. 📋 List all saved recordings with size/date
  * 3. 🤖 AI recap: transcribe + summarize via configured LLM provider
- * 4. 📨 Send recap to Zalo contact (by name or phone number)
+ * 4. 📨 Send recap to Zalo contact (by name or phone number) / Email
+ * 5. ⚙️ Settings: custom prompt, default contacts, auto-send
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +123,10 @@ fun MeetingScreen(
     var elapsedMs by remember { mutableLongStateOf(0L) }
     var recordings by remember { mutableStateOf(recorder.listRecordings()) }
 
+    // Settings
+    var meetingConfig by remember { mutableStateOf(loadMeetingConfig(context)) }
+    var showSettings by remember { mutableStateOf(false) }
+
     // Recap state
     var recapText by remember { mutableStateOf<String?>(null) }
     var recapFileName by remember { mutableStateOf<String?>(null) }
@@ -71,9 +134,14 @@ fun MeetingScreen(
 
     // Zalo send dialog
     var showZaloDialog by remember { mutableStateOf(false) }
-    var zaloContact by remember { mutableStateOf("") }
+    var zaloContact by remember { mutableStateOf(meetingConfig.defaultZaloContact) }
     var zaloMessage by remember { mutableStateOf("") }
     var isSendingZalo by remember { mutableStateOf(false) }
+
+    // Email send dialog
+    var showEmailDialog by remember { mutableStateOf(false) }
+    var emailAddress by remember { mutableStateOf(meetingConfig.defaultEmail) }
+    var emailMessage by remember { mutableStateOf("") }
 
     // Saved recaps (file -> recap text)
     val savedRecaps = remember { mutableStateMapOf<String, String>() }
@@ -110,6 +178,54 @@ fun MeetingScreen(
         }
     }
 
+    // Auto-send helper
+    fun autoSendRecap(recap: String) {
+        if (!meetingConfig.autoSendRecap) return
+        if (meetingConfig.defaultZaloContact.isNotBlank()) {
+            scope.launch {
+                try {
+                    val controller = AppController(context)
+                    val result = controller.zaloSendMessage(
+                        meetingConfig.defaultZaloContact, recap
+                    )
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            if (result.success) "✅ Tự động gửi Zalo thành công"
+                            else "❌ Zalo: ${result.message}",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            context,
+                            "❌ Auto-send Zalo lỗi: ${e.message?.take(60)}",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
+            }
+        }
+        if (meetingConfig.defaultEmail.isNotBlank()) {
+            scope.launch {
+                try {
+                    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_EMAIL, arrayOf(meetingConfig.defaultEmail))
+                        putExtra(android.content.Intent.EXTRA_SUBJECT, "📋 Recap Cuộc Họp — BizClaw")
+                        putExtra(android.content.Intent.EXTRA_TEXT, recap)
+                    }
+                    withContext(Dispatchers.Main) {
+                        context.startActivity(
+                            android.content.Intent.createChooser(intent, "Gửi email recap")
+                        )
+                    }
+                } catch (_: Exception) { }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -128,6 +244,16 @@ fun MeetingScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại")
                     }
                 },
+                actions = {
+                    IconButton(onClick = { showSettings = !showSettings }) {
+                        Icon(
+                            Icons.Default.Settings,
+                            "Cài đặt",
+                            tint = if (showSettings) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
@@ -139,6 +265,23 @@ fun MeetingScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // ═══════════════════════════════════════════════
+            // Settings Panel (expandable)
+            // ═══════════════════════════════════════════════
+            AnimatedVisibility(
+                visible = showSettings,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                SettingsPanel(
+                    config = meetingConfig,
+                    onConfigChange = { newConfig ->
+                        meetingConfig = newConfig
+                        saveMeetingConfig(context, newConfig)
+                    },
+                )
+            }
+
             // ═══════════════════════════════════════════════
             // Recording Control Panel
             // ═══════════════════════════════════════════════
@@ -191,8 +334,14 @@ fun MeetingScreen(
                     recapText = recapText ?: "",
                     onClose = { recapText = null; recapFileName = null },
                     onSendZalo = {
+                        zaloContact = meetingConfig.defaultZaloContact
                         zaloMessage = recapText ?: ""
                         showZaloDialog = true
+                    },
+                    onSendEmail = {
+                        emailAddress = meetingConfig.defaultEmail
+                        emailMessage = recapText ?: ""
+                        showEmailDialog = true
                     },
                 )
             }
@@ -226,7 +375,9 @@ fun MeetingScreen(
                                 recapFileName = recording.fileName
                                 scope.launch {
                                     try {
-                                        val result = generateRecap(context, recording)
+                                        val result = generateRecap(
+                                            context, recording, meetingConfig.recapPrompt
+                                        )
                                         recapText = result
                                         recapFileName = recording.fileName
 
@@ -235,6 +386,9 @@ fun MeetingScreen(
                                         val recapDir = File(context.filesDir, "recaps")
                                         recapDir.mkdirs()
                                         File(recapDir, recording.fileName).writeText(result)
+
+                                        // Auto-send if enabled
+                                        autoSendRecap(result)
                                     } catch (e: Exception) {
                                         recapText = "❌ Lỗi: ${e.message}"
                                         recapFileName = recording.fileName
@@ -252,15 +406,17 @@ fun MeetingScreen(
                             onSendZalo = {
                                 val existing = savedRecaps[recording.fileName]
                                 if (existing != null) {
+                                    zaloContact = meetingConfig.defaultZaloContact
                                     zaloMessage = existing
                                     showZaloDialog = true
                                 } else {
-                                    Toast.makeText(context, "Hãy tạo recap trước", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context, "Hãy tạo recap trước", Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             },
                             onDelete = {
                                 recorder.deleteRecording(recording.filePath)
-                                // Also delete recap
                                 savedRecaps.remove(recording.fileName)
                                 File(context.filesDir, "recaps/${recording.fileName}").delete()
                                 recordings = recorder.listRecordings()
@@ -295,6 +451,39 @@ fun MeetingScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+
+                    // Save as default checkbox
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val newConfig = meetingConfig.copy(
+                                    defaultZaloContact = zaloContact
+                                )
+                                meetingConfig = newConfig
+                                saveMeetingConfig(context, newConfig)
+                                Toast.makeText(
+                                    context,
+                                    "✅ Đã lưu SĐT/tên Zalo mặc định",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Save,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Lưu làm SĐT Zalo mặc định",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
 
                     OutlinedTextField(
                         value = zaloMessage,
@@ -359,6 +548,281 @@ fun MeetingScreen(
                 }
             },
         )
+    }
+
+    // ═══════════════════════════════════════════════
+    // Email Send Dialog
+    // ═══════════════════════════════════════════════
+    if (showEmailDialog) {
+        AlertDialog(
+            onDismissRequest = { showEmailDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📧", fontSize = 24.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Gửi Recap qua Email")
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = emailAddress,
+                        onValueChange = { emailAddress = it },
+                        label = { Text("Email người nhận") },
+                        placeholder = { Text("VD: sếp@company.com") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val newConfig = meetingConfig.copy(defaultEmail = emailAddress)
+                                meetingConfig = newConfig
+                                saveMeetingConfig(context, newConfig)
+                                Toast.makeText(
+                                    context, "✅ Đã lưu email mặc định", Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                            .padding(vertical = 4.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.Save,
+                            null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Lưu làm email mặc định",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (emailAddress.isBlank()) return@Button
+                        try {
+                            val intent = android.content.Intent(
+                                android.content.Intent.ACTION_SEND
+                            ).apply {
+                                type = "text/plain"
+                                putExtra(
+                                    android.content.Intent.EXTRA_EMAIL,
+                                    arrayOf(emailAddress)
+                                )
+                                putExtra(
+                                    android.content.Intent.EXTRA_SUBJECT,
+                                    "📋 Recap Cuộc Họp — BizClaw"
+                                )
+                                putExtra(android.content.Intent.EXTRA_TEXT, emailMessage)
+                            }
+                            context.startActivity(
+                                android.content.Intent.createChooser(intent, "Gửi email recap")
+                            )
+                            showEmailDialog = false
+                        } catch (e: Exception) {
+                            Toast.makeText(
+                                context,
+                                "❌ Không tìm thấy ứng dụng email",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
+                    enabled = emailAddress.isNotBlank(),
+                ) {
+                    Icon(Icons.Default.Email, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Gửi Email")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEmailDialog = false }) {
+                    Text("Huỷ")
+                }
+            },
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// Settings Panel
+// ═══════════════════════════════════════════════════════
+
+@Composable
+private fun SettingsPanel(
+    config: MeetingConfig,
+    onConfigChange: (MeetingConfig) -> Unit,
+) {
+    var editPrompt by remember(config) { mutableStateOf(config.recapPrompt) }
+    var editZalo by remember(config) { mutableStateOf(config.defaultZaloContact) }
+    var editEmail by remember(config) { mutableStateOf(config.defaultEmail) }
+    var autoSend by remember(config) { mutableStateOf(config.autoSendRecap) }
+    var isExpanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
+        ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("⚙️", fontSize = 20.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Cài Đặt Recap",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Zalo Contact ──
+            OutlinedTextField(
+                value = editZalo,
+                onValueChange = { editZalo = it },
+                label = { Text("📱 SĐT / Tên Zalo mặc định") },
+                placeholder = { Text("VD: 0901234567") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF0068FF),
+                ),
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Email ──
+            OutlinedTextField(
+                value = editEmail,
+                onValueChange = { editEmail = it },
+                label = { Text("📧 Email người nhận mặc định") },
+                placeholder = { Text("VD: manager@company.com") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Auto-send toggle ──
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "🚀 Tự động gửi sau recap",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        "Gửi recap ngay khi AI tạo xong (Zalo + Email)",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = autoSend,
+                    onCheckedChange = { autoSend = it },
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── Custom Prompt (collapsible) ──
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { isExpanded = !isExpanded }
+                    .padding(vertical = 4.dp),
+            ) {
+                Text("🤖", fontSize = 16.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Prompt AI Recap",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    null,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically(),
+            ) {
+                Column {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = editPrompt,
+                        onValueChange = { editPrompt = it },
+                        label = { Text("System Prompt cho AI") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 120.dp, max = 200.dp),
+                        maxLines = 15,
+                        textStyle = MaterialTheme.typography.bodySmall,
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    TextButton(
+                        onClick = { editPrompt = DEFAULT_PROMPT },
+                        modifier = Modifier.align(Alignment.End),
+                    ) {
+                        Icon(Icons.Default.Restore, null, Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Khôi phục mặc định", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // ── Save Button ──
+            Button(
+                onClick = {
+                    onConfigChange(
+                        MeetingConfig(
+                            recapPrompt = editPrompt,
+                            defaultZaloContact = editZalo,
+                            defaultEmail = editEmail,
+                            autoSendRecap = autoSend,
+                        )
+                    )
+                    // Show confirmation
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Icon(Icons.Default.Save, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("💾 Lưu Cài Đặt", fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
@@ -696,6 +1160,7 @@ private fun RecapViewer(
     recapText: String,
     onClose: () -> Unit,
     onSendZalo: () -> Unit,
+    onSendEmail: () -> Unit,
 ) {
     Card(
         modifier = Modifier
@@ -745,16 +1210,31 @@ private fun RecapViewer(
 
             Spacer(Modifier.height(12.dp))
 
-            Button(
-                onClick = onSendZalo,
+            // Action buttons: Zalo + Email
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF0068FF),
-                ),
             ) {
-                Text("📨", fontSize = 16.sp)
-                Spacer(Modifier.width(8.dp))
-                Text("Gửi Recap qua Zalo", fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = onSendZalo,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF0068FF),
+                    ),
+                ) {
+                    Text("📨", fontSize = 14.sp)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Gửi Zalo", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+
+                OutlinedButton(
+                    onClick = onSendEmail,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text("📧", fontSize = 14.sp)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Gửi Email", fontSize = 13.sp)
+                }
             }
         }
     }
@@ -796,35 +1276,19 @@ private fun EmptyRecordingsPlaceholder() {
 private suspend fun generateRecap(
     context: android.content.Context,
     recording: AudioRecorder.RecordingResult,
+    customPrompt: String,
 ): String = withContext(Dispatchers.IO) {
     val providerManager = ProviderManager(context)
     val providers = providerManager.loadProviders()
     val provider = providers.firstOrNull { it.enabled }
         ?: throw Exception("Chưa cấu hình AI Provider. Vào Settings để thêm.")
 
-    val prompt = """Bạn là trợ lý AI chuyên recap cuộc họp.
+    val prompt = """$customPrompt
+
 File ghi âm: ${recording.fileName}
 Kích thước: ${recording.sizeFormatted}
 
-Hãy tạo bản recap cuộc họp với format sau:
-
-📋 RECAP CUỘC HỌP
-📅 Thời gian: [ngày giờ từ tên file]
-⏱️ Thời lượng: [ước tính từ kích thước file]
-
-🎯 Các điểm chính:
-1. [Điểm quan trọng 1]
-2. [Điểm quan trọng 2]
-3. [Điểm quan trọng 3]
-
-📌 Hành động tiếp theo:
-- [Action item 1]
-- [Action item 2]
-
-💡 Ghi chú thêm:
-[Các nhận xét khác]
-
-Lưu ý: Đây là file ghi âm ${recording.sizeFormatted}, hãy tạo recap mẫu phù hợp. 
+Lưu ý: Đây là file ghi âm ${recording.sizeFormatted}, hãy tạo recap mẫu phù hợp.
 Khi có tính năng transcribe đầy đủ, recap sẽ dựa trên nội dung thực tế."""
 
     ProviderChat.appContext = context
@@ -846,3 +1310,4 @@ private fun formatDuration(ms: Long): String {
         String.format("%02d:%02d", mins, secs)
     }
 }
+
