@@ -12,14 +12,14 @@
 //! - Table allowlist
 //! - Vault-encrypted credentials
 
+use crate::db_connection::{DbConnectionManager, DbConnectionProfile};
+use crate::db_safety::DbSafety;
 use async_trait::async_trait;
 use bizclaw_core::error::Result;
 use bizclaw_core::traits::Tool;
 use bizclaw_core::types::{ToolDefinition, ToolResult};
 use sqlx::any::AnyPoolOptions;
 use sqlx::{Column, Row, ValueRef};
-use crate::db_safety::DbSafety;
-use crate::db_connection::{DbConnectionManager, DbConnectionProfile};
 
 pub struct DbQueryTool {
     connection_manager: DbConnectionManager,
@@ -102,8 +102,9 @@ impl Tool for DbQueryTool {
     }
 
     async fn execute(&self, arguments: &str) -> Result<ToolResult> {
-        let args: serde_json::Value = serde_json::from_str(arguments)
-            .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Invalid arguments JSON: {}", e)))?;
+        let args: serde_json::Value = serde_json::from_str(arguments).map_err(|e| {
+            bizclaw_core::error::BizClawError::Tool(format!("Invalid arguments JSON: {}", e))
+        })?;
 
         let query = args["query"]
             .as_str()
@@ -129,16 +130,15 @@ impl Tool for DbQueryTool {
         let timeout_secs = profile.as_ref().map(|p| p.timeout_secs).unwrap_or(15);
 
         // ── Table allowlist check ──
-        if let Some(ref p) = profile {
-            if !p.allowed_tables.is_empty() {
-                if let Err(msg) = DbConnectionManager::check_allowed_tables(query, &p.allowed_tables) {
-                    return Ok(ToolResult {
-                        tool_call_id: String::new(),
-                        output: format!("🛡️ Table Access Denied: {}", msg),
-                        success: false,
-                    });
-                }
-            }
+        if let Some(ref p) = profile
+            && !p.allowed_tables.is_empty()
+            && let Err(msg) = DbConnectionManager::check_allowed_tables(query, &p.allowed_tables)
+        {
+            return Ok(ToolResult {
+                tool_call_id: String::new(),
+                output: format!("🛡️ Table Access Denied: {}", msg),
+                success: false,
+            });
         }
 
         // ── Connect ──
@@ -219,10 +219,10 @@ impl Tool for DbQueryTool {
         }
 
         // ── Redact sensitive columns ──
-        if let Some(ref p) = profile {
-            if !p.sensitive_columns.is_empty() {
-                DbConnectionManager::redact_sensitive(&mut results, &p.sensitive_columns);
-            }
+        if let Some(ref p) = profile
+            && !p.sensitive_columns.is_empty()
+        {
+            DbConnectionManager::redact_sensitive(&mut results, &p.sensitive_columns);
         }
 
         let elapsed = start.elapsed();

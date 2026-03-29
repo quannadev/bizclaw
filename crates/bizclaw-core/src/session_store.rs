@@ -19,8 +19,8 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tracing::{debug, info, warn};
 
-use crate::types::message::{Message, Role};
 use crate::types::ToolCall;
+use crate::types::message::{Message, Role};
 
 /// A single entry in the JSONL session file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,14 +119,12 @@ impl SessionStore {
 
     /// Append a single entry to the session file.
     pub fn append(&self, session_id: &str, entry: &SessionEntry) -> crate::Result<()> {
-        self.ensure_dir().map_err(|e| {
-            crate::BizClawError::Config(format!("Create sessions dir: {e}"))
-        })?;
+        self.ensure_dir()
+            .map_err(|e| crate::BizClawError::Config(format!("Create sessions dir: {e}")))?;
 
         let path = self.session_path(session_id);
-        let line = serde_json::to_string(entry).map_err(|e| {
-            crate::BizClawError::Config(format!("Serialize session entry: {e}"))
-        })?;
+        let line = serde_json::to_string(entry)
+            .map_err(|e| crate::BizClawError::Config(format!("Serialize session entry: {e}")))?;
 
         use std::io::Write;
         let mut file = std::fs::OpenOptions::new()
@@ -134,15 +132,11 @@ impl SessionStore {
             .append(true)
             .open(&path)
             .map_err(|e| {
-                crate::BizClawError::Config(format!(
-                    "Open session file {}: {e}",
-                    path.display()
-                ))
+                crate::BizClawError::Config(format!("Open session file {}: {e}", path.display()))
             })?;
 
-        writeln!(file, "{}", line).map_err(|e| {
-            crate::BizClawError::Config(format!("Write session entry: {e}"))
-        })?;
+        writeln!(file, "{}", line)
+            .map_err(|e| crate::BizClawError::Config(format!("Write session entry: {e}")))?;
 
         debug!(
             "Session {}: appended turn {} ({})",
@@ -173,10 +167,7 @@ impl SessionStore {
         }
 
         let content = std::fs::read_to_string(&path).map_err(|e| {
-            crate::BizClawError::Config(format!(
-                "Read session {}: {e}",
-                path.display()
-            ))
+            crate::BizClawError::Config(format!("Read session {}: {e}", path.display()))
         })?;
 
         let mut entries = Vec::new();
@@ -196,11 +187,7 @@ impl SessionStore {
             }
         }
 
-        info!(
-            "Session {}: loaded {} entries",
-            session_id,
-            entries.len()
-        );
+        info!("Session {}: loaded {} entries", session_id, entries.len());
         Ok(entries)
     }
 
@@ -218,14 +205,12 @@ impl SessionStore {
 
     /// List all session IDs.
     pub fn list_sessions(&self) -> crate::Result<Vec<SessionInfo>> {
-        self.ensure_dir().map_err(|e| {
-            crate::BizClawError::Config(format!("Create sessions dir: {e}"))
-        })?;
+        self.ensure_dir()
+            .map_err(|e| crate::BizClawError::Config(format!("Create sessions dir: {e}")))?;
 
         let mut sessions = Vec::new();
-        let entries = std::fs::read_dir(&self.base_dir).map_err(|e| {
-            crate::BizClawError::Config(format!("Read sessions dir: {e}"))
-        })?;
+        let entries = std::fs::read_dir(&self.base_dir)
+            .map_err(|e| crate::BizClawError::Config(format!("Read sessions dir: {e}")))?;
 
         for entry in entries.flatten() {
             let path = entry.path();
@@ -254,9 +239,8 @@ impl SessionStore {
     pub fn delete(&self, session_id: &str) -> crate::Result<bool> {
         let path = self.session_path(session_id);
         if path.exists() {
-            std::fs::remove_file(&path).map_err(|e| {
-                crate::BizClawError::Config(format!("Delete session: {e}"))
-            })?;
+            std::fs::remove_file(&path)
+                .map_err(|e| crate::BizClawError::Config(format!("Delete session: {e}")))?;
             info!("Session deleted: {}", session_id);
             Ok(true)
         } else {
@@ -271,9 +255,7 @@ impl SessionStore {
             .map(|entries| {
                 entries
                     .flatten()
-                    .filter(|e| {
-                        e.path().extension().is_some_and(|ext| ext == "jsonl")
-                    })
+                    .filter(|e| e.path().extension().is_some_and(|ext| ext == "jsonl"))
                     .filter_map(|e| e.metadata().ok())
                     .map(|m| m.len())
                     .sum()
@@ -347,10 +329,7 @@ mod tests {
         let (store, _dir) = store_in_tmp();
         let session = "test-turn-batch";
 
-        let messages = vec![
-            Message::user("What is 2+2?"),
-            Message::assistant("4"),
-        ];
+        let messages = vec![Message::user("What is 2+2?"), Message::assistant("4")];
 
         store.append_turn(session, 1, &messages).unwrap();
         assert_eq!(store.last_turn(session).unwrap(), 1);
@@ -362,7 +341,10 @@ mod tests {
         let session = "test-messages";
 
         store
-            .append(session, &SessionEntry::from_message(&Message::user("Hi"), 1))
+            .append(
+                session,
+                &SessionEntry::from_message(&Message::user("Hi"), 1),
+            )
             .unwrap();
         store
             .append(
@@ -381,10 +363,16 @@ mod tests {
         let (store, _dir) = store_in_tmp();
 
         store
-            .append("sess-a", &SessionEntry::from_message(&Message::user("a"), 1))
+            .append(
+                "sess-a",
+                &SessionEntry::from_message(&Message::user("a"), 1),
+            )
             .unwrap();
         store
-            .append("sess-b", &SessionEntry::from_message(&Message::user("b"), 1))
+            .append(
+                "sess-b",
+                &SessionEntry::from_message(&Message::user("b"), 1),
+            )
             .unwrap();
 
         let sessions = store.list_sessions().unwrap();
@@ -397,7 +385,10 @@ mod tests {
         let session = "to-delete";
 
         store
-            .append(session, &SessionEntry::from_message(&Message::user("bye"), 1))
+            .append(
+                session,
+                &SessionEntry::from_message(&Message::user("bye"), 1),
+            )
             .unwrap();
         assert!(store.delete(session).unwrap());
         assert!(!store.delete(session).unwrap()); // already deleted
@@ -413,7 +404,10 @@ mod tests {
 
         // Write valid entry
         store
-            .append(session, &SessionEntry::from_message(&Message::user("ok"), 1))
+            .append(
+                session,
+                &SessionEntry::from_message(&Message::user("ok"), 1),
+            )
             .unwrap();
 
         // Manually append corrupt line

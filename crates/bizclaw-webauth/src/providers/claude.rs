@@ -19,6 +19,12 @@ pub struct ClaudeWebProvider {
     models: Vec<WebAuthModel>,
 }
 
+impl Default for ClaudeWebProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ClaudeWebProvider {
     pub fn new() -> Self {
         Self {
@@ -73,7 +79,10 @@ impl ClaudeWebProvider {
         org_id: &str,
         prompt: &str,
     ) -> Result<String, String> {
-        let escaped_prompt = prompt.replace('\\', "\\\\").replace('\"', "\\\"").replace('\n', "\\n");
+        let escaped_prompt = prompt
+            .replace('\\', "\\\\")
+            .replace('\"', "\\\"")
+            .replace('\n', "\\n");
 
         // Create conversation and send message
         let js = format!(

@@ -237,9 +237,7 @@ impl LambdaMemory {
     ///
     /// `score = importance × e^(−λt)` where t is age in seconds.
     pub fn score(&self, entry: &LambdaEntry) -> f64 {
-        let age_secs = (Utc::now() - entry.created_at)
-            .num_seconds()
-            .max(0) as f64;
+        let age_secs = (Utc::now() - entry.created_at).num_seconds().max(0) as f64;
         entry.importance * (-self.config.decay_rate * age_secs).exp()
     }
 
@@ -269,11 +267,8 @@ impl LambdaMemory {
         }
 
         // Score and sort all entries
-        let mut scored: Vec<(f64, &LambdaEntry)> = self
-            .entries
-            .iter()
-            .map(|e| (self.score(e), e))
-            .collect();
+        let mut scored: Vec<(f64, &LambdaEntry)> =
+            self.entries.iter().map(|e| (self.score(e), e)).collect();
         scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
 
         let max_chars = token_budget * CHARS_PER_TOKEN;
@@ -306,7 +301,7 @@ impl LambdaMemory {
             if total_chars + line.len() + 1 > max_chars {
                 // Budget exhausted — add remaining as hash-only if space permits
                 let hash_line = format!("  [hash|{score:.2}] #{}", entry.hash);
-                if total_chars + hash_line.len() + 1 <= max_chars {
+                if total_chars + hash_line.len() < max_chars {
                     parts.push(hash_line.clone());
                     total_chars += hash_line.len() + 1;
                 } else {
@@ -329,11 +324,11 @@ impl LambdaMemory {
         let full_count = scores.iter().filter(|&&s| s >= FIDELITY_FULL).count();
         let summary_count = scores
             .iter()
-            .filter(|&&s| s >= FIDELITY_SUMMARY && s < FIDELITY_FULL)
+            .filter(|&&s| (FIDELITY_SUMMARY..FIDELITY_FULL).contains(&s))
             .count();
         let essence_count = scores
             .iter()
-            .filter(|&&s| s >= FIDELITY_ESSENCE && s < FIDELITY_SUMMARY)
+            .filter(|&&s| (FIDELITY_ESSENCE..FIDELITY_SUMMARY).contains(&s))
             .count();
         let hash_count = scores.iter().filter(|&&s| s < FIDELITY_ESSENCE).count();
 
@@ -361,15 +356,15 @@ impl LambdaMemory {
 
     /// Boost a memory's importance (e.g., when recalled or referenced).
     pub fn boost(&mut self, hash: &str, boost_amount: f64) -> bool {
-        if let Some(&idx) = self.hash_index.get(hash) {
-            if let Some(entry) = self.entries.get_mut(idx) {
-                entry.importance = (entry.importance + boost_amount).min(1.0);
-                debug!(
-                    "λ-Memory: boosted hash={} to importance={:.2}",
-                    hash, entry.importance
-                );
-                return true;
-            }
+        if let Some(&idx) = self.hash_index.get(hash)
+            && let Some(entry) = self.entries.get_mut(idx)
+        {
+            entry.importance = (entry.importance + boost_amount).min(1.0);
+            debug!(
+                "λ-Memory: boosted hash={} to importance={:.2}",
+                hash, entry.importance
+            );
+            return true;
         }
         false
     }
@@ -481,7 +476,10 @@ mod tests {
 
         // Fresh entry → score ≈ 1.0
         let score_now = mem.score(&entry);
-        assert!(score_now > 0.99, "Fresh score should be ~1.0, got {score_now}");
+        assert!(
+            score_now > 0.99,
+            "Fresh score should be ~1.0, got {score_now}"
+        );
 
         // Entry from 1 hour ago
         entry.created_at = Utc::now() - Duration::hours(1);
@@ -536,7 +534,10 @@ mod tests {
         let small = mem.build_context(200);
         let large = mem.build_context(10000);
 
-        assert!(small.len() < large.len(), "Small budget should produce less text");
+        assert!(
+            small.len() < large.len(),
+            "Small budget should produce less text"
+        );
         assert!(small.contains("<lambda-memory>"));
         assert!(large.contains("<lambda-memory>"));
     }
@@ -567,10 +568,7 @@ mod tests {
         let mut mem = LambdaMemory::new(config);
 
         for i in 0..10 {
-            mem.store(sample_entry(
-                &format!("Entry {i}"),
-                i as f64 * 0.1,
-            ));
+            mem.store(sample_entry(&format!("Entry {i}"), i as f64 * 0.1));
         }
 
         assert_eq!(mem.entries().len(), 5);

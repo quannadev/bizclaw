@@ -61,11 +61,13 @@ impl SchemaLayerStore {
     /// Save a semantic layer for a connection.
     pub fn save(&self, layer: &SchemaSemanticLayer) -> Result<(), String> {
         let path = self.data_dir.join(format!("{}.json", layer.connection_id));
-        let json = serde_json::to_string_pretty(layer)
-            .map_err(|e| format!("Serialize: {e}"))?;
-        std::fs::write(&path, json)
-            .map_err(|e| format!("Write: {e}"))?;
-        tracing::info!("[schema-layer] Saved {} tables for '{}'", layer.tables.len(), layer.connection_id);
+        let json = serde_json::to_string_pretty(layer).map_err(|e| format!("Serialize: {e}"))?;
+        std::fs::write(&path, json).map_err(|e| format!("Write: {e}"))?;
+        tracing::info!(
+            "[schema-layer] Saved {} tables for '{}'",
+            layer.tables.len(),
+            layer.connection_id
+        );
         Ok(())
     }
 
@@ -115,15 +117,23 @@ impl SchemaLayerStore {
 
         let mut lines = Vec::new();
         for table in &layer.tables {
-            if table_names.iter().any(|n| n.eq_ignore_ascii_case(&table.name)) {
-                let cols: Vec<String> = table.columns.iter().map(|c| {
-                    format!("  - {} ({}{}) — {}",
-                        c.name,
-                        c.data_type,
-                        if c.nullable { ", nullable" } else { "" },
-                        c.description
-                    )
-                }).collect();
+            if table_names
+                .iter()
+                .any(|n| n.eq_ignore_ascii_case(&table.name))
+            {
+                let cols: Vec<String> = table
+                    .columns
+                    .iter()
+                    .map(|c| {
+                        format!(
+                            "  - {} ({}{}) — {}",
+                            c.name,
+                            c.data_type,
+                            if c.nullable { ", nullable" } else { "" },
+                            c.description
+                        )
+                    })
+                    .collect();
 
                 lines.push(format!(
                     "### TABLE: {}\n{}\nPurpose: {}\nKeys: [{}]\nConnected: [{}]\nColumns:\n{}",
@@ -203,7 +213,11 @@ Rules:
     }
 
     /// Prompt to select relevant tables for a NL question.
-    pub fn table_selection_prompt(question: &str, table_descriptions: &str, business_rules: &str) -> String {
+    pub fn table_selection_prompt(
+        question: &str,
+        table_descriptions: &str,
+        business_rules: &str,
+    ) -> String {
         format!(
             r#"Analyze the user question and determine which database tables are needed to answer it.
 
@@ -313,31 +327,29 @@ mod tests {
             connection_id: "test_pg".to_string(),
             db_type: "postgres".to_string(),
             indexed_at: "2026-03-13T09:00:00Z".to_string(),
-            tables: vec![
-                TableDoc {
-                    name: "orders".to_string(),
-                    summary: "Đơn hàng của khách".to_string(),
-                    purpose: "Lưu trữ đơn hàng".to_string(),
-                    row_count: 15000,
-                    columns: vec![
-                        ColumnDoc {
-                            name: "id".to_string(),
-                            data_type: "integer".to_string(),
-                            nullable: false,
-                            description: "Primary key".to_string(),
-                        },
-                        ColumnDoc {
-                            name: "total".to_string(),
-                            data_type: "numeric".to_string(),
-                            nullable: false,
-                            description: "Tổng tiền đơn".to_string(),
-                        },
-                    ],
-                    keys: vec!["customer_id".to_string()],
-                    connected_tables: vec!["customers".to_string()],
-                    entities: vec!["revenue".to_string(), "order count".to_string()],
-                },
-            ],
+            tables: vec![TableDoc {
+                name: "orders".to_string(),
+                summary: "Đơn hàng của khách".to_string(),
+                purpose: "Lưu trữ đơn hàng".to_string(),
+                row_count: 15000,
+                columns: vec![
+                    ColumnDoc {
+                        name: "id".to_string(),
+                        data_type: "integer".to_string(),
+                        nullable: false,
+                        description: "Primary key".to_string(),
+                    },
+                    ColumnDoc {
+                        name: "total".to_string(),
+                        data_type: "numeric".to_string(),
+                        nullable: false,
+                        description: "Tổng tiền đơn".to_string(),
+                    },
+                ],
+                keys: vec!["customer_id".to_string()],
+                connected_tables: vec!["customers".to_string()],
+                entities: vec!["revenue".to_string(), "order count".to_string()],
+            }],
         };
 
         // Save & Load
@@ -376,7 +388,13 @@ mod tests {
         let p = SchemaPrompts::table_selection_prompt("doanh thu", "## orders\n...", "");
         assert!(p.contains("doanh thu"));
 
-        let p = SchemaPrompts::sql_generation_prompt("revenue", "docs", "examples", "rules", "postgresql");
+        let p = SchemaPrompts::sql_generation_prompt(
+            "revenue",
+            "docs",
+            "examples",
+            "rules",
+            "postgresql",
+        );
         assert!(p.contains("revenue"));
         assert!(p.contains("postgresql"));
     }

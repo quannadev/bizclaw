@@ -230,10 +230,7 @@ impl LlmTracer {
     pub async fn metrics_window(&self, window_seconds: i64) -> LlmMetrics {
         let cutoff = Utc::now() - chrono::Duration::seconds(window_seconds);
         let spans = self.spans.read().await;
-        let filtered: Vec<&LlmCallSpan> = spans
-            .iter()
-            .filter(|s| s.timestamp >= cutoff)
-            .collect();
+        let filtered: Vec<&LlmCallSpan> = spans.iter().filter(|s| s.timestamp >= cutoff).collect();
 
         let owned: Vec<LlmCallSpan> = filtered.into_iter().cloned().collect();
         Self::compute_metrics(&owned)
@@ -292,9 +289,7 @@ impl LlmTracer {
         // Per-provider breakdown
         let mut by_provider: HashMap<String, ProviderMetrics> = HashMap::new();
         for span in spans {
-            let entry = by_provider
-                .entry(span.provider.clone())
-                .or_default();
+            let entry = by_provider.entry(span.provider.clone()).or_default();
             entry.calls += 1;
             entry.tokens += span.total_tokens;
             entry.cost_usd += span.cost_usd;
@@ -302,9 +297,9 @@ impl LlmTracer {
                 entry.errors += 1;
             }
             // Running average
-            entry.avg_latency_ms =
-                (entry.avg_latency_ms * (entry.calls - 1) as f64 + span.latency_ms as f64)
-                    / entry.calls as f64;
+            entry.avg_latency_ms = (entry.avg_latency_ms * (entry.calls - 1) as f64
+                + span.latency_ms as f64)
+                / entry.calls as f64;
         }
 
         // Per-model breakdown
@@ -315,9 +310,9 @@ impl LlmTracer {
             entry.prompt_tokens += span.prompt_tokens;
             entry.completion_tokens += span.completion_tokens;
             entry.cost_usd += span.cost_usd;
-            entry.avg_latency_ms =
-                (entry.avg_latency_ms * (entry.calls - 1) as f64 + span.latency_ms as f64)
-                    / entry.calls as f64;
+            entry.avg_latency_ms = (entry.avg_latency_ms * (entry.calls - 1) as f64
+                + span.latency_ms as f64)
+                / entry.calls as f64;
         }
 
         LlmMetrics {
@@ -494,9 +489,7 @@ mod tests {
     #[tokio::test]
     async fn test_clear() {
         let tracer = LlmTracer::new();
-        tracer
-            .record(sample_span("test", "model", 100, 50))
-            .await;
+        tracer.record(sample_span("test", "model", 100, 50)).await;
         assert_eq!(tracer.count().await, 1);
 
         tracer.clear().await;

@@ -7,27 +7,41 @@ pub struct DbSafety;
 impl DbSafety {
     pub fn ensure_safe_query(query: &str) -> std::result::Result<(), String> {
         let q = query.trim().to_uppercase();
-        
+
         // 1. Check blocked keywords (Basic SQL injection / dangerous query protection for agent context)
         let blocked = [
-            "DROP", "TRUNCATE", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE", 
-            "GRANT", "REVOKE", "EXEC", "CALL", "LOAD", "INTO OUTFILE"
+            "DROP",
+            "TRUNCATE",
+            "DELETE",
+            "UPDATE",
+            "INSERT",
+            "ALTER",
+            "CREATE",
+            "GRANT",
+            "REVOKE",
+            "EXEC",
+            "CALL",
+            "LOAD",
+            "INTO OUTFILE",
         ];
-        
+
         for kw in &blocked {
             let pattern = format!(r"\b{}\b", kw);
-            if let Ok(re) = Regex::new(&pattern) {
-                if re.is_match(&q) {
-                    return Err(format!("Blocked dangerous keyword: {}", kw));
-                }
+            if let Ok(re) = Regex::new(&pattern)
+                && re.is_match(&q)
+            {
+                return Err(format!("Blocked dangerous keyword: {}", kw));
             }
         }
-        
+
         // 2. Check allowed starting keyword
         let first_word = q.split_whitespace().next().unwrap_or("");
         match first_word {
             "SELECT" | "SHOW" | "DESCRIBE" | "EXPLAIN" | "WITH" => Ok(()),
-            _ => Err(format!("Only SELECT, SHOW, DESCRIBE, EXPLAIN, WITH queries are allowed. Got: {}", first_word)),
+            _ => Err(format!(
+                "Only SELECT, SHOW, DESCRIBE, EXPLAIN, WITH queries are allowed. Got: {}",
+                first_word
+            )),
         }
     }
 }

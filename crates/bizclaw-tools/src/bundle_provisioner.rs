@@ -186,7 +186,10 @@ impl BundleProvisionerTool {
         std::fs::write(&config_path, &config_toml).map_err(|e| {
             bizclaw_core::error::BizClawError::Tool(format!("Write config.toml: {e}"))
         })?;
-        steps_done.push(format!("✅ config.toml generated at {}", config_path.display()));
+        steps_done.push(format!(
+            "✅ config.toml generated at {}",
+            config_path.display()
+        ));
 
         // 2. Create agent system prompt files
         let agents_dir = workspace_path.join("agents");
@@ -205,18 +208,15 @@ impl BundleProvisionerTool {
                 agent.channels.join(", "),
             );
             std::fs::write(&prompt_path, content).ok();
-            steps_done.push(format!(
-                "✅ Agent '{}' system.md created",
-                agent.name
-            ));
+            steps_done.push(format!("✅ Agent '{}' system.md created", agent.name));
         }
 
         // 3. Create scheduled tasks config
         if !bundle.config.scheduled_tasks.is_empty() {
             let hands_dir = workspace_path.join("hands");
             std::fs::create_dir_all(&hands_dir).ok();
-            let tasks_json = serde_json::to_string_pretty(&bundle.config.scheduled_tasks)
-                .unwrap_or_default();
+            let tasks_json =
+                serde_json::to_string_pretty(&bundle.config.scheduled_tasks).unwrap_or_default();
             let hands_path = hands_dir.join("scheduled.json");
             std::fs::write(&hands_path, tasks_json).ok();
             steps_done.push(format!(
@@ -270,10 +270,7 @@ impl BundleProvisionerTool {
 
         // MCP Servers (commented)
         for mcp in &bundle.config.mcp_servers {
-            toml.push_str(&format!(
-                "# [[mcp_servers]]\n# name = \"{}\"\n\n",
-                mcp
-            ));
+            toml.push_str(&format!("# [[mcp_servers]]\n# name = \"{}\"\n\n", mcp));
         }
 
         toml
@@ -297,9 +294,13 @@ impl BundleProvisionerTool {
 
         // Fallback: get from bundle itself
         let file = self.load_bundles()?;
-        let bundle = file.bundles.iter().find(|b| b.id == bundle_id).ok_or_else(|| {
-            bizclaw_core::error::BizClawError::Tool(format!("Bundle '{bundle_id}' not found"))
-        })?;
+        let bundle = file
+            .bundles
+            .iter()
+            .find(|b| b.id == bundle_id)
+            .ok_or_else(|| {
+                bizclaw_core::error::BizClawError::Tool(format!("Bundle '{bundle_id}' not found"))
+            })?;
         Ok(serde_json::to_string_pretty(&bundle.onboarding).unwrap_or_default())
     }
 }
@@ -383,9 +384,7 @@ impl Tool for BundleProvisionerTool {
                 let id = args["bundle_id"].as_str().ok_or_else(|| {
                     bizclaw_core::error::BizClawError::Tool("Missing 'bundle_id'".into())
                 })?;
-                let workspace = args["workspace"]
-                    .as_str()
-                    .unwrap_or("~/.bizclaw");
+                let workspace = args["workspace"].as_str().unwrap_or("~/.bizclaw");
                 let output = self.provision(id, workspace)?;
                 Ok(ToolResult {
                     tool_call_id: String::new(),

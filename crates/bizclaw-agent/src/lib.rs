@@ -938,7 +938,10 @@ impl Agent {
     /// Summarizes old messages keeping recent context intact.
     pub async fn compact_now(&mut self) {
         if self.conversation.len() <= 4 {
-            tracing::info!("📦 Compact skipped: too few messages ({})", self.conversation.len());
+            tracing::info!(
+                "📦 Compact skipped: too few messages ({})",
+                self.conversation.len()
+            );
             return;
         }
         tracing::info!(

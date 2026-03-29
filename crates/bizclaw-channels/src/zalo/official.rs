@@ -50,11 +50,14 @@ impl ZaloOfficialChannel {
 
     /// Refresh access token using refresh token (Zalo OA API v3).
     pub async fn refresh_access_token(&mut self, app_id: &str, app_secret: &str) -> Result<String> {
-        let refresh = self.refresh_token.as_ref()
+        let refresh = self
+            .refresh_token
+            .as_ref()
             .ok_or_else(|| BizClawError::AuthFailed("No refresh token".into()))?;
 
         let client = reqwest::Client::new();
-        let res = client.post("https://oauth.zaloapp.com/v4/oa/access_token")
+        let res = client
+            .post("https://oauth.zaloapp.com/v4/oa/access_token")
             .header("Content-Type", "application/x-www-form-urlencoded")
             .header("secret_key", app_secret)
             .form(&[
@@ -66,7 +69,9 @@ impl ZaloOfficialChannel {
             .await
             .map_err(|e| BizClawError::Channel(format!("Token refresh failed: {e}")))?;
 
-        let body: serde_json::Value = res.json().await
+        let body: serde_json::Value = res
+            .json()
+            .await
             .map_err(|e| BizClawError::Channel(format!("Token parse failed: {e}")))?;
 
         if let Some(token) = body.get("access_token").and_then(|v| v.as_str()) {
@@ -77,7 +82,8 @@ impl ZaloOfficialChannel {
             tracing::info!("[zalo-oa] Access token refreshed successfully");
             Ok(token.to_string())
         } else {
-            let err = body.get("error_description")
+            let err = body
+                .get("error_description")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unknown error");
             Err(BizClawError::AuthFailed(format!("Token refresh: {err}")))
@@ -91,7 +97,9 @@ impl ZaloOfficialChannel {
         template_id: &str,
         template_data: serde_json::Value,
     ) -> Result<()> {
-        let token = self.access_token.as_ref()
+        let token = self
+            .access_token
+            .as_ref()
             .ok_or_else(|| BizClawError::Channel("No access token".into()))?;
 
         let payload = serde_json::json!({
@@ -109,45 +117,60 @@ impl ZaloOfficialChannel {
         });
 
         let client = reqwest::Client::new();
-        let res = client.post("https://openapi.zalo.me/v3.0/oa/message/cs")
+        let res = client
+            .post("https://openapi.zalo.me/v3.0/oa/message/cs")
             .header("access_token", token)
             .json(&payload)
             .send()
             .await
             .map_err(|e| BizClawError::Channel(format!("Template send failed: {e}")))?;
 
-        let body: serde_json::Value = res.json().await
+        let body: serde_json::Value = res
+            .json()
+            .await
             .map_err(|e| BizClawError::Channel(format!("Response parse: {e}")))?;
 
         if body.get("error").and_then(|v| v.as_i64()).unwrap_or(-1) == 0 {
             tracing::info!("[zalo-oa] Template message sent to {user_id}");
             Ok(())
         } else {
-            let msg = body.get("message").and_then(|v| v.as_str()).unwrap_or("Unknown error");
+            let msg = body
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown error");
             Err(BizClawError::Channel(format!("Template send: {msg}")))
         }
     }
 
     /// Get list of OA followers with pagination.
     pub async fn get_followers(&self, offset: u32, count: u32) -> Result<serde_json::Value> {
-        let token = self.access_token.as_ref()
+        let token = self
+            .access_token
+            .as_ref()
             .ok_or_else(|| BizClawError::Channel("No access token".into()))?;
 
         let client = reqwest::Client::new();
-        let res = client.get("https://openapi.zalo.me/v2.0/oa/getfollowers")
+        let res = client
+            .get("https://openapi.zalo.me/v2.0/oa/getfollowers")
             .header("access_token", token)
-            .query(&[("data", serde_json::json!({"offset": offset, "count": count}).to_string())])
+            .query(&[(
+                "data",
+                serde_json::json!({"offset": offset, "count": count}).to_string(),
+            )])
             .send()
             .await
             .map_err(|e| BizClawError::Channel(format!("Get followers failed: {e}")))?;
 
-        res.json().await
+        res.json()
+            .await
             .map_err(|e| BizClawError::Channel(format!("Parse followers: {e}")))
     }
 
     /// Send image message via OA.
     pub async fn send_image(&self, user_id: &str, image_url: &str, caption: &str) -> Result<()> {
-        let token = self.access_token.as_ref()
+        let token = self
+            .access_token
+            .as_ref()
             .ok_or_else(|| BizClawError::Channel("No access token".into()))?;
 
         let payload = serde_json::json!({
@@ -168,7 +191,8 @@ impl ZaloOfficialChannel {
         });
 
         let client = reqwest::Client::new();
-        client.post("https://openapi.zalo.me/v3.0/oa/message/cs")
+        client
+            .post("https://openapi.zalo.me/v3.0/oa/message/cs")
             .header("access_token", token)
             .json(&payload)
             .send()
@@ -181,7 +205,9 @@ impl ZaloOfficialChannel {
 
     /// Broadcast message to all followers (requires ZCA approval).
     pub async fn broadcast(&self, message: &str) -> Result<serde_json::Value> {
-        let token = self.access_token.as_ref()
+        let token = self
+            .access_token
+            .as_ref()
             .ok_or_else(|| BizClawError::Channel("No access token".into()))?;
 
         let payload = serde_json::json!({
@@ -190,30 +216,36 @@ impl ZaloOfficialChannel {
         });
 
         let client = reqwest::Client::new();
-        let res = client.post("https://openapi.zalo.me/v2.0/oa/message/broadcast")
+        let res = client
+            .post("https://openapi.zalo.me/v2.0/oa/message/broadcast")
             .header("access_token", token)
             .json(&payload)
             .send()
             .await
             .map_err(|e| BizClawError::Channel(format!("Broadcast failed: {e}")))?;
 
-        res.json().await
+        res.json()
+            .await
             .map_err(|e| BizClawError::Channel(format!("Broadcast parse: {e}")))
     }
 
     /// Get OA profile info.
     pub async fn get_oa_info(&self) -> Result<serde_json::Value> {
-        let token = self.access_token.as_ref()
+        let token = self
+            .access_token
+            .as_ref()
             .ok_or_else(|| BizClawError::Channel("No access token".into()))?;
 
         let client = reqwest::Client::new();
-        let res = client.get("https://openapi.zalo.me/v2.0/oa/getoa")
+        let res = client
+            .get("https://openapi.zalo.me/v2.0/oa/getoa")
             .header("access_token", token)
             .send()
             .await
             .map_err(|e| BizClawError::Channel(format!("Get OA info failed: {e}")))?;
 
-        res.json().await
+        res.json()
+            .await
             .map_err(|e| BizClawError::Channel(format!("Parse OA info: {e}")))
     }
 }

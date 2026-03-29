@@ -238,8 +238,7 @@ impl ZaloTool {
 
         let mut cfg = self.config.lock().unwrap_or_else(|p| p.into_inner());
         cfg.watched_users.insert(user_id.to_string());
-        cfg.user_names
-            .insert(user_id.to_string(), name.to_string());
+        cfg.user_names.insert(user_id.to_string(), name.to_string());
 
         format!(
             "✅ Đã thêm \"{}\" ({}) vào danh sách theo dõi DM.\n📊 Tổng người đang theo dõi: {}",
@@ -277,8 +276,7 @@ impl ZaloTool {
 
         let mut cfg = self.config.lock().unwrap_or_else(|p| p.into_inner());
         // Remove existing entry for this user_id if any
-        cfg.report_recipients
-            .retain(|r| r.user_id != user_id);
+        cfg.report_recipients.retain(|r| r.user_id != user_id);
         cfg.report_recipients.push(ReportRecipient {
             user_id: user_id.to_string(),
             name: name.to_string(),
@@ -310,7 +308,10 @@ impl ZaloTool {
             for gid in &cfg.watched_groups {
                 let name = cfg.group_names.get(gid).map(|s| s.as_str()).unwrap_or("?");
                 let count = self.group_buffer.count(gid);
-                out.push_str(&format!("  • {} ({}): {} tin đang buffer\n", name, gid, count));
+                out.push_str(&format!(
+                    "  • {} ({}): {} tin đang buffer\n",
+                    name, gid, count
+                ));
             }
         }
 
@@ -325,7 +326,10 @@ impl ZaloTool {
             for uid in &cfg.watched_users {
                 let name = cfg.user_names.get(uid).map(|s| s.as_str()).unwrap_or("?");
                 let count = self.dm_buffer.count(uid);
-                out.push_str(&format!("  • {} ({}): {} tin đang buffer\n", name, uid, count));
+                out.push_str(&format!(
+                    "  • {} ({}): {} tin đang buffer\n",
+                    name, uid, count
+                ));
             }
         }
 
@@ -338,7 +342,10 @@ impl ZaloTool {
             out.push_str("  (chưa thiết lập)\n");
         } else {
             for r in &cfg.report_recipients {
-                out.push_str(&format!("  • {} ({}) — scope: {}\n", r.name, r.user_id, r.scope));
+                out.push_str(&format!(
+                    "  • {} ({}) — scope: {}\n",
+                    r.name, r.user_id, r.scope
+                ));
             }
         }
 
@@ -391,7 +398,10 @@ impl ZaloTool {
                 .get(user_id)
                 .map(|s| s.as_str())
                 .unwrap_or(user_id);
-            return format!("📭 Cuộc trò chuyện với \"{}\" không có tin nhắn trong buffer.", name);
+            return format!(
+                "📭 Cuộc trò chuyện với \"{}\" không có tin nhắn trong buffer.",
+                name
+            );
         }
 
         let cfg = self.config.lock().unwrap_or_else(|p| p.into_inner());
@@ -426,7 +436,10 @@ impl ZaloTool {
                 let count = self.group_buffer.count(gid);
                 if count > 0 {
                     total_msgs += count as u32;
-                    report.push_str(&format!("  📌 {} — {} tin nhắn (cần tóm tắt)\n", name, count));
+                    report.push_str(&format!(
+                        "  📌 {} — {} tin nhắn (cần tóm tắt)\n",
+                        name, count
+                    ));
                 } else {
                     report.push_str(&format!("  ✅ {} — không có tin mới\n", name));
                 }
@@ -441,7 +454,10 @@ impl ZaloTool {
                 let count = self.dm_buffer.count(uid);
                 if count > 0 {
                     total_msgs += count as u32;
-                    report.push_str(&format!("  📌 {} — {} tin nhắn (cần tóm tắt)\n", name, count));
+                    report.push_str(&format!(
+                        "  📌 {} — {} tin nhắn (cần tóm tắt)\n",
+                        name, count
+                    ));
                 } else {
                     report.push_str(&format!("  ✅ {} — không có tin mới\n", name));
                 }
@@ -506,7 +522,7 @@ impl ZaloTool {
         let bin_bank = args["bin_bank"].as_str().unwrap_or("");
         let acc_num = args["acc_num"].as_str().unwrap_or("");
         let acc_name = args["acc_name"].as_str().unwrap_or("");
-        
+
         if thread_id.is_empty() || bin_bank.is_empty() || acc_num.is_empty() {
             return "❌ Thiếu thread_id, bin_bank hoặc acc_num".into();
         }
@@ -527,7 +543,7 @@ impl ZaloTool {
              • Tên: {}\n\n\
              🔄 Hệ thống sẽ gửi qua Zalo channel.\n\
              _zalo_request: {}",
-             bin_bank, acc_num, acc_name, request
+            bin_bank, acc_num, acc_name, request
         )
     }
 
@@ -562,7 +578,7 @@ impl ZaloTool {
              • Số tiền (tuỳ chọn): {:?}\n\n\
              🔄 Hệ thống sẽ gửi qua Zalo channel.\n\
              _zalo_request: {}",
-             bin_bank, acc_num, amount, request
+            bin_bank, acc_num, amount, request
         )
     }
 
@@ -606,7 +622,10 @@ impl ZaloTool {
         let targets: Vec<(String, String)> = if let Some(rid) = recipient_id {
             vec![(
                 rid.to_string(),
-                cfg.user_names.get(rid).cloned().unwrap_or_else(|| rid.to_string()),
+                cfg.user_names
+                    .get(rid)
+                    .cloned()
+                    .unwrap_or_else(|| rid.to_string()),
             )]
         } else {
             // Send to all report recipients

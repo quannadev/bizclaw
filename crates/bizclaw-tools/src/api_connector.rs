@@ -78,15 +78,9 @@ fn default_true() -> bool {
 }
 
 /// Root config for `api-endpoints.json`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ApiEndpointConfig {
     pub endpoints: Vec<ApiEndpointProfile>,
-}
-
-impl Default for ApiEndpointConfig {
-    fn default() -> Self {
-        Self { endpoints: vec![] }
-    }
 }
 
 /// API Connector tool — safe data updates via pre-configured endpoints.
@@ -101,24 +95,26 @@ impl ApiConnectorTool {
 
     pub fn load_from(path: &std::path::Path) -> Self {
         let endpoints = match std::fs::read_to_string(path) {
-            Ok(content) => {
-                match serde_json::from_str::<ApiEndpointConfig>(&content) {
-                    Ok(config) => {
-                        let mut map = HashMap::new();
-                        for ep in config.endpoints {
-                            if ep.enabled {
-                                map.insert(ep.id.clone(), ep);
-                            }
+            Ok(content) => match serde_json::from_str::<ApiEndpointConfig>(&content) {
+                Ok(config) => {
+                    let mut map = HashMap::new();
+                    for ep in config.endpoints {
+                        if ep.enabled {
+                            map.insert(ep.id.clone(), ep);
                         }
-                        tracing::info!("🔗 Loaded {} API endpoint(s) from {}", map.len(), path.display());
-                        map
                     }
-                    Err(e) => {
-                        tracing::warn!("⚠️ Failed to parse API endpoints config: {e}");
-                        HashMap::new()
-                    }
+                    tracing::info!(
+                        "🔗 Loaded {} API endpoint(s) from {}",
+                        map.len(),
+                        path.display()
+                    );
+                    map
                 }
-            }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to parse API endpoints config: {e}");
+                    HashMap::new()
+                }
+            },
             Err(_) => {
                 tracing::debug!("No API endpoints config at {}", path.display());
                 HashMap::new()
@@ -148,7 +144,10 @@ impl Tool for ApiConnectorTool {
                 .values()
                 .map(|ep| {
                     let danger = if ep.dangerous { "⚠️ " } else { "" };
-                    format!("  - '{}' {} {} — {}{}", ep.id, ep.method, ep.url, danger, ep.description)
+                    format!(
+                        "  - '{}' {} {} — {}{}",
+                        ep.id, ep.method, ep.url, danger, ep.description
+                    )
                 })
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -160,7 +159,8 @@ impl Tool for ApiConnectorTool {
                 "Call pre-configured API endpoints to safely update data. Each endpoint has authentication, \
                 field validation, and optional approval gates. Use this for WRITE operations \
                 (create, update) — use db_query for READ operations.\n\n\
-                Available endpoints:\n{}", ep_list
+                Available endpoints:\n{}",
+                ep_list
             ),
             parameters: serde_json::json!({
                 "type": "object",
@@ -191,18 +191,26 @@ impl Tool for ApiConnectorTool {
         let args: serde_json::Value = serde_json::from_str(arguments)
             .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Invalid JSON: {}", e)))?;
 
-        let ep_id = args["endpoint_id"]
-            .as_str()
-            .ok_or_else(|| bizclaw_core::error::BizClawError::Tool("Missing 'endpoint_id'".into()))?;
+        let ep_id = args["endpoint_id"].as_str().ok_or_else(|| {
+            bizclaw_core::error::BizClawError::Tool("Missing 'endpoint_id'".into())
+        })?;
 
         // Look up endpoint
         let endpoint = match self.endpoints.get(ep_id) {
             Some(ep) => ep,
             None => {
-                let available = self.endpoints.keys().cloned().collect::<Vec<_>>().join(", ");
+                let available = self
+                    .endpoints
+                    .keys()
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(", ");
                 return Ok(ToolResult {
                     tool_call_id: String::new(),
-                    output: format!("❌ Unknown endpoint '{}'. Available: [{}]", ep_id, available),
+                    output: format!(
+                        "❌ Unknown endpoint '{}'. Available: [{}]",
+                        ep_id, available
+                    ),
                     success: false,
                 });
             }
@@ -235,7 +243,10 @@ impl Tool for ApiConnectorTool {
         if let Some(qp) = args["query_params"].as_object() {
             let query_string: Vec<String> = qp
                 .iter()
-                .filter_map(|(k, v)| v.as_str().map(|s| format!("{}={}", k, urlencoding::encode(s))))
+                .filter_map(|(k, v)| {
+                    v.as_str()
+                        .map(|s| format!("{}={}", k, urlencoding::encode(s)))
+                })
                 .collect();
             if !query_string.is_empty() {
                 let separator = if url.contains('?') { "&" } else { "?" };
@@ -244,19 +255,19 @@ impl Tool for ApiConnectorTool {
         }
 
         // Validate body fields
-        if let Some(body) = args["body"].as_object() {
-            if !endpoint.allowed_fields.is_empty() {
-                for key in body.keys() {
-                    if !endpoint.allowed_fields.contains(key) {
-                        return Ok(ToolResult {
-                            tool_call_id: String::new(),
-                            output: format!(
-                                "🛡️ Field '{}' is not allowed for endpoint '{}'. Allowed: {:?}",
-                                key, ep_id, endpoint.allowed_fields
-                            ),
-                            success: false,
-                        });
-                    }
+        if let Some(body) = args["body"].as_object()
+            && !endpoint.allowed_fields.is_empty()
+        {
+            for key in body.keys() {
+                if !endpoint.allowed_fields.contains(key) {
+                    return Ok(ToolResult {
+                        tool_call_id: String::new(),
+                        output: format!(
+                            "🛡️ Field '{}' is not allowed for endpoint '{}'. Allowed: {:?}",
+                            key, ep_id, endpoint.allowed_fields
+                        ),
+                        success: false,
+                    });
                 }
             }
         }
@@ -273,7 +284,9 @@ impl Tool for ApiConnectorTool {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
             .build()
-            .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("HTTP client error: {}", e)))?;
+            .map_err(|e| {
+                bizclaw_core::error::BizClawError::Tool(format!("HTTP client error: {}", e))
+            })?;
 
         let method = endpoint.method.to_uppercase();
         let mut request = match method.as_str() {
@@ -302,11 +315,12 @@ impl Tool for ApiConnectorTool {
         }
 
         // Set body
-        if let Some(body) = args.get("body") {
-            if !body.is_null() {
-                request = request.header("Content-Type", "application/json")
-                    .json(body);
-            }
+        if let Some(body) = args.get("body")
+            && !body.is_null()
+        {
+            request = request
+                .header("Content-Type", "application/json")
+                .json(body);
         }
 
         let start = std::time::Instant::now();
@@ -314,12 +328,19 @@ impl Tool for ApiConnectorTool {
             Ok(response) => {
                 let status = response.status();
                 let elapsed = start.elapsed();
-                let body_text = response.text().await.unwrap_or_else(|_| "[empty]".to_string());
+                let body_text = response
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "[empty]".to_string());
 
                 // Truncate response
                 let max_len = 3000;
                 let body_display = if body_text.len() > max_len {
-                    format!("{}... [truncated, total {} bytes]", &body_text[..max_len], body_text.len())
+                    format!(
+                        "{}... [truncated, total {} bytes]",
+                        &body_text[..max_len],
+                        body_text.len()
+                    )
                 } else {
                     body_text
                 };
@@ -331,7 +352,12 @@ impl Tool for ApiConnectorTool {
                     tool_call_id: String::new(),
                     output: format!(
                         "{} {} {} → {} ({}ms)\n\nResponse:\n{}",
-                        icon, method, url, status, elapsed.as_millis(), body_display
+                        icon,
+                        method,
+                        url,
+                        status,
+                        elapsed.as_millis(),
+                        body_display
                     ),
                     success,
                 })

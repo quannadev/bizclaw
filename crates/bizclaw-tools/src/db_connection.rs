@@ -82,17 +82,9 @@ fn default_timeout() -> u64 {
 }
 
 /// Root config structure for `db-connections.json`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DbConnectionConfig {
     pub connections: Vec<DbConnectionProfile>,
-}
-
-impl Default for DbConnectionConfig {
-    fn default() -> Self {
-        Self {
-            connections: vec![],
-        }
-    }
 }
 
 /// Connection Manager — loads, validates, and provides DB connections.
@@ -110,24 +102,26 @@ impl DbConnectionManager {
     /// Load connections from a specific path.
     pub fn load_from(path: &Path) -> Self {
         let profiles = match std::fs::read_to_string(path) {
-            Ok(content) => {
-                match serde_json::from_str::<DbConnectionConfig>(&content) {
-                    Ok(config) => {
-                        let mut map = HashMap::new();
-                        for conn in config.connections {
-                            if conn.enabled {
-                                map.insert(conn.id.clone(), conn);
-                            }
+            Ok(content) => match serde_json::from_str::<DbConnectionConfig>(&content) {
+                Ok(config) => {
+                    let mut map = HashMap::new();
+                    for conn in config.connections {
+                        if conn.enabled {
+                            map.insert(conn.id.clone(), conn);
                         }
-                        tracing::info!("🗄️ Loaded {} DB connection(s) from {}", map.len(), path.display());
-                        map
                     }
-                    Err(e) => {
-                        tracing::warn!("⚠️ Failed to parse DB connections config: {e}");
-                        HashMap::new()
-                    }
+                    tracing::info!(
+                        "🗄️ Loaded {} DB connection(s) from {}",
+                        map.len(),
+                        path.display()
+                    );
+                    map
                 }
-            }
+                Err(e) => {
+                    tracing::warn!("⚠️ Failed to parse DB connections config: {e}");
+                    HashMap::new()
+                }
+            },
             Err(_) => {
                 tracing::debug!("No DB connections config at {}", path.display());
                 HashMap::new()
@@ -147,13 +141,16 @@ impl DbConnectionManager {
 
     /// List all connection IDs with types and descriptions.
     pub fn list(&self) -> Vec<ConnectionSummary> {
-        self.profiles.values().map(|p| ConnectionSummary {
-            id: p.id.clone(),
-            db_type: p.db_type.clone(),
-            description: p.description.clone(),
-            read_only: p.read_only,
-            max_rows: p.max_rows,
-        }).collect()
+        self.profiles
+            .values()
+            .map(|p| ConnectionSummary {
+                id: p.id.clone(),
+                db_type: p.db_type.clone(),
+                description: p.description.clone(),
+                read_only: p.read_only,
+                max_rows: p.max_rows,
+            })
+            .collect()
     }
 
     /// Number of registered connections.
@@ -176,10 +173,7 @@ impl DbConnectionManager {
     }
 
     /// Redact sensitive columns from query results.
-    pub fn redact_sensitive(
-        results: &mut Vec<serde_json::Value>,
-        sensitive_columns: &[String],
-    ) {
+    pub fn redact_sensitive(results: &mut Vec<serde_json::Value>, sensitive_columns: &[String]) {
         if sensitive_columns.is_empty() {
             return;
         }
@@ -187,7 +181,10 @@ impl DbConnectionManager {
             if let Some(obj) = row.as_object_mut() {
                 for col in sensitive_columns {
                     if obj.contains_key(col) {
-                        obj.insert(col.clone(), serde_json::Value::String("****REDACTED****".into()));
+                        obj.insert(
+                            col.clone(),
+                            serde_json::Value::String("****REDACTED****".into()),
+                        );
                     }
                     // Also check case-insensitive
                     let keys: Vec<String> = obj.keys().cloned().collect();
@@ -223,7 +220,11 @@ impl DbConnectionManager {
                         && !allowed_tables.iter().any(|t| t.to_lowercase() == clean)
                     {
                         // Skip if it looks like a subquery or keyword
-                        let keywords = ["where", "on", "as", "and", "or", "left", "right", "inner", "outer", "cross", "natural", "group", "order", "limit", "having", "union", "set"];
+                        let keywords = [
+                            "where", "on", "as", "and", "or", "left", "right", "inner", "outer",
+                            "cross", "natural", "group", "order", "limit", "having", "union",
+                            "set",
+                        ];
                         if !keywords.contains(&clean.as_str()) {
                             return Err(format!(
                                 "Table '{}' is not in the allowed list: {:?}",
@@ -328,10 +329,7 @@ mod tests {
             serde_json::json!({"name": "Bob", "password": "hunter2", "ssn": "123-45-6789"}),
         ];
 
-        DbConnectionManager::redact_sensitive(
-            &mut results,
-            &["password".into(), "ssn".into()],
-        );
+        DbConnectionManager::redact_sensitive(&mut results, &["password".into(), "ssn".into()]);
 
         assert_eq!(results[0]["password"], "****REDACTED****");
         assert_eq!(results[0]["name"], "Alice");
@@ -361,10 +359,7 @@ mod tests {
 
     #[test]
     fn test_allowed_tables_no_restriction() {
-        let result = DbConnectionManager::check_allowed_tables(
-            "SELECT * FROM anything_goes",
-            &[],
-        );
+        let result = DbConnectionManager::check_allowed_tables("SELECT * FROM anything_goes", &[]);
         assert!(result.is_ok());
     }
 

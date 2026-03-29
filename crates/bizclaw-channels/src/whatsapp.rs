@@ -96,7 +96,9 @@ impl WhatsAppChannel {
             Ok(r) => r,
             Err(e) => {
                 self.circuit_breaker.record_failure();
-                return Err(BizClawError::Channel(format!("WhatsApp API request failed: {e}")));
+                return Err(BizClawError::Channel(format!(
+                    "WhatsApp API request failed: {e}"
+                )));
             }
         };
 

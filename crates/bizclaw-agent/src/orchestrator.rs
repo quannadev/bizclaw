@@ -885,14 +885,13 @@ impl Orchestrator {
         if !self.agents.contains_key(from_agent) {
             return Err(BizClawError::AgentNotFound(from_agent.to_string()));
         }
-        let to = self.agents.get_mut(to_agent).ok_or_else(|| {
-            BizClawError::AgentNotFound(to_agent.to_string())
-        })?;
+        let to = self
+            .agents
+            .get_mut(to_agent)
+            .ok_or_else(|| BizClawError::AgentNotFound(to_agent.to_string()))?;
 
         // Inject as a system message into the target agent's conversation
-        let injected = format!(
-            "[Inter-agent message from '{from_agent}']\n{message}"
-        );
+        let injected = format!("[Inter-agent message from '{from_agent}']\n{message}");
         to.agent.inject_system_message(&injected);
 
         self.message_log.push(AgentMessage {
@@ -903,7 +902,12 @@ impl Orchestrator {
             timestamp: chrono::Utc::now(),
         });
 
-        tracing::info!("📨 agent_send: {} → {} ({} chars)", from_agent, to_agent, message.len());
+        tracing::info!(
+            "📨 agent_send: {} → {} ({} chars)",
+            from_agent,
+            to_agent,
+            message.len()
+        );
         Ok(())
     }
 
@@ -922,9 +926,10 @@ impl Orchestrator {
             return Err(BizClawError::AgentNotFound(from_agent.to_string()));
         }
 
-        let to = self.agents.get_mut(to_agent).ok_or_else(|| {
-            BizClawError::AgentNotFound(to_agent.to_string())
-        })?;
+        let to = self
+            .agents
+            .get_mut(to_agent)
+            .ok_or_else(|| BizClawError::AgentNotFound(to_agent.to_string()))?;
 
         let prompt = format!(
             "[Quick question from agent '{from_agent}']\n{question}\n\n\
@@ -944,7 +949,9 @@ impl Orchestrator {
 
         tracing::info!(
             "💬 agent_ask: {} → {} (reply: {} chars)",
-            from_agent, to_agent, response.len()
+            from_agent,
+            to_agent,
+            response.len()
         );
         Ok(response)
     }

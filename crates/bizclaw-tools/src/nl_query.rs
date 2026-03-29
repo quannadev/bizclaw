@@ -18,15 +18,15 @@
 //!   ↓ learn → save {question, sql} for next time
 //! ```
 
+use crate::db_connection::DbConnectionManager;
+use crate::db_examples::{BusinessRuleStore, SqlExampleStore};
+use crate::db_semantic::{SchemaLayerStore, SchemaPrompts};
 use async_trait::async_trait;
 use bizclaw_core::error::Result;
 use bizclaw_core::traits::Tool;
 use bizclaw_core::types::{ToolDefinition, ToolResult};
-use sqlx::any::AnyPoolOptions;
 use sqlx::Row;
-use crate::db_connection::DbConnectionManager;
-use crate::db_examples::{SqlExampleStore, BusinessRuleStore};
-use crate::db_semantic::{SchemaLayerStore, SchemaPrompts};
+use sqlx::any::AnyPoolOptions;
 
 pub struct NlQueryTool {
     connection_manager: DbConnectionManager,
@@ -199,9 +199,11 @@ impl NlQueryTool {
         let examples_text = if examples.is_empty() {
             "No similar examples found.".to_string()
         } else {
-            examples.iter().map(|e| {
-                format!("Q: {}\nSQL: {}", e.question, e.sql)
-            }).collect::<Vec<_>>().join("\n\n")
+            examples
+                .iter()
+                .map(|e| format!("Q: {}\nSQL: {}", e.question, e.sql))
+                .collect::<Vec<_>>()
+                .join("\n\n")
         };
 
         // Step 5: Build the SQL generation prompt
@@ -252,28 +254,33 @@ impl NlQueryTool {
         })?;
 
         let vault = bizclaw_security::vault::Vault::new();
-        let uri = DbConnectionManager::resolve_connection_string(
-            &profile.connection_string,
-            &vault,
-        );
+        let uri =
+            DbConnectionManager::resolve_connection_string(&profile.connection_string, &vault);
 
         let pool = AnyPoolOptions::new()
             .max_connections(2)
             .acquire_timeout(std::time::Duration::from_secs(15))
             .connect(&uri)
             .await
-            .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Connection failed: {e}")))?;
+            .map_err(|e| {
+                bizclaw_core::error::BizClawError::Tool(format!("Connection failed: {e}"))
+            })?;
 
         let db_type = profile.db_type.to_lowercase();
         let start = std::time::Instant::now();
 
         // Get all tables
         let table_query = match db_type.as_str() {
-            "postgresql" | "postgres" =>
-                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+            "postgresql" | "postgres" => {
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+            }
             "mysql" => "SHOW TABLES",
-            "sqlite" => "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-            _ => "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+            "sqlite" => {
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            }
+            _ => {
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+            }
         };
 
         let table_rows = sqlx::query(table_query)
@@ -292,7 +299,12 @@ impl NlQueryTool {
 
         // Filter by allowlist
         if !profile.allowed_tables.is_empty() {
-            table_names.retain(|t| profile.allowed_tables.iter().any(|a| a.eq_ignore_ascii_case(t)));
+            table_names.retain(|t| {
+                profile
+                    .allowed_tables
+                    .iter()
+                    .any(|a| a.eq_ignore_ascii_case(t))
+            });
         }
 
         // For each table, get columns + row count → build raw schema doc
@@ -325,18 +337,26 @@ impl NlQueryTool {
             let mut columns = Vec::new();
             let mut raw_cols = Vec::new();
             for row in &col_rows {
-                let col_name = row.try_get::<String, _>(0)
+                let col_name = row
+                    .try_get::<String, _>(0)
                     .or_else(|_| row.try_get::<&str, _>(0).map(|s| s.to_string()))
                     .unwrap_or_default();
-                let data_type = row.try_get::<String, _>(1)
+                let data_type = row
+                    .try_get::<String, _>(1)
                     .or_else(|_| row.try_get::<&str, _>(1).map(|s| s.to_string()))
                     .unwrap_or("unknown".to_string());
-                let nullable_str = row.try_get::<String, _>(2)
+                let nullable_str = row
+                    .try_get::<String, _>(2)
                     .or_else(|_| row.try_get::<&str, _>(2).map(|s| s.to_string()))
                     .unwrap_or("YES".to_string());
                 let nullable = nullable_str.to_uppercase() == "YES" || nullable_str == "1";
 
-                raw_cols.push(format!("  {} {} {}", col_name, data_type, if nullable { "NULL" } else { "NOT NULL" }));
+                raw_cols.push(format!(
+                    "  {} {} {}",
+                    col_name,
+                    data_type,
+                    if nullable { "NULL" } else { "NOT NULL" }
+                ));
 
                 // Auto-detect keys and generate basic description
                 let _is_key = col_name.ends_with("_id") || col_name == "id";
@@ -353,7 +373,10 @@ impl NlQueryTool {
                     "Email address".to_string()
                 } else if col_name.contains("phone") {
                     "Phone number".to_string()
-                } else if col_name.contains("total") || col_name.contains("amount") || col_name.contains("price") {
+                } else if col_name.contains("total")
+                    || col_name.contains("amount")
+                    || col_name.contains("price")
+                {
                     "Monetary value".to_string()
                 } else if col_name.contains("status") || col_name.contains("state") {
                     "Status/state field".to_string()
@@ -379,12 +402,14 @@ impl NlQueryTool {
             };
 
             // Auto-detect keys and connected tables
-            let keys: Vec<String> = columns.iter()
+            let keys: Vec<String> = columns
+                .iter()
                 .filter(|c| c.name.ends_with("_id") && c.name != "id")
                 .map(|c| c.name.clone())
                 .collect();
 
-            let connected: Vec<String> = keys.iter()
+            let connected: Vec<String> = keys
+                .iter()
                 .map(|k| {
                     let base = k.trim_end_matches("_id");
                     format!("{base}s") // Simple pluralization
@@ -416,8 +441,9 @@ impl NlQueryTool {
             tables: table_docs,
         };
 
-        self.schema_store.save(&layer)
-            .map_err(|e| bizclaw_core::error::BizClawError::Tool(e))?;
+        self.schema_store
+            .save(&layer)
+            .map_err(bizclaw_core::error::BizClawError::Tool)?;
 
         let elapsed = start.elapsed();
 
@@ -439,7 +465,7 @@ impl NlQueryTool {
                 elapsed.as_millis(),
                 table_names.join(", "),
                 crate::db_semantic::SchemaPrompts::process_table_prompt(
-                    &raw_schemas.first().unwrap_or(&String::new())
+                    raw_schemas.first().unwrap_or(&String::new())
                 ),
             ),
             success: true,
@@ -447,12 +473,19 @@ impl NlQueryTool {
     }
 
     /// Infer business entities from table name and columns.
-    fn infer_entities(&self, table: &str, columns: &[crate::db_semantic::ColumnDoc]) -> Vec<String> {
+    fn infer_entities(
+        &self,
+        table: &str,
+        columns: &[crate::db_semantic::ColumnDoc],
+    ) -> Vec<String> {
         let mut entities = Vec::new();
 
         // Based on monetary columns
         for col in columns {
-            if col.name.contains("total") || col.name.contains("amount") || col.name.contains("price") {
+            if col.name.contains("total")
+                || col.name.contains("amount")
+                || col.name.contains("price")
+            {
                 entities.push(format!("{} {}", table, col.name));
             }
         }
@@ -508,14 +541,17 @@ impl NlQueryTool {
         if rules.is_empty() {
             return Ok(ToolResult {
                 tool_call_id: String::new(),
-                output: format!("📋 No business rules for '{conn_id}'. Add with action='add_rule'."),
+                output: format!(
+                    "📋 No business rules for '{conn_id}'. Add with action='add_rule'."
+                ),
                 success: true,
             });
         }
 
-        let lines: Vec<String> = rules.iter().map(|r| {
-            format!("  [{}/{}] {}", r.id, r.connection_id, r.rule)
-        }).collect();
+        let lines: Vec<String> = rules
+            .iter()
+            .map(|r| format!("  [{}/{}] {}", r.id, r.connection_id, r.rule))
+            .collect();
 
         Ok(ToolResult {
             tool_call_id: String::new(),
@@ -530,31 +566,41 @@ impl NlQueryTool {
         if examples.is_empty() {
             return Ok(ToolResult {
                 tool_call_id: String::new(),
-                output: format!("📝 No learned examples for '{conn_id}'. Examples are saved when NL queries succeed."),
+                output: format!(
+                    "📝 No learned examples for '{conn_id}'. Examples are saved when NL queries succeed."
+                ),
                 success: true,
             });
         }
 
-        let lines: Vec<String> = examples.iter().map(|e| {
-            format!("  [{}] Q: {}\n       SQL: {}",
-                e.id,
-                if e.question.len() > 60 {
-                    format!("{}...", &e.question.chars().take(60).collect::<String>())
-                } else {
-                    e.question.clone()
-                },
-                if e.sql.len() > 80 {
-                    format!("{}...", &e.sql.chars().take(80).collect::<String>())
-                } else {
-                    e.sql.clone()
-                },
-            )
-        }).collect();
+        let lines: Vec<String> = examples
+            .iter()
+            .map(|e| {
+                format!(
+                    "  [{}] Q: {}\n       SQL: {}",
+                    e.id,
+                    if e.question.len() > 60 {
+                        format!("{}...", &e.question.chars().take(60).collect::<String>())
+                    } else {
+                        e.question.clone()
+                    },
+                    if e.sql.len() > 80 {
+                        format!("{}...", &e.sql.chars().take(80).collect::<String>())
+                    } else {
+                        e.sql.clone()
+                    },
+                )
+            })
+            .collect();
 
         Ok(ToolResult {
             tool_call_id: String::new(),
-            output: format!("📝 Learned examples for '{}' ({} total):\n{}",
-                conn_id, examples.len(), lines.join("\n")),
+            output: format!(
+                "📝 Learned examples for '{}' ({} total):\n{}",
+                conn_id,
+                examples.len(),
+                lines.join("\n")
+            ),
             success: true,
         })
     }
@@ -573,15 +619,22 @@ impl NlQueryTool {
         let tables = Self::extract_tables_from_sql(sql);
 
         // Create a normalized version (simple: lowercase, remove numbers)
-        let normalized = question.to_lowercase()
+        let normalized = question
+            .to_lowercase()
             .chars()
             .filter(|c| c.is_alphabetic() || c.is_whitespace())
             .collect::<String>();
 
-        match self.example_store.save(question, &normalized, sql, conn_id, &tables) {
+        match self
+            .example_store
+            .save(question, &normalized, sql, conn_id, &tables)
+        {
             Ok(id) => Ok(ToolResult {
                 tool_call_id: String::new(),
-                output: format!("✅ Example saved (ID: {id})\nQ: {question}\nSQL: {sql}\nTables: {}", tables.join(", ")),
+                output: format!(
+                    "✅ Example saved (ID: {id})\nQ: {question}\nSQL: {sql}\nTables: {}",
+                    tables.join(", ")
+                ),
                 success: true,
             }),
             Err(e) => Ok(ToolResult {
@@ -604,13 +657,15 @@ impl NlQueryTool {
                         .trim_matches(|c: char| c == '`' || c == '"' || c == '\'' || c == '(')
                         .to_lowercase();
                     if !clean.is_empty()
-                        && !["where", "on", "as", "and", "or", "set", "left", "right",
-                             "inner", "outer", "cross", "group", "order", "limit",
-                             "having", "union", "(", "select"].contains(&clean.as_str())
+                        && ![
+                            "where", "on", "as", "and", "or", "set", "left", "right", "inner",
+                            "outer", "cross", "group", "order", "limit", "having", "union", "(",
+                            "select",
+                        ]
+                        .contains(&clean.as_str())
+                        && !tables.contains(&clean)
                     {
-                        if !tables.contains(&clean) {
-                            tables.push(clean);
-                        }
+                        tables.push(clean);
                     }
                 }
             }
@@ -642,7 +697,7 @@ mod tests {
     #[test]
     fn test_extract_tables() {
         let tables = NlQueryTool::extract_tables_from_sql(
-            "SELECT o.total, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE o.status = 'completed'"
+            "SELECT o.total, c.name FROM orders o JOIN customers c ON o.customer_id = c.id WHERE o.status = 'completed'",
         );
         assert!(tables.contains(&"orders".to_string()));
         assert!(tables.contains(&"customers".to_string()));
@@ -654,7 +709,7 @@ mod tests {
             "SELECT p.name, SUM(oi.quantity) FROM products p \
              LEFT JOIN order_items oi ON p.id = oi.product_id \
              JOIN orders o ON oi.order_id = o.id \
-             GROUP BY p.name"
+             GROUP BY p.name",
         );
         assert!(tables.contains(&"products".to_string()));
         assert!(tables.contains(&"order_items".to_string()));

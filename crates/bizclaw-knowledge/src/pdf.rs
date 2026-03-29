@@ -99,11 +99,11 @@ pub fn extract_markdown_from_pdf(data: &[u8]) -> Result<String, String> {
             Err(_) => {
                 // Fallback to plain text for this page
                 fallback_count += 1;
-                if let Ok(text) = doc.extract_text(page_idx) {
-                    if !text.is_empty() {
-                        markdown.push_str(&text);
-                        markdown.push('\n');
-                    }
+                if let Ok(text) = doc.extract_text(page_idx)
+                    && !text.is_empty()
+                {
+                    markdown.push_str(&text);
+                    markdown.push('\n');
                 }
             }
         }

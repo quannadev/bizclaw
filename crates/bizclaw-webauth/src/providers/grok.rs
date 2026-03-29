@@ -18,6 +18,12 @@ pub struct GrokWebProvider {
     models: Vec<WebAuthModel>,
 }
 
+impl Default for GrokWebProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GrokWebProvider {
     pub fn new() -> Self {
         Self {

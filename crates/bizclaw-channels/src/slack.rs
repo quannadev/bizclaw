@@ -62,11 +62,7 @@ impl SlackChannel {
             config,
             client: reqwest::Client::new(),
             connected: false,
-            circuit_breaker: CircuitBreaker::named(
-                "slack",
-                5,
-                std::time::Duration::from_secs(30),
-            ),
+            circuit_breaker: CircuitBreaker::named("slack", 5, std::time::Duration::from_secs(30)),
         }
     }
 

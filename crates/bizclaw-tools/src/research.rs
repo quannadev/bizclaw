@@ -46,14 +46,19 @@ impl ResearchTool {
             max_results
         );
 
-        let response = client.get(&url).send().await
+        let response = client
+            .get(&url)
+            .send()
+            .await
             .map_err(|e| BizClawError::tool_error("research", e))?;
 
         if !response.status().is_success() {
             return Ok(vec![]);
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| BizClawError::tool_error("research", e))?;
 
         let papers: Vec<Paper> = data["results"]
@@ -108,14 +113,19 @@ impl ResearchTool {
             max_results
         );
 
-        let response = client.get(&url).send().await
+        let response = client
+            .get(&url)
+            .send()
+            .await
             .map_err(|e| BizClawError::tool_error("research", e))?;
 
         if !response.status().is_success() {
             return Ok(vec![]);
         }
 
-        let data: serde_json::Value = response.json().await
+        let data: serde_json::Value = response
+            .json()
+            .await
             .map_err(|e| BizClawError::tool_error("research", e))?;
 
         let papers: Vec<Paper> = data["data"]
@@ -140,10 +150,7 @@ impl ResearchTool {
                     .filter_map(|a| a["name"].as_str().map(String::from))
                     .collect();
 
-                let journal = work["journal"]["name"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string();
+                let journal = work["journal"]["name"].as_str().unwrap_or("").to_string();
 
                 Some(Paper {
                     title,
@@ -167,12 +174,18 @@ impl ResearchTool {
         match report_type {
             "literature_review" => {
                 report.push_str(&format!("# 📚 Literature Review: {topic}\n\n"));
-                report.push_str(&format!("*{} papers found across OpenAlex & Semantic Scholar*\n\n", papers.len()));
+                report.push_str(&format!(
+                    "*{} papers found across OpenAlex & Semantic Scholar*\n\n",
+                    papers.len()
+                ));
                 report.push_str("## Key Papers\n\n");
             }
             "competitive" => {
                 report.push_str(&format!("# 🔍 Competitive Analysis: {topic}\n\n"));
-                report.push_str(&format!("*Based on {} academic and industry publications*\n\n", papers.len()));
+                report.push_str(&format!(
+                    "*Based on {} academic and industry publications*\n\n",
+                    papers.len()
+                ));
                 report.push_str("## Related Works\n\n");
             }
             "trend" => {
@@ -230,16 +243,23 @@ impl ResearchTool {
         if !papers.is_empty() {
             report.push_str("---\n\n## 📊 Statistics\n\n");
             let total_citations: u32 = papers.iter().map(|p| p.citations).sum();
-            let avg_year: f64 = papers.iter().map(|p| p.year as f64).sum::<f64>() / papers.len() as f64;
+            let avg_year: f64 =
+                papers.iter().map(|p| p.year as f64).sum::<f64>() / papers.len() as f64;
             let newest = papers.iter().map(|p| p.year).max().unwrap_or(0);
-            let oldest = papers.iter().filter(|p| p.year > 0).map(|p| p.year).min().unwrap_or(0);
+            let oldest = papers
+                .iter()
+                .filter(|p| p.year > 0)
+                .map(|p| p.year)
+                .min()
+                .unwrap_or(0);
 
-            report.push_str(&format!("| Metric | Value |\n|--------|-------|\n"));
+            report.push_str(&"| Metric | Value |\n|--------|-------|\n".to_string());
             report.push_str(&format!("| Total papers | {} |\n", papers.len()));
             report.push_str(&format!("| Total citations | {} |\n", total_citations));
             report.push_str(&format!("| Average year | {:.0} |\n", avg_year));
             report.push_str(&format!("| Year range | {} – {} |\n", oldest, newest));
-            report.push_str(&format!("| Most cited | {} ({} citations) |\n",
+            report.push_str(&format!(
+                "| Most cited | {} ({} citations) |\n",
                 sorted.first().map(|p| p.title.as_str()).unwrap_or("N/A"),
                 sorted.first().map(|p| p.citations).unwrap_or(0),
             ));
@@ -312,14 +332,17 @@ impl Tool for ResearchTool {
         let args: serde_json::Value = serde_json::from_str(arguments)
             .map_err(|e| BizClawError::Tool(format!("Invalid arguments: {e}")))?;
 
-        let topic = args["topic"].as_str()
+        let topic = args["topic"]
+            .as_str()
             .ok_or_else(|| BizClawError::Tool("topic is required".into()))?;
 
         let report_type = args["report_type"].as_str().unwrap_or("search");
         let max_results = args["max_results"].as_u64().unwrap_or(10).min(25) as usize;
         let sources = args["sources"].as_str().unwrap_or("all");
 
-        tracing::info!("[research] Searching '{topic}' ({report_type}, max={max_results}, sources={sources})");
+        tracing::info!(
+            "[research] Searching '{topic}' ({report_type}, max={max_results}, sources={sources})"
+        );
 
         let mut all_papers = Vec::new();
 
@@ -361,7 +384,9 @@ impl Tool for ResearchTool {
         });
 
         let output = if all_papers.is_empty() {
-            format!("No academic papers found for topic: \"{topic}\". Try broader keywords or different phrasing.")
+            format!(
+                "No academic papers found for topic: \"{topic}\". Try broader keywords or different phrasing."
+            )
         } else {
             self.format_report(topic, &all_papers, report_type)
         };

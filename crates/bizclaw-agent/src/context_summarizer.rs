@@ -21,7 +21,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 use bizclaw_core::types::message::{Message, Role};
 
@@ -51,12 +51,24 @@ pub struct SummarizationConfig {
     pub off_load_dir: String,
 }
 
-fn default_true() -> bool { true }
-fn default_trigger() -> f32 { 0.7 }
-fn default_min_messages() -> usize { 20 }
-fn default_keep_recent() -> usize { 10 }
-fn default_summary_tokens() -> usize { 800 }
-fn default_offload_dir() -> String { "~/.bizclaw/transcripts".into() }
+fn default_true() -> bool {
+    true
+}
+fn default_trigger() -> f32 {
+    0.7
+}
+fn default_min_messages() -> usize {
+    20
+}
+fn default_keep_recent() -> usize {
+    10
+}
+fn default_summary_tokens() -> usize {
+    800
+}
+fn default_offload_dir() -> String {
+    "~/.bizclaw/transcripts".into()
+}
 
 impl Default for SummarizationConfig {
     fn default() -> Self {
@@ -126,7 +138,7 @@ pub fn build_summarization_prompt(messages: &[Message]) -> Vec<Message> {
 
     vec![
         Message::system(SUMMARIZATION_SYSTEM_PROMPT),
-        Message::user(&format!(
+        Message::user(format!(
             "Summarize this conversation ({} messages):\n\n{}",
             messages.len(),
             transcript
@@ -159,7 +171,11 @@ pub fn off_load_transcript(
     }
 
     std::fs::write(&path, &content)?;
-    info!("💾 Transcript off-loaded: {} ({} bytes)", path.display(), content.len());
+    info!(
+        "💾 Transcript off-loaded: {} ({} bytes)",
+        path.display(),
+        content.len()
+    );
 
     Ok(path.to_string_lossy().to_string())
 }
@@ -179,9 +195,18 @@ pub fn rule_based_summarize(messages: &[Message]) -> String {
 
     let file_re = regex::Regex::new(r"(/[^\s]+\.[a-zA-Z0-9]+)").unwrap();
     let decision_keywords = [
-        "decided", "chose", "selected", "using", "switched to",
-        "will use", "going with", "quyết định", "chọn", "sử dụng",
-        "đã chọn", "sẽ dùng",
+        "decided",
+        "chose",
+        "selected",
+        "using",
+        "switched to",
+        "will use",
+        "going with",
+        "quyết định",
+        "chọn",
+        "sử dụng",
+        "đã chọn",
+        "sẽ dùng",
     ];
 
     for msg in messages {
@@ -268,7 +293,10 @@ pub fn rule_based_summarize(messages: &[Message]) -> String {
     }
 
     if summary_parts.len() > 20 {
-        summary.push_str(&format!("- *... {} more exchanges*\n", summary_parts.len() - 20));
+        summary.push_str(&format!(
+            "- *... {} more exchanges*\n",
+            summary_parts.len() - 20
+        ));
     }
 
     summary
@@ -393,7 +421,10 @@ impl Default for LlmSummarizationMiddleware {
 
 #[async_trait]
 impl crate::middleware::AgentMiddleware for LlmSummarizationMiddleware {
-    async fn before_model(&self, state: &mut crate::middleware::AgentState) -> crate::middleware::MiddlewareAction {
+    async fn before_model(
+        &self,
+        state: &mut crate::middleware::AgentState,
+    ) -> crate::middleware::MiddlewareAction {
         let result = apply_summarization(
             &mut state.messages,
             &self.config,
@@ -416,9 +447,7 @@ impl crate::middleware::AgentMiddleware for LlmSummarizationMiddleware {
             );
 
             if let Some(path) = res.off_load_path {
-                state
-                    .metadata
-                    .insert("transcript_path".into(), path);
+                state.metadata.insert("transcript_path".into(), path);
             }
         }
 
@@ -447,7 +476,9 @@ mod tests {
     fn make_conversation(turns: usize) -> Vec<Message> {
         let mut msgs = vec![Message::system("You are a helpful assistant.")];
         for i in 0..turns {
-            msgs.push(Message::user(&format!("Question {i}: Tell me about topic {i}")));
+            msgs.push(Message::user(&format!(
+                "Question {i}: Tell me about topic {i}"
+            )));
             msgs.push(Message::assistant(&format!("Answer {i}: Here is information about topic {i}. It includes details about file /Users/test/project/{i}.rs and I decided to use approach {i}.")));
         }
         msgs

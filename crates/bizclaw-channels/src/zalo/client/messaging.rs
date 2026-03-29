@@ -186,14 +186,13 @@ impl ZaloMessaging {
     /// Create with dynamic service map (proper zca-js v2 way).
     pub fn with_service_map(service_map: ZaloServiceMap, proxy: Option<String>) -> Self {
         let mut builder = reqwest::Client::builder();
-        if let Some(p) = proxy {
-            if !p.is_empty() {
-                if let Ok(pr) = reqwest::Proxy::all(&p) {
-                    builder = builder.proxy(pr);
-                }
-            }
+        if let Some(p) = proxy
+            && !p.is_empty()
+            && let Ok(pr) = reqwest::Proxy::all(&p)
+        {
+            builder = builder.proxy(pr);
         }
-        
+
         Self {
             client: builder.build().unwrap_or_default(),
             service_map,
@@ -311,10 +310,17 @@ impl ZaloMessaging {
         acc_name: &str,
         cookie: &str,
     ) -> Result<String> {
-        let endpoint = self.add_api_params(&format!("{}/api/transfer/card", self.service_map.zimsg_url()));
+        let endpoint = self.add_api_params(&format!(
+            "{}/api/transfer/card",
+            self.service_map.zimsg_url()
+        ));
 
         let ts_msg = chrono::Utc::now().timestamp_millis();
-        let dest_type = if thread_type == ThreadType::Group { 1 } else { 0 };
+        let dest_type = if thread_type == ThreadType::Group {
+            1
+        } else {
+            0
+        };
 
         let params = serde_json::json!({
             "binBank": bin_bank,
@@ -327,13 +333,17 @@ impl ZaloMessaging {
         });
 
         let json_str = serde_json::to_string(&params).unwrap();
-        
+
         let secret_key = self.secret_key.as_deref().ok_or_else(|| {
-            BizClawError::Channel("Missing secret_key (zpw_enk) required for bank card encryption.".into())
+            BizClawError::Channel(
+                "Missing secret_key (zpw_enk) required for bank card encryption.".into(),
+            )
         })?;
 
-        let encrypted_params = crate::zalo::client::crypto::encode_aes_cbc_base64(&json_str, secret_key)
-            .ok_or_else(|| BizClawError::Channel("Failed to encrypt params for bank card".into()))?;
+        let encrypted_params = crate::zalo::client::crypto::encode_aes_cbc_base64(
+            &json_str, secret_key,
+        )
+        .ok_or_else(|| BizClawError::Channel("Failed to encrypt params for bank card".into()))?;
 
         // Zalo expects the payload as URL-encoded form data with 'params'
         let response = self

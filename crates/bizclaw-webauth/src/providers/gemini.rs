@@ -43,6 +43,12 @@ pub struct GeminiWebProvider {
     cached_template: Mutex<Option<GeminiTemplate>>,
 }
 
+impl Default for GeminiWebProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GeminiWebProvider {
     pub fn new() -> Self {
         Self {
@@ -114,13 +120,10 @@ impl GeminiWebProvider {
         .await?;
 
         // 4. Wait for Fetch.requestPaused event (15s timeout)
-        let paused = tokio::time::timeout(
-            std::time::Duration::from_secs(15),
-            rx.recv(),
-        )
-        .await
-        .map_err(|_| format!("{} Template capture timed out", LOG_TAG))?
-        .ok_or_else(|| format!("{} Event channel closed", LOG_TAG))?;
+        let paused = tokio::time::timeout(std::time::Duration::from_secs(15), rx.recv())
+            .await
+            .map_err(|_| format!("{} Template capture timed out", LOG_TAG))?
+            .ok_or_else(|| format!("{} Event channel closed", LOG_TAG))?;
 
         // 5. Extract template from postData
         let request_id = paused
@@ -222,12 +225,11 @@ impl GeminiWebProvider {
         let mut inner = template.inner.clone();
 
         // Set message text at inner[0][0]
-        if let Some(first) = inner.get_mut(0) {
-            if let Some(arr) = first.as_array_mut() {
-                if !arr.is_empty() {
-                    arr[0] = Value::String(prompt.to_string());
-                }
-            }
+        if let Some(first) = inner.get_mut(0)
+            && let Some(arr) = first.as_array_mut()
+            && !arr.is_empty()
+        {
+            arr[0] = Value::String(prompt.to_string());
         }
 
         // Reset conversation metadata (inner[2]) for new conversation
@@ -302,34 +304,28 @@ impl GeminiWebProvider {
                 for item in &arr {
                     if let Some(inner_arr) = item.as_array() {
                         // Check if this is a wrb.fr item
-                        if inner_arr
-                            .first()
-                            .and_then(|v| v.as_str())
-                            == Some("wrb.fr")
-                        {
+                        if inner_arr.first().and_then(|v| v.as_str()) == Some("wrb.fr") {
                             // Parse inner_arr[2] as JSON
-                            if let Some(data_str) = inner_arr.get(2).and_then(|v| v.as_str()) {
-                                if let Ok(data) = serde_json::from_str::<Value>(data_str) {
-                                    // Text at data[4][0][1]
-                                    if let Some(text) = data
-                                        .get(4)
-                                        .and_then(|v| v.get(0))
-                                        .and_then(|v| v.get(1))
-                                    {
-                                        match text {
-                                            Value::String(s) => {
-                                                extracted_text.push_str(s);
-                                            }
-                                            Value::Array(arr) => {
-                                                // String array — join
-                                                for part in arr {
-                                                    if let Some(s) = part.as_str() {
-                                                        extracted_text.push_str(s);
-                                                    }
+                            if let Some(data_str) = inner_arr.get(2).and_then(|v| v.as_str())
+                                && let Ok(data) = serde_json::from_str::<Value>(data_str)
+                            {
+                                // Text at data[4][0][1]
+                                if let Some(text) =
+                                    data.get(4).and_then(|v| v.get(0)).and_then(|v| v.get(1))
+                                {
+                                    match text {
+                                        Value::String(s) => {
+                                            extracted_text.push_str(s);
+                                        }
+                                        Value::Array(arr) => {
+                                            // String array — join
+                                            for part in arr {
+                                                if let Some(s) = part.as_str() {
+                                                    extracted_text.push_str(s);
                                                 }
                                             }
-                                            _ => {}
                                         }
+                                        _ => {}
                                     }
                                 }
                             }
@@ -340,7 +336,10 @@ impl GeminiWebProvider {
         }
 
         if extracted_text.is_empty() {
-            Err(format!("{} No text found in batchexecute response", LOG_TAG))
+            Err(format!(
+                "{} No text found in batchexecute response",
+                LOG_TAG
+            ))
         } else {
             Ok(extracted_text)
         }
@@ -445,7 +444,10 @@ mod tests {
         // Gemini batchexecute: data[4][0][1] = text content
         // data[4][0] is [prompt_echo, response_text]
         let inner_data = json!([
-            null, null, null, null,
+            null,
+            null,
+            null,
+            null,
             [["echo", "Hello! How can I help you?"]]
         ]);
         let inner_str = serde_json::to_string(&inner_data).unwrap();

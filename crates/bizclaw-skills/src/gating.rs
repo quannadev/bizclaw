@@ -121,10 +121,7 @@ impl GatingChecker {
 
     /// Check if an environment variable is set and non-empty.
     pub fn has_env(&self, name: &str) -> bool {
-        std::env::var(name)
-            .ok()
-            .filter(|v| !v.is_empty())
-            .is_some()
+        std::env::var(name).ok().filter(|v| !v.is_empty()).is_some()
     }
 
     /// Check if a feature flag is enabled.
@@ -242,8 +239,8 @@ impl GatingChecker {
     /// Get a summary of system capabilities (for dashboard).
     pub fn system_capabilities(&mut self) -> HashMap<String, bool> {
         let common_bins = [
-            "git", "docker", "python3", "node", "cargo", "go", "curl", "wget",
-            "ffmpeg", "chromium", "chrome",
+            "git", "docker", "python3", "node", "cargo", "go", "curl", "wget", "ffmpeg",
+            "chromium", "chrome",
         ];
 
         let mut caps = HashMap::new();
@@ -251,10 +248,7 @@ impl GatingChecker {
             caps.insert(format!("bin:{}", bin), self.has_binary(bin));
         }
 
-        caps.insert(
-            format!("os:{}", std::env::consts::OS),
-            true,
-        );
+        caps.insert(format!("os:{}", std::env::consts::OS), true);
 
         caps
     }

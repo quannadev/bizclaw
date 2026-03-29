@@ -36,10 +36,8 @@ const MAX_INJECTION_CHARS: usize = 50_000;
 
 /// Supported file extensions.
 const SUPPORTED_EXTENSIONS: &[&str] = &[
-    "pdf", "docx", "xlsx", "xls", "csv", "pptx",
-    "txt", "md", "json", "xml", "yaml", "yml",
-    "rs", "py", "js", "ts", "go", "java", "c", "cpp", "h",
-    "html", "css", "sql", "sh", "toml", "log",
+    "pdf", "docx", "xlsx", "xls", "csv", "pptx", "txt", "md", "json", "xml", "yaml", "yml", "rs",
+    "py", "js", "ts", "go", "java", "c", "cpp", "h", "html", "css", "sql", "sh", "toml", "log",
 ];
 
 /// File Upload Middleware — detects file paths, converts to markdown, injects context.
@@ -106,8 +104,8 @@ impl FileUploadMiddleware {
 
     /// Convert a file to markdown format.
     fn convert_to_markdown(path: &Path) -> Result<String, String> {
-        let metadata = std::fs::metadata(path)
-            .map_err(|e| format!("Cannot read file metadata: {e}"))?;
+        let metadata =
+            std::fs::metadata(path).map_err(|e| format!("Cannot read file metadata: {e}"))?;
 
         if metadata.len() > MAX_FILE_SIZE {
             return Err(format!(
@@ -140,14 +138,13 @@ impl FileUploadMiddleware {
 
     /// Convert PDF to markdown.
     fn convert_pdf(path: &Path, filename: &str) -> Result<String, String> {
-        let text = pdf_extract::extract_text(path)
-            .map_err(|e| format!("PDF parse error: {e}"))?;
+        let text = pdf_extract::extract_text(path).map_err(|e| format!("PDF parse error: {e}"))?;
 
         // Split into paragraphs and format
         let paragraphs: Vec<&str> = text.split("\n\n").collect();
         let mut md = format!("# 📄 {filename}\n\n");
 
-        for (_i, para) in paragraphs.iter().enumerate() {
+        for para in paragraphs.iter() {
             let trimmed = para.trim();
             if trimmed.is_empty() {
                 continue;
@@ -170,10 +167,9 @@ impl FileUploadMiddleware {
 
     /// Convert DOCX to markdown with heading detection.
     fn convert_docx(path: &Path, filename: &str) -> Result<String, String> {
-        let file = std::fs::File::open(path)
-            .map_err(|e| format!("Cannot open file: {e}"))?;
-        let mut archive = zip::ZipArchive::new(file)
-            .map_err(|e| format!("Invalid DOCX archive: {e}"))?;
+        let file = std::fs::File::open(path).map_err(|e| format!("Cannot open file: {e}"))?;
+        let mut archive =
+            zip::ZipArchive::new(file).map_err(|e| format!("Invalid DOCX archive: {e}"))?;
 
         let mut xml_content = String::new();
         {
@@ -238,8 +234,8 @@ impl FileUploadMiddleware {
     fn convert_excel(path: &Path, filename: &str) -> Result<String, String> {
         use calamine::{Data, Reader, open_workbook_auto};
 
-        let mut workbook = open_workbook_auto(path)
-            .map_err(|e| format!("Excel parse error: {e}"))?;
+        let mut workbook =
+            open_workbook_auto(path).map_err(|e| format!("Excel parse error: {e}"))?;
 
         let sheet_names = workbook.sheet_names().to_owned();
         let mut md = format!("# 📊 {filename}\n\n");
@@ -281,9 +277,7 @@ impl FileUploadMiddleware {
 
                 // Separator
                 md.push_str("| ");
-                md.push_str(
-                    &header.iter().map(|_| "---").collect::<Vec<_>>().join(" | "),
-                );
+                md.push_str(&header.iter().map(|_| "---").collect::<Vec<_>>().join(" | "));
                 md.push_str(" |\n");
 
                 // Data rows (limit to 100 rows)
@@ -297,10 +291,7 @@ impl FileUploadMiddleware {
                 }
 
                 if rows.len() > 101 {
-                    md.push_str(&format!(
-                        "\n*... {} more rows omitted*\n",
-                        rows.len() - 101
-                    ));
+                    md.push_str(&format!("\n*... {} more rows omitted*\n", rows.len() - 101));
                 }
 
                 md.push('\n');
@@ -312,8 +303,7 @@ impl FileUploadMiddleware {
 
     /// Convert CSV to markdown table.
     fn convert_csv(path: &Path, filename: &str) -> Result<String, String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Read error: {e}"))?;
+        let content = std::fs::read_to_string(path).map_err(|e| format!("Read error: {e}"))?;
 
         let mut md = format!("# 📊 {filename}\n\n");
         let lines: Vec<&str> = content.lines().collect();
@@ -342,7 +332,10 @@ impl FileUploadMiddleware {
         }
 
         if lines.len() > 101 {
-            md.push_str(&format!("\n*... {} more rows omitted*\n", lines.len() - 101));
+            md.push_str(&format!(
+                "\n*... {} more rows omitted*\n",
+                lines.len() - 101
+            ));
         }
 
         Ok(md)
@@ -350,10 +343,9 @@ impl FileUploadMiddleware {
 
     /// Convert PPTX to slide-by-slide markdown.
     fn convert_pptx(path: &Path, filename: &str) -> Result<String, String> {
-        let file = std::fs::File::open(path)
-            .map_err(|e| format!("Cannot open file: {e}"))?;
-        let mut archive = zip::ZipArchive::new(file)
-            .map_err(|e| format!("Invalid PPTX archive: {e}"))?;
+        let file = std::fs::File::open(path).map_err(|e| format!("Cannot open file: {e}"))?;
+        let mut archive =
+            zip::ZipArchive::new(file).map_err(|e| format!("Invalid PPTX archive: {e}"))?;
 
         let t_re = Regex::new(r"<a:t>(.*?)</a:t>").unwrap();
         let mut md = format!("# 📊 {filename}\n\n");
@@ -403,8 +395,7 @@ impl FileUploadMiddleware {
 
     /// Convert text/code files to fenced code blocks.
     fn convert_text(path: &Path, filename: &str, ext: &str) -> Result<String, String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Read error: {e}"))?;
+        let content = std::fs::read_to_string(path).map_err(|e| format!("Read error: {e}"))?;
 
         let lang = match ext {
             "rs" => "rust",
@@ -490,14 +481,14 @@ impl AgentMiddleware for FileUploadMiddleware {
                         path.file_name().unwrap_or_default().to_string_lossy(),
                         markdown.len()
                     );
-                    injections.push(Message::system(&format!(
+                    injections.push(Message::system(format!(
                         "[File Content: {}]\n{}",
                         path_str, markdown
                     )));
                 }
                 Err(e) => {
                     warn!("📎 Failed to convert {}: {}", path_str, e);
-                    injections.push(Message::system(&format!(
+                    injections.push(Message::system(format!(
                         "[File Error: {} — {}]",
                         path_str, e
                     )));
@@ -554,10 +545,16 @@ mod tests {
     #[test]
     fn test_is_supported_extension() {
         assert!(FileUploadMiddleware::is_supported_extension("/foo/bar.pdf"));
-        assert!(FileUploadMiddleware::is_supported_extension("/foo/bar.xlsx"));
+        assert!(FileUploadMiddleware::is_supported_extension(
+            "/foo/bar.xlsx"
+        ));
         assert!(FileUploadMiddleware::is_supported_extension("/foo/bar.rs"));
-        assert!(!FileUploadMiddleware::is_supported_extension("/foo/bar.png"));
-        assert!(!FileUploadMiddleware::is_supported_extension("/foo/bar.mp4"));
+        assert!(!FileUploadMiddleware::is_supported_extension(
+            "/foo/bar.png"
+        ));
+        assert!(!FileUploadMiddleware::is_supported_extension(
+            "/foo/bar.mp4"
+        ));
     }
 
     #[test]

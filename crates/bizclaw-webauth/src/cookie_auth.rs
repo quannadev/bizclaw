@@ -42,13 +42,11 @@ pub fn get_cookie_requirements(provider_id: &str) -> Vec<CookieRequirement> {
             domain: "claude.ai",
             required: true,
         }],
-        "chatgpt" => vec![
-            CookieRequirement {
-                name: "__Secure-next-auth.session-token",
-                domain: ".chatgpt.com",
-                required: true,
-            },
-        ],
+        "chatgpt" => vec![CookieRequirement {
+            name: "__Secure-next-auth.session-token",
+            domain: ".chatgpt.com",
+            required: true,
+        }],
         "deepseek" => vec![CookieRequirement {
             name: "ds_session",
             domain: "chat.deepseek.com",
@@ -143,7 +141,7 @@ pub async fn check_provider_auth(
                         let chars: Vec<char> = s.chars().collect();
                         if chars.len() > 8 {
                             let prefix: String = chars[..4].iter().collect();
-                            let suffix: String = chars[chars.len()-4..].iter().collect();
+                            let suffix: String = chars[chars.len() - 4..].iter().collect();
                             format!("{}...{}", prefix, suffix)
                         } else {
                             s.to_string()
@@ -170,10 +168,7 @@ pub async fn check_provider_auth(
 }
 
 /// Check authentication without CDP, by examining a cookie jar (for non-browser mode).
-pub fn check_auth_from_cookie_string(
-    provider_id: &str,
-    cookie_header: &str,
-) -> AuthCheckResult {
+pub fn check_auth_from_cookie_string(provider_id: &str, cookie_header: &str) -> AuthCheckResult {
     let requirements = get_cookie_requirements(provider_id);
     if requirements.is_empty() {
         return AuthCheckResult {
@@ -190,15 +185,12 @@ pub fn check_auth_from_cookie_string(
         })
         .collect();
 
-    let all_required = requirements
-        .iter()
-        .filter(|r| r.required)
-        .all(|r| {
-            cookie_map
-                .get(r.name)
-                .map(|v| !v.is_empty())
-                .unwrap_or(false)
-        });
+    let all_required = requirements.iter().filter(|r| r.required).all(|r| {
+        cookie_map
+            .get(r.name)
+            .map(|v| !v.is_empty())
+            .unwrap_or(false)
+    });
 
     AuthCheckResult {
         authenticated: all_required,
@@ -227,7 +219,10 @@ mod tests {
     fn test_gemini_cookie_requirements() {
         let reqs = get_cookie_requirements("gemini");
         assert!(!reqs.is_empty());
-        assert!(reqs.iter().any(|r| r.name == "__Secure-1PSID" && r.required));
+        assert!(
+            reqs.iter()
+                .any(|r| r.name == "__Secure-1PSID" && r.required)
+        );
     }
 
     #[test]
@@ -239,10 +234,8 @@ mod tests {
 
     #[test]
     fn test_check_auth_from_cookie_string() {
-        let result = check_auth_from_cookie_string(
-            "gemini",
-            "__Secure-1PSID=abc123; other_cookie=xyz",
-        );
+        let result =
+            check_auth_from_cookie_string("gemini", "__Secure-1PSID=abc123; other_cookie=xyz");
         assert!(result.authenticated);
 
         let result = check_auth_from_cookie_string("gemini", "other_cookie=xyz");

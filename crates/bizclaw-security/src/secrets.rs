@@ -217,7 +217,7 @@ fn encrypt_aes256_cbc(data: &[u8], key: &[u8; 32]) -> Vec<u8> {
 /// AES-256-CBC decrypt with PKCS7 unpadding.
 /// Input format: [16-byte IV] + [ciphertext]
 fn decrypt_aes256_cbc(data: &[u8], key: &[u8; 32]) -> Result<String> {
-    if data.len() < 32 || data.len() % 16 != 0 {
+    if data.len() < 32 || !data.len().is_multiple_of(16) {
         return Err(BizClawError::Security(
             "Invalid CBC ciphertext length".into(),
         ));

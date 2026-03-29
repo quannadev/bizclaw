@@ -28,8 +28,8 @@ const MAX_FILE_SIZE: u64 = 10 * 1024 * 1024;
 
 /// File extensions we can process.
 const SUPPORTED_EXTENSIONS: &[&str] = &[
-    "txt", "md", "markdown", "csv", "html", "htm", "json", "yaml", "yml",
-    "toml", "xml", "log", "rst", "pdf",
+    "txt", "md", "markdown", "csv", "html", "htm", "json", "yaml", "yml", "toml", "xml", "log",
+    "rst", "pdf",
 ];
 
 /// Result of processing a single file.
@@ -128,8 +128,11 @@ impl FolderWatcher {
                     status: IngestStatus::TooLarge,
                     chunks: 0,
                     file_size: size,
-                    message: format!("File too large: {}MB (max {}MB)",
-                        size / (1024 * 1024), MAX_FILE_SIZE / (1024 * 1024)),
+                    message: format!(
+                        "File too large: {}MB (max {}MB)",
+                        size / (1024 * 1024),
+                        MAX_FILE_SIZE / (1024 * 1024)
+                    ),
                 });
                 continue;
             }
@@ -177,7 +180,10 @@ impl FolderWatcher {
         }
 
         if !results.is_empty() {
-            let added = results.iter().filter(|r| r.status == IngestStatus::Added).count();
+            let added = results
+                .iter()
+                .filter(|r| r.status == IngestStatus::Added)
+                .count();
             if added > 0 {
                 tracing::info!(
                     "📚 Folder watcher: {} new file(s) ingested from {}",
@@ -192,8 +198,7 @@ impl FolderWatcher {
 
     /// List all supported files in the watched folder (non-recursive).
     fn list_files(&self) -> Result<Vec<(PathBuf, String, u64)>, String> {
-        let entries = std::fs::read_dir(&self.folder)
-            .map_err(|e| format!("Read dir: {e}"))?;
+        let entries = std::fs::read_dir(&self.folder).map_err(|e| format!("Read dir: {e}"))?;
 
         let mut files = Vec::new();
         for entry in entries.flatten() {
@@ -208,15 +213,15 @@ impl FolderWatcher {
             };
 
             // Skip hidden files and temp files
-            if filename.starts_with('.') || filename.starts_with('~')
-                || filename.ends_with(".tmp") || filename.ends_with(".swp")
+            if filename.starts_with('.')
+                || filename.starts_with('~')
+                || filename.ends_with(".tmp")
+                || filename.ends_with(".swp")
             {
                 continue;
             }
 
-            let size = std::fs::metadata(&path)
-                .map(|m| m.len())
-                .unwrap_or(0);
+            let size = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
 
             files.push((path, filename, size));
         }
@@ -243,8 +248,7 @@ impl FolderWatcher {
         // PDF files need special handling
         #[cfg(feature = "pdf")]
         if ext == "pdf" {
-            let data = std::fs::read(path)
-                .map_err(|e| format!("Read PDF: {e}"))?;
+            let data = std::fs::read(path).map_err(|e| format!("Read PDF: {e}"))?;
             return store
                 .add_pdf_document_with_meta(filename, &data, "folder_watcher", "")
                 .map_err(|e| format!("PDF ingest: {e}"));
@@ -256,8 +260,7 @@ impl FolderWatcher {
         }
 
         // Text-based files
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("Read file: {e}"))?;
+        let content = std::fs::read_to_string(path).map_err(|e| format!("Read file: {e}"))?;
 
         if content.trim().is_empty() {
             return Err("Empty file".into());

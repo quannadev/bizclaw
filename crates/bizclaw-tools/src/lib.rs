@@ -30,8 +30,8 @@ pub mod api_connector;
 pub mod browser;
 pub mod bundle_provisioner;
 pub mod calendar;
-pub mod custom_tool;
 pub mod config_manager;
+pub mod custom_tool;
 pub mod db_connection;
 pub mod db_examples;
 pub mod db_query;
@@ -148,8 +148,6 @@ impl ToolRegistry {
             tracing::info!("🛠️ Loaded {count} custom tool(s) from disk");
         }
     }
-
-
 
     /// Register the memory_search tool with a shared memory backend.
     pub fn register_memory_search(

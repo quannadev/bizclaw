@@ -226,6 +226,12 @@ pub struct GuardrailMiddleware {
     blocked_arg_patterns: Vec<String>,
 }
 
+impl Default for GuardrailMiddleware {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GuardrailMiddleware {
     pub fn new() -> Self {
         Self {
@@ -533,7 +539,7 @@ impl AgentMiddleware for SubagentLimitMiddleware {
             .into_iter()
             .map(|id| {
                 Message::tool(
-                    &format!(
+                    format!(
                         "⚠️ Sub-agent limit reached (max {}). This task was deferred.",
                         self.max_concurrent
                     ),
@@ -560,6 +566,12 @@ impl AgentMiddleware for SubagentLimitMiddleware {
 /// and queues them for debounced background processing.
 pub struct MemoryMiddleware {
     enabled: bool,
+}
+
+impl Default for MemoryMiddleware {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MemoryMiddleware {

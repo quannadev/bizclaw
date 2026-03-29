@@ -134,7 +134,6 @@ pub struct HandManifest {
     pub notify_channels: Vec<String>,
 
     // ── OpenFang-compatible extensions ──
-
     /// Tool requirements (required + optional).
     #[serde(default)]
     pub tools: ToolsManifest,
@@ -303,7 +302,11 @@ description = "Execute"
         let missing = manifest.check_tools(&available);
         assert_eq!(missing, vec!["shell"]);
 
-        let all_available = vec!["web_search".to_string(), "shell".to_string(), "file".to_string()];
+        let all_available = vec![
+            "web_search".to_string(),
+            "shell".to_string(),
+            "file".to_string(),
+        ];
         assert!(manifest.check_tools(&all_available).is_empty());
     }
 }

@@ -7,9 +7,9 @@
 //! - Permanent failure notification after exhausting retries
 //! - fail_count resets on success
 
+use bizclaw_core::safe_truncate;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use bizclaw_core::safe_truncate;
 
 /// Retry policy — lightweight, configurable per-task.
 /// Controls exponential backoff behavior on task failure.
@@ -306,7 +306,11 @@ impl Task {
                     "Failed after {}/{} attempts: {}",
                     self.fail_count,
                     self.retry.max_retries,
-                    if e.len() > 80 { safe_truncate(e, 80) } else { e }
+                    if e.len() > 80 {
+                        safe_truncate(e, 80)
+                    } else {
+                        e
+                    }
                 )
             }
             _ => String::new(),

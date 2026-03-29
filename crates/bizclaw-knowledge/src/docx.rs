@@ -23,11 +23,10 @@
 ///
 /// DOCX = ZIP archive → find word/document.xml → strip XML tags → return text.
 pub fn extract_docx_text(path: &std::path::Path) -> Result<String, String> {
-    let file = std::fs::File::open(path)
-        .map_err(|e| format!("Cannot open DOCX file: {e}"))?;
+    let file = std::fs::File::open(path).map_err(|e| format!("Cannot open DOCX file: {e}"))?;
 
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| format!("Invalid DOCX (not a ZIP archive): {e}"))?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| format!("Invalid DOCX (not a ZIP archive): {e}"))?;
 
     // Find word/document.xml (try primary path, then fallback)
     let doc_path = if archive.by_name("word/document.xml").is_ok() {
@@ -38,7 +37,8 @@ pub fn extract_docx_text(path: &std::path::Path) -> Result<String, String> {
         return Err("No word/document.xml found in DOCX archive".into());
     };
 
-    let mut doc_xml = archive.by_name(doc_path)
+    let mut doc_xml = archive
+        .by_name(doc_path)
         .map_err(|e| format!("Read {}: {e}", doc_path))?;
 
     let mut xml_content = String::new();
@@ -58,8 +58,8 @@ pub fn extract_docx_text(path: &std::path::Path) -> Result<String, String> {
 /// Extract text from a DOCX byte slice (for in-memory processing).
 pub fn extract_docx_from_bytes(data: &[u8]) -> Result<String, String> {
     let cursor = std::io::Cursor::new(data);
-    let mut archive = zip::ZipArchive::new(cursor)
-        .map_err(|e| format!("Invalid DOCX data: {e}"))?;
+    let mut archive =
+        zip::ZipArchive::new(cursor).map_err(|e| format!("Invalid DOCX data: {e}"))?;
 
     let mut doc_xml = archive
         .by_name("word/document.xml")
@@ -123,7 +123,8 @@ fn extract_text_from_xml(xml: &str) -> String {
                 in_text_run = false;
             }
             // Line break
-            else if tag_lower == "w:br" || tag_lower == "w:br/" || tag_lower.starts_with("w:br ") {
+            else if tag_lower == "w:br" || tag_lower == "w:br/" || tag_lower.starts_with("w:br ")
+            {
                 text.push('\n');
             }
             // Tab
@@ -197,10 +198,10 @@ pub fn is_docx(path: &std::path::Path) -> bool {
     }
 
     // Deeper check: try opening as ZIP and look for word/document.xml
-    if let Ok(file) = std::fs::File::open(path) {
-        if let Ok(mut archive) = zip::ZipArchive::new(file) {
-            return archive.by_name("word/document.xml").is_ok();
-        }
+    if let Ok(file) = std::fs::File::open(path)
+        && let Ok(mut archive) = zip::ZipArchive::new(file)
+    {
+        return archive.by_name("word/document.xml").is_ok();
     }
     false
 }

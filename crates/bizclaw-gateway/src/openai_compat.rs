@@ -101,10 +101,10 @@ fn extract_api_key(headers: &axum::http::HeaderMap) -> Option<String> {
 /// For backward compat, also accepts any API key if no JWT secret is configured (dev mode).
 fn validate_key(state: &AppState, key: &str) -> bool {
     // Try JWT validation first
-    if !state.jwt_secret.is_empty() {
-        if super::server::validate_jwt_public(key, &state.jwt_secret).is_ok() {
-            return true;
-        }
+    if !state.jwt_secret.is_empty()
+        && super::server::validate_jwt_public(key, &state.jwt_secret).is_ok()
+    {
+        return true;
     }
     // Dev mode: no JWT secret = allow all
     state.jwt_secret.is_empty()

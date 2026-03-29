@@ -59,7 +59,10 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
     // ── Page modules (lazy-loaded) ──
     let pages: &[(&str, &str)] = &[
         ("chat.js", include_str!("dashboard/pages/chat.js")),
-        ("chat_widget.js", include_str!("dashboard/pages/chat_widget.js")),
+        (
+            "chat_widget.js",
+            include_str!("dashboard/pages/chat_widget.js"),
+        ),
         ("dashboard.js", include_str!("dashboard/pages/dashboard.js")),
         ("scheduler.js", include_str!("dashboard/pages/scheduler.js")),
         ("hands.js", include_str!("dashboard/pages/hands.js")),
@@ -70,12 +73,18 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
         ("mcp.js", include_str!("dashboard/pages/mcp.js")),
         ("agents.js", include_str!("dashboard/pages/agents.js")),
         ("knowledge.js", include_str!("dashboard/pages/knowledge.js")),
-        ("orchestration.js", include_str!("dashboard/pages/orchestration.js")),
+        (
+            "orchestration.js",
+            include_str!("dashboard/pages/orchestration.js"),
+        ),
         ("org_map.js", include_str!("dashboard/pages/org_map.js")),
         ("kanban.js", include_str!("dashboard/pages/kanban.js")),
         ("gallery.js", include_str!("dashboard/pages/gallery.js")),
         ("brain.js", include_str!("dashboard/pages/brain.js")),
-        ("config_file.js", include_str!("dashboard/pages/config_file.js")),
+        (
+            "config_file.js",
+            include_str!("dashboard/pages/config_file.js"),
+        ),
         ("traces.js", include_str!("dashboard/pages/traces.js")),
         ("cost.js", include_str!("dashboard/pages/cost.js")),
         ("activity.js", include_str!("dashboard/pages/activity.js")),
@@ -86,10 +95,19 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
         ("usage.js", include_str!("dashboard/pages/usage.js")),
         ("analytics.js", include_str!("dashboard/pages/analytics.js")),
         ("sso.js", include_str!("dashboard/pages/sso.js")),
-        ("fine_tuning.js", include_str!("dashboard/pages/fine_tuning.js")),
-        ("edge_gateway.js", include_str!("dashboard/pages/edge_gateway.js")),
+        (
+            "fine_tuning.js",
+            include_str!("dashboard/pages/fine_tuning.js"),
+        ),
+        (
+            "edge_gateway.js",
+            include_str!("dashboard/pages/edge_gateway.js"),
+        ),
         ("plugins.js", include_str!("dashboard/pages/plugins.js")),
-        ("db_assistant.js", include_str!("dashboard/pages/db_assistant.js")),
+        (
+            "db_assistant.js",
+            include_str!("dashboard/pages/db_assistant.js"),
+        ),
         ("campaigns.js", include_str!("dashboard/pages/campaigns.js")),
     ];
 

@@ -206,7 +206,8 @@ impl ZaloListener {
                         let url_clone = url.to_string();
                         let payload = text.clone();
                         tokio::spawn(async move {
-                            let _ = client.post(&url_clone)
+                            let _ = client
+                                .post(&url_clone)
                                 .header("Content-Type", "application/json")
                                 .body(payload)
                                 .send()
@@ -315,7 +316,7 @@ impl ZaloListener {
                         }
                     }
                     connected.store(false, Ordering::SeqCst);
-                    
+
                     if is_3000 {
                         // Notify via IncomingMessage that re-login is required due to conflict
                         let incoming = IncomingMessage {
@@ -329,7 +330,9 @@ impl ZaloListener {
                             reply_to: None,
                         };
                         let _ = tx.send(incoming).await;
-                        return Err(BizClawError::Channel("WebSocket closed with Code 3000: Duplicate session".into()));
+                        return Err(BizClawError::Channel(
+                            "WebSocket closed with Code 3000: Duplicate session".into(),
+                        ));
                     }
                     break;
                 }

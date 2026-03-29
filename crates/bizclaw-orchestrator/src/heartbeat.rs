@@ -368,7 +368,9 @@ mod tests {
     async fn test_heartbeat_summary() {
         let monitor = HeartbeatMonitor::default();
         monitor.register("agent-1", vec!["zalo".into()], 30).await;
-        monitor.register("agent-2", vec!["telegram".into()], 60).await;
+        monitor
+            .register("agent-2", vec!["telegram".into()], 60)
+            .await;
         monitor.mark_offline("agent-2").await;
 
         let summary = monitor.summary().await;

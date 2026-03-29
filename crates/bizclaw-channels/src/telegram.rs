@@ -87,7 +87,9 @@ impl TelegramChannel {
             Ok(r) => r,
             Err(e) => {
                 self.circuit_breaker.record_failure();
-                return Err(BizClawError::Channel(format!("Telegram getUpdates failed: {e}")));
+                return Err(BizClawError::Channel(format!(
+                    "Telegram getUpdates failed: {e}"
+                )));
             }
         };
 
@@ -113,7 +115,12 @@ impl TelegramChannel {
     }
 
     /// Send a text message, optionally with a thread/topic ID.
-    pub async fn send_message(&self, chat_id: i64, message_thread_id: Option<i64>, text: &str) -> Result<()> {
+    pub async fn send_message(
+        &self,
+        chat_id: i64,
+        message_thread_id: Option<i64>,
+        text: &str,
+    ) -> Result<()> {
         if !self.circuit_breaker.can_execute() {
             return Err(BizClawError::Channel(format!(
                 "Telegram circuit breaker Open — message to {} rejected",
@@ -217,10 +224,13 @@ impl TelegramChannel {
                         }
                     }
                     Err(e) => {
-                        tracing::error!("Telegram polling error: {e} (CB: {})", channel.circuit_breaker.summary());
+                        tracing::error!(
+                            "Telegram polling error: {e} (CB: {})",
+                            channel.circuit_breaker.summary()
+                        );
                         // Use circuit breaker backoff if available
                         let backoff = CircuitBreaker::backoff_duration(
-                            channel.circuit_breaker.consecutive_failures().min(10) as u32
+                            channel.circuit_breaker.consecutive_failures().min(10) as u32,
                         );
                         tokio::time::sleep(backoff).await;
                     }
@@ -283,14 +293,15 @@ impl Channel for TelegramChannel {
         let chat_id: i64 = parts[0]
             .parse()
             .map_err(|_| BizClawError::Channel("Invalid chat_id".into()))?;
-        
+
         let message_thread_id = if parts.len() > 1 {
             parts[1].parse::<i64>().ok()
         } else {
             None
         };
 
-        self.send_message(chat_id, message_thread_id, &message.content).await
+        self.send_message(chat_id, message_thread_id, &message.content)
+            .await
     }
 
     async fn send_typing(&self, thread_id: &str) -> Result<()> {

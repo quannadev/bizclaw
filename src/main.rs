@@ -1282,14 +1282,21 @@ async fn start_cloudflare_tunnel(port: u16) {
             eprintln!();
             eprintln!("   ❌ cloudflared not found!");
             eprintln!("   Install: brew install cloudflared");
-            eprintln!("   Or: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/");
+            eprintln!(
+                "   Or: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/"
+            );
             return;
         }
     }
 
     // Start cloudflared tunnel
     let child = tokio::process::Command::new("cloudflared")
-        .args(["tunnel", "--no-autoupdate", "--url", &format!("http://localhost:{port}")])
+        .args([
+            "tunnel",
+            "--no-autoupdate",
+            "--url",
+            &format!("http://localhost:{port}"),
+        ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn();
@@ -1310,33 +1317,33 @@ async fn start_cloudflare_tunnel(port: u16) {
 
         while let Ok(Some(line)) = lines.next_line().await {
             // Look for the tunnel URL
-            if line.contains(".trycloudflare.com") {
-                if let Some(start) = line.find("https://") {
-                    let url_part = &line[start..];
-                    let url = url_part
-                        .split_whitespace()
-                        .next()
-                        .unwrap_or(url_part)
-                        .trim();
+            if line.contains(".trycloudflare.com")
+                && let Some(start) = line.find("https://")
+            {
+                let url_part = &line[start..];
+                let url = url_part
+                    .split_whitespace()
+                    .next()
+                    .unwrap_or(url_part)
+                    .trim();
 
-                    if !url_found {
-                        url_found = true;
-                        eprintln!();
-                        eprintln!("   ╔══════════════════════════════════════════════╗");
-                        eprintln!("   ║  🌐 REMOTE ACCESS ENABLED                   ║");
-                        eprintln!("   ╠══════════════════════════════════════════════╣");
-                        eprintln!("   ║  {:<44} ║", url);
-                        eprintln!("   ║                                              ║");
-                        eprintln!("   ║  📱 Mở URL trên từ điện thoại/máy khác       ║");
-                        eprintln!("   ║  🔒 Tunnel tự động mã hóa SSL               ║");
-                        eprintln!("   ╚══════════════════════════════════════════════╝");
-                        eprintln!();
+                if !url_found {
+                    url_found = true;
+                    eprintln!();
+                    eprintln!("   ╔══════════════════════════════════════════════╗");
+                    eprintln!("   ║  🌐 REMOTE ACCESS ENABLED                   ║");
+                    eprintln!("   ╠══════════════════════════════════════════════╣");
+                    eprintln!("   ║  {:<44} ║", url);
+                    eprintln!("   ║                                              ║");
+                    eprintln!("   ║  📱 Mở URL trên từ điện thoại/máy khác       ║");
+                    eprintln!("   ║  🔒 Tunnel tự động mã hóa SSL               ║");
+                    eprintln!("   ╚══════════════════════════════════════════════╝");
+                    eprintln!();
 
-                        // Save tunnel URL for other tools
-                        let pid_dir = std::path::Path::new("/tmp/bizclaw-local");
-                        let _ = std::fs::create_dir_all(pid_dir);
-                        let _ = std::fs::write(pid_dir.join("tunnel.url"), url);
-                    }
+                    // Save tunnel URL for other tools
+                    let pid_dir = std::path::Path::new("/tmp/bizclaw-local");
+                    let _ = std::fs::create_dir_all(pid_dir);
+                    let _ = std::fs::write(pid_dir.join("tunnel.url"), url);
                 }
             }
 

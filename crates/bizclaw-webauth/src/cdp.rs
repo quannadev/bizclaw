@@ -19,12 +19,16 @@ const LOG_TAG: &str = "[CDP]";
 /// CDP client for communicating with a Chrome/Chromium instance.
 pub struct CdpClient {
     /// WebSocket sender
-    sender: Arc<Mutex<futures::stream::SplitSink<
-        tokio_tungstenite::WebSocketStream<
-            tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+    sender: Arc<
+        Mutex<
+            futures::stream::SplitSink<
+                tokio_tungstenite::WebSocketStream<
+                    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
+                >,
+                WsMessage,
+            >,
         >,
-        WsMessage,
-    >>>,
+    >,
     /// Pending responses (method call ID → response sender)
     pending: Arc<Mutex<HashMap<u64, oneshot::Sender<Value>>>>,
     /// Event listeners (method name → sender)
@@ -60,25 +64,25 @@ impl CdpClient {
         // Background task: read WebSocket messages and dispatch
         let reader_handle = tokio::spawn(async move {
             while let Some(Ok(msg)) = receiver.next().await {
-                if let WsMessage::Text(text) = msg {
-                    if let Ok(json) = serde_json::from_str::<Value>(&text) {
-                        if let Some(id) = json.get("id").and_then(|v| v.as_u64()) {
-                            // Method response
-                            let mut pending = pending_clone.lock().await;
-                            if let Some(tx) = pending.remove(&id) {
-                                let _ = tx.send(json);
-                            }
-                        } else if let Some(method) = json.get("method").and_then(|v| v.as_str()) {
-                            // Event
-                            let listeners = events_clone.lock().await;
-                            if let Some(senders) = listeners.get(method) {
-                                let params = json
-                                    .get("params")
-                                    .cloned()
-                                    .unwrap_or(Value::Object(serde_json::Map::new()));
-                                for tx in senders {
-                                    let _ = tx.send(params.clone());
-                                }
+                if let WsMessage::Text(text) = msg
+                    && let Ok(json) = serde_json::from_str::<Value>(&text)
+                {
+                    if let Some(id) = json.get("id").and_then(|v| v.as_u64()) {
+                        // Method response
+                        let mut pending = pending_clone.lock().await;
+                        if let Some(tx) = pending.remove(&id) {
+                            let _ = tx.send(json);
+                        }
+                    } else if let Some(method) = json.get("method").and_then(|v| v.as_str()) {
+                        // Event
+                        let listeners = events_clone.lock().await;
+                        if let Some(senders) = listeners.get(method) {
+                            let params = json
+                                .get("params")
+                                .cloned()
+                                .unwrap_or(Value::Object(serde_json::Map::new()));
+                            for tx in senders {
+                                let _ = tx.send(params.clone());
                             }
                         }
                     }
@@ -99,11 +103,7 @@ impl CdpClient {
     }
 
     /// Send a CDP command and wait for the response.
-    pub async fn send_command(
-        &self,
-        method: &str,
-        params: Value,
-    ) -> Result<Value, String> {
+    pub async fn send_command(&self, method: &str, params: Value) -> Result<Value, String> {
         let id = {
             let mut next = self.next_id.lock().await;
             let id = *next;
@@ -157,18 +157,9 @@ impl CdpClient {
     }
 
     /// Wait for a single occurrence of a CDP event with timeout.
-    pub async fn wait_for_event(
-        &self,
-        event: &str,
-        timeout_ms: u64,
-    ) -> Result<Value, String> {
+    pub async fn wait_for_event(&self, event: &str, timeout_ms: u64) -> Result<Value, String> {
         let mut rx = self.subscribe(event).await;
-        match tokio::time::timeout(
-            std::time::Duration::from_millis(timeout_ms),
-            rx.recv(),
-        )
-        .await
-        {
+        match tokio::time::timeout(std::time::Duration::from_millis(timeout_ms), rx.recv()).await {
             Ok(Some(params)) => Ok(params),
             Ok(None) => Err(format!("{} Event channel closed for {}", LOG_TAG, event)),
             Err(_) => Err(format!(
@@ -254,19 +245,14 @@ impl CdpClient {
 
     /// Continue a paused request.
     pub async fn continue_request(&self, request_id: &str) -> Result<(), String> {
-        self.send_command(
-            "Fetch.continueRequest",
-            json!({ "requestId": request_id }),
-        )
-        .await?;
+        self.send_command("Fetch.continueRequest", json!({ "requestId": request_id }))
+            .await?;
         Ok(())
     }
 
     /// Get the current page URL.
     pub async fn get_url(&self) -> Result<String, String> {
-        let result = self
-            .evaluate_js("window.location.href")
-            .await?;
+        let result = self.evaluate_js("window.location.href").await?;
         result
             .as_str()
             .map(String::from)
@@ -279,9 +265,12 @@ impl CdpClient {
 /// Chrome must be started with `--remote-debugging-port=PORT`.
 pub async fn find_chrome_ws_url(port: u16) -> Result<String, String> {
     let url = format!("http://127.0.0.1:{}/json/version", port);
-    let resp = reqwest::get(&url)
-        .await
-        .map_err(|e| format!("Could not connect to Chrome debugger on port {}: {}", port, e))?;
+    let resp = reqwest::get(&url).await.map_err(|e| {
+        format!(
+            "Could not connect to Chrome debugger on port {}: {}",
+            port, e
+        )
+    })?;
 
     let json: Value = resp
         .json()

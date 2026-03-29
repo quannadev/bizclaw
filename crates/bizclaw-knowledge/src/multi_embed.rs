@@ -37,19 +37,15 @@ pub struct MultiModelEmbedder {
 /// How to combine scores from multiple models.
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum CombineStrategy {
     /// Take the maximum score (dis_max approach).
+    #[default]
     DisMax,
     /// Average all scores.
     Average,
     /// Weighted average — first model gets higher weight.
     WeightedFirst,
-}
-
-impl Default for CombineStrategy {
-    fn default() -> Self {
-        Self::DisMax
-    }
 }
 
 /// Result from multi-model embedding with per-model scores.
@@ -120,7 +116,7 @@ impl MultiModelEmbedder {
         for model_name in &models {
             // Check if this is a known embedding model
             let base_name = model_name.split(':').next().unwrap_or(model_name);
-            if known_embed_models.iter().any(|k| base_name == *k) {
+            if known_embed_models.contains(&base_name) {
                 configs.push((
                     base_name.to_string(),
                     EmbeddingConfig {
@@ -139,7 +135,11 @@ impl MultiModelEmbedder {
             tracing::info!(
                 "🔍 Auto-detected {} embedding model(s): {}",
                 configs.len(),
-                configs.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>().join(", ")
+                configs
+                    .iter()
+                    .map(|(n, _)| n.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ")
             );
         }
 
@@ -163,10 +163,7 @@ impl MultiModelEmbedder {
 
     /// Embed text using all available models.
     /// Returns embeddings keyed by model name.
-    pub async fn embed_all(
-        &mut self,
-        text: &str,
-    ) -> Result<HashMap<String, Vec<f32>>, String> {
+    pub async fn embed_all(&mut self, text: &str) -> Result<HashMap<String, Vec<f32>>, String> {
         let mut results = HashMap::new();
         let mut errors = Vec::new();
 

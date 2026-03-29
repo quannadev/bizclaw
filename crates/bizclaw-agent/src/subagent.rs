@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, Semaphore, mpsc};
-use tracing::{debug, error, info, warn};
+use tracing::info;
 
 /// Maximum concurrent sub-agents (matches DeerFlow default).
 pub const MAX_CONCURRENT_SUBAGENTS: usize = 3;
@@ -50,8 +50,14 @@ impl SubAgentType {
     pub fn default_tools(&self) -> Vec<&str> {
         match self {
             Self::GeneralPurpose => vec![
-                "shell", "file", "web_search", "web_fetch", "calculator",
-                "plan", "read_file", "write_file",
+                "shell",
+                "file",
+                "web_search",
+                "web_fetch",
+                "calculator",
+                "plan",
+                "read_file",
+                "write_file",
             ],
             Self::Bash => vec!["shell", "file", "read_file", "write_file"],
             Self::Research => vec!["web_search", "web_fetch", "calculator"],
@@ -299,7 +305,10 @@ impl SubAgentExecutor {
                         agent_type: task.agent_type.clone(),
                         turns_used: 0,
                         duration_ms: start.elapsed().as_millis() as u64,
-                        error: Some(format!("Task timed out after {} seconds", timeout.as_secs())),
+                        error: Some(format!(
+                            "Task timed out after {} seconds",
+                            timeout.as_secs()
+                        )),
                     }
                 }
             };
@@ -360,20 +369,20 @@ impl SubAgentExecutor {
     /// Cancel a running task.
     pub async fn cancel(&self, task_id: &str) -> bool {
         let mut tasks = self.tasks.lock().await;
-        if let Some(rt) = tasks.get_mut(task_id) {
-            if rt.status == TaskStatus::Running || rt.status == TaskStatus::Queued {
-                rt.status = TaskStatus::Cancelled;
-                rt.result = Some(SubAgentResult {
-                    task_id: task_id.into(),
-                    status: TaskStatus::Cancelled,
-                    output: String::new(),
-                    agent_type: rt.task.agent_type.clone(),
-                    turns_used: 0,
-                    duration_ms: rt.started_at.elapsed().as_millis() as u64,
-                    error: Some("Cancelled by lead agent".into()),
-                });
-                return true;
-            }
+        if let Some(rt) = tasks.get_mut(task_id)
+            && (rt.status == TaskStatus::Running || rt.status == TaskStatus::Queued)
+        {
+            rt.status = TaskStatus::Cancelled;
+            rt.result = Some(SubAgentResult {
+                task_id: task_id.into(),
+                status: TaskStatus::Cancelled,
+                output: String::new(),
+                agent_type: rt.task.agent_type.clone(),
+                turns_used: 0,
+                duration_ms: rt.started_at.elapsed().as_millis() as u64,
+                error: Some("Cancelled by lead agent".into()),
+            });
+            return true;
         }
         false
     }
@@ -403,7 +412,10 @@ impl SubAgentExecutor {
         tasks.retain(|_, rt| {
             let is_terminal = matches!(
                 rt.status,
-                TaskStatus::Completed | TaskStatus::Failed | TaskStatus::TimedOut | TaskStatus::Cancelled
+                TaskStatus::Completed
+                    | TaskStatus::Failed
+                    | TaskStatus::TimedOut
+                    | TaskStatus::Cancelled
             );
             if is_terminal && rt.started_at.elapsed() > max_age {
                 return false;
@@ -422,7 +434,10 @@ impl SubAgentExecutor {
             task_ids.push(id);
         }
 
-        info!("🔀 Fan-out: {} sub-agents running in parallel", task_ids.len());
+        info!(
+            "🔀 Fan-out: {} sub-agents running in parallel",
+            task_ids.len()
+        );
 
         let mut results = Vec::new();
         for id in task_ids {
@@ -430,9 +445,15 @@ impl SubAgentExecutor {
             results.push(result);
         }
 
-        let completed = results.iter().filter(|r| r.status == TaskStatus::Completed).count();
+        let completed = results
+            .iter()
+            .filter(|r| r.status == TaskStatus::Completed)
+            .count();
         let failed = results.len() - completed;
-        info!("🔀 Fan-out complete: {} succeeded, {} failed", completed, failed);
+        info!(
+            "🔀 Fan-out complete: {} succeeded, {} failed",
+            completed, failed
+        );
 
         results
     }
@@ -454,7 +475,9 @@ impl Default for SubAgentExecutor {
 /// For now, this provides the task execution framework.
 /// The actual LLM integration will be wired when SubAgentExecutor
 /// is integrated into the main Agent.
-async fn execute_task(task: &SubAgentTask) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+async fn execute_task(
+    task: &SubAgentTask,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
     info!(
         "🤖 Sub-agent executing: {} (type: {}, max_turns: {})",
         task.description, task.agent_type, task.max_turns
@@ -589,9 +612,7 @@ mod tests {
         let result = executor
             .wait_for(&task_id, Duration::from_millis(100))
             .await;
-        assert!(
-            result.status == TaskStatus::Cancelled || result.status == TaskStatus::Completed
-        );
+        assert!(result.status == TaskStatus::Cancelled || result.status == TaskStatus::Completed);
     }
 
     #[tokio::test]
@@ -626,9 +647,7 @@ mod tests {
         };
 
         let id = executor.submit(task).await;
-        executor
-            .wait_for(&id, Duration::from_millis(100))
-            .await;
+        executor.wait_for(&id, Duration::from_millis(100)).await;
 
         // Cleanup with 0 duration should remove completed tasks
         let removed = executor.cleanup(Duration::ZERO).await;
@@ -668,9 +687,7 @@ mod tests {
         };
 
         let id = executor.submit(task).await;
-        executor
-            .wait_for(&id, Duration::from_millis(100))
-            .await;
+        executor.wait_for(&id, Duration::from_millis(100)).await;
         // After completion, active count should be 0
         assert_eq!(executor.active_count().await, 0);
     }

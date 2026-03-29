@@ -159,7 +159,11 @@ impl KnowledgeStore {
 
         tracing::info!(
             "📄 Added '{}' ({}) → {} chunks indexed [owner={}, size={}]",
-            name, mimetype, chunk_count, owner, file_size
+            name,
+            mimetype,
+            chunk_count,
+            owner,
+            file_size
         );
         Ok(chunk_count)
     }
@@ -210,7 +214,12 @@ impl KnowledgeStore {
                 .map_err(|e| format!("Insert chunk error: {e}"))?;
         }
 
-        tracing::info!("📄 Added PDF '{}' → {} chunks indexed [owner={}]", name, chunk_count, owner);
+        tracing::info!(
+            "📄 Added PDF '{}' → {} chunks indexed [owner={}]",
+            name,
+            chunk_count,
+            owner
+        );
         Ok(chunk_count)
     }
 
@@ -271,7 +280,8 @@ impl KnowledgeStore {
         }
         all_params.push(Box::new(limit as i64));
 
-        let param_refs: Vec<&dyn rusqlite::types::ToSql> = all_params.iter().map(|p| p.as_ref()).collect();
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> =
+            all_params.iter().map(|p| p.as_ref()).collect();
 
         let results = stmt.query_map(param_refs.as_slice(), |row| {
             let mimetype: Option<String> = row.get(5).ok();
@@ -403,7 +413,9 @@ impl KnowledgeStore {
         // Count by mimetype
         let type_counts: Vec<(String, i64)> = self
             .conn
-            .prepare("SELECT COALESCE(mimetype, 'unknown'), COUNT(*) FROM documents GROUP BY mimetype")
+            .prepare(
+                "SELECT COALESCE(mimetype, 'unknown'), COUNT(*) FROM documents GROUP BY mimetype",
+            )
             .and_then(|mut stmt| {
                 stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
                     .map(|rows| rows.filter_map(|r| r.ok()).collect())
@@ -413,7 +425,11 @@ impl KnowledgeStore {
         // Total file size
         let total_size: i64 = self
             .conn
-            .query_row("SELECT COALESCE(SUM(file_size), 0) FROM documents", [], |r| r.get(0))
+            .query_row(
+                "SELECT COALESCE(SUM(file_size), 0) FROM documents",
+                [],
+                |r| r.get(0),
+            )
             .unwrap_or(0);
 
         serde_json::json!({
@@ -524,7 +540,11 @@ mod tests {
     fn test_add_and_search() {
         let store = create_test_store();
         let chunks = store
-            .add_document("test.md", "BizClaw is an AI agent platform for SMEs", "test")
+            .add_document(
+                "test.md",
+                "BizClaw is an AI agent platform for SMEs",
+                "test",
+            )
             .unwrap();
         assert!(chunks > 0);
 
@@ -537,7 +557,13 @@ mod tests {
     fn test_add_with_metadata() {
         let store = create_test_store();
         store
-            .add_document_with_meta("policy.pdf", "Company policy content", "upload", "admin", 1024)
+            .add_document_with_meta(
+                "policy.pdf",
+                "Company policy content",
+                "upload",
+                "admin",
+                1024,
+            )
             .unwrap();
 
         let docs = store.list_documents();
@@ -552,7 +578,13 @@ mod tests {
     fn test_search_with_filters() {
         let store = create_test_store();
         store
-            .add_document_with_meta("policy.md", "Chính sách công ty về nghỉ phép", "upload", "hr", 500)
+            .add_document_with_meta(
+                "policy.md",
+                "Chính sách công ty về nghỉ phép",
+                "upload",
+                "hr",
+                500,
+            )
             .unwrap();
         store
             .add_document_with_meta("tech.md", "Kiến trúc hệ thống AI", "upload", "dev", 800)

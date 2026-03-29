@@ -268,10 +268,10 @@ impl HotConfig {
             .ok();
 
         let needs_reload = match (&inner.cached, &inner.last_mtime, &current_mtime) {
-            (None, _, _) => true, // No cached config
-            (_, None, Some(_)) => true, // File appeared
-            (_, Some(old), Some(new)) => new > old, // File modified
-            (_, Some(_), None) => false, // File disappeared, keep cached
+            (None, _, _) => true,                      // No cached config
+            (_, None, Some(_)) => true,                // File appeared
+            (_, Some(old), Some(new)) => new > old,    // File modified
+            (_, Some(_), None) => false,               // File disappeared, keep cached
             (_, None, None) => inner.cached.is_none(), // No file, no cache
         };
 
@@ -282,10 +282,7 @@ impl HotConfig {
                 BizClawConfig::default()
             };
 
-            tracing::info!(
-                "🔄 Config hot-reload: loaded from {}",
-                inner.path.display()
-            );
+            tracing::info!("🔄 Config hot-reload: loaded from {}", inner.path.display());
 
             inner.cached = Some(config);
             inner.last_mtime = current_mtime;
@@ -313,10 +310,7 @@ impl HotConfig {
         inner.cached = Some(config.clone());
         inner.last_mtime = mtime;
 
-        tracing::info!(
-            "🔄 Config force-reload from {}",
-            inner.path.display()
-        );
+        tracing::info!("🔄 Config force-reload from {}", inner.path.display());
 
         Ok(config)
     }
@@ -993,9 +987,15 @@ pub struct SsoConfig {
     pub default_role: String,
 }
 
-fn default_sso_provider() -> String { "oidc".into() }
-fn default_sso_scopes() -> Vec<String> { vec!["openid".into(), "email".into(), "profile".into()] }
-fn default_sso_role() -> String { "user".into() }
+fn default_sso_provider() -> String {
+    "oidc".into()
+}
+fn default_sso_scopes() -> Vec<String> {
+    vec!["openid".into(), "email".into(), "profile".into()]
+}
+fn default_sso_role() -> String {
+    "user".into()
+}
 
 impl Default for SsoConfig {
     fn default() -> Self {
@@ -1050,9 +1050,15 @@ pub struct AnalyticsConfig {
     pub report_recipients: Vec<String>,
 }
 
-fn default_retention_days() -> u32 { 90 }
-fn default_export_format() -> String { "json".into() }
-fn default_metrics_path() -> String { "/metrics".into() }
+fn default_retention_days() -> u32 {
+    90
+}
+fn default_export_format() -> String {
+    "json".into()
+}
+fn default_metrics_path() -> String {
+    "/metrics".into()
+}
 
 impl Default for AnalyticsConfig {
     fn default() -> Self {
@@ -1110,14 +1116,30 @@ pub struct FineTuningConfig {
     pub max_samples: u32,
 }
 
-fn default_ft_provider() -> String { "openai".into() }
-fn default_ft_base_model() -> String { "gpt-4o-mini-2024-07-18".into() }
-fn default_ft_dataset_dir() -> String { "~/.bizclaw/fine-tuning/datasets".into() }
-fn default_ft_epochs() -> u32 { 3 }
-fn default_ft_lr() -> f32 { 1.8 }
-fn default_ft_batch() -> u32 { 4 }
-fn default_ft_min_rating() -> u32 { 4 }
-fn default_ft_max_samples() -> u32 { 10000 }
+fn default_ft_provider() -> String {
+    "openai".into()
+}
+fn default_ft_base_model() -> String {
+    "gpt-4o-mini-2024-07-18".into()
+}
+fn default_ft_dataset_dir() -> String {
+    "~/.bizclaw/fine-tuning/datasets".into()
+}
+fn default_ft_epochs() -> u32 {
+    3
+}
+fn default_ft_lr() -> f32 {
+    1.8
+}
+fn default_ft_batch() -> u32 {
+    4
+}
+fn default_ft_min_rating() -> u32 {
+    4
+}
+fn default_ft_max_samples() -> u32 {
+    10000
+}
 
 impl Default for FineTuningConfig {
     fn default() -> Self {
@@ -1177,11 +1199,21 @@ pub struct EdgeGatewayConfig {
     pub xiaozhi_ota_url: String,
 }
 
-fn default_mqtt_topic() -> String { "bizclaw/edge".into() }
-fn default_coap_port() -> u16 { 5683 }
-fn default_sync_interval() -> u32 { 60 }
-fn default_offline_queue() -> u32 { 1000 }
-fn default_protocols() -> Vec<String> { vec!["mqtt".into(), "http".into(), "websocket".into()] }
+fn default_mqtt_topic() -> String {
+    "bizclaw/edge".into()
+}
+fn default_coap_port() -> u16 {
+    5683
+}
+fn default_sync_interval() -> u32 {
+    60
+}
+fn default_offline_queue() -> u32 {
+    1000
+}
+fn default_protocols() -> Vec<String> {
+    vec!["mqtt".into(), "http".into(), "websocket".into()]
+}
 
 impl Default for EdgeGatewayConfig {
     fn default() -> Self {
@@ -1242,8 +1274,12 @@ pub struct PluginEntry {
     pub config: serde_json::Value,
 }
 
-fn default_plugin_registry() -> String { "https://plugins.bizclaw.vn/api/v1".into() }
-fn default_plugin_dir() -> String { "~/.bizclaw/plugins".into() }
+fn default_plugin_registry() -> String {
+    "https://plugins.bizclaw.vn/api/v1".into()
+}
+fn default_plugin_dir() -> String {
+    "~/.bizclaw/plugins".into()
+}
 
 impl Default for PluginMarketplaceConfig {
     fn default() -> Self {

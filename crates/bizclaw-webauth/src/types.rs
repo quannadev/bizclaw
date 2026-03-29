@@ -161,7 +161,11 @@ impl OpenAIChatChunk {
                     content: Some(text.to_string()),
                     tool_calls: None,
                 },
-                finish_reason: if finish { Some("stop".to_string()) } else { None },
+                finish_reason: if finish {
+                    Some("stop".to_string())
+                } else {
+                    None
+                },
             }],
         }
     }

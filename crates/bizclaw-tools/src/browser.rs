@@ -74,12 +74,11 @@ impl BrowserTool {
             .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Parse error: {e}")))?;
 
         // If instances exist, return the first one
-        if let Some(arr) = instances.as_array() {
-            if let Some(inst) = arr.first() {
-                if let Some(id) = inst["id"].as_str() {
-                    return Ok(id.to_string());
-                }
-            }
+        if let Some(arr) = instances.as_array()
+            && let Some(inst) = arr.first()
+            && let Some(id) = inst["id"].as_str()
+        {
+            return Ok(id.to_string());
         }
 
         // Create new instance
@@ -286,11 +285,7 @@ impl Tool for BrowserTool {
                 let body = resp.text().await.unwrap_or_default();
                 let display = if body.len() > 6000 {
                     let truncated: String = body.chars().take(6000).collect();
-                    format!(
-                        "{}...\n[truncated, {} bytes total]",
-                        truncated,
-                        body.len()
-                    )
+                    format!("{}...\n[truncated, {} bytes total]", truncated, body.len())
                 } else {
                     body
                 };

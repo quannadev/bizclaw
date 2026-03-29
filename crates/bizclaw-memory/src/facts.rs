@@ -90,7 +90,7 @@ pub struct UserContext {
 }
 
 /// Full memory data — persisted as JSON.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FactMemory {
     /// Structured user context.
     #[serde(default)]
@@ -98,15 +98,6 @@ pub struct FactMemory {
     /// Discrete facts with confidence scoring.
     #[serde(default)]
     pub facts: Vec<Fact>,
-}
-
-impl Default for FactMemory {
-    fn default() -> Self {
-        Self {
-            user_context: UserContext::default(),
-            facts: Vec::new(),
-        }
-    }
 }
 
 /// Fact Store — manages the lifecycle of facts.
@@ -135,7 +126,11 @@ impl FactStore {
     }
 
     /// Create a fact store with file persistence.
-    pub fn with_path(max_facts: usize, min_confidence: f32, path: impl Into<std::path::PathBuf>) -> Self {
+    pub fn with_path(
+        max_facts: usize,
+        min_confidence: f32,
+        path: impl Into<std::path::PathBuf>,
+    ) -> Self {
         let path = path.into();
         let data = if path.exists() {
             match std::fs::read_to_string(&path) {
@@ -185,7 +180,14 @@ impl FactStore {
         }
 
         let fact = Fact {
-            id: format!("f_{}", uuid::Uuid::new_v4().to_string().split('-').next().unwrap_or("0")),
+            id: format!(
+                "f_{}",
+                uuid::Uuid::new_v4()
+                    .to_string()
+                    .split('-')
+                    .next()
+                    .unwrap_or("0")
+            ),
             content: content.to_string(),
             category,
             confidence,
@@ -199,7 +201,9 @@ impl FactStore {
         // Evict lowest-confidence facts if over limit
         if self.data.facts.len() > self.max_facts {
             self.data.facts.sort_by(|a, b| {
-                b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+                b.confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
             self.data.facts.truncate(self.max_facts);
         }
@@ -212,7 +216,9 @@ impl FactStore {
     pub fn top_facts(&self, n: usize) -> Vec<&Fact> {
         let mut sorted: Vec<&Fact> = self.data.facts.iter().collect();
         sorted.sort_by(|a, b| {
-            b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
         sorted.truncate(n);
         sorted
@@ -233,10 +239,16 @@ impl FactStore {
             ctx.push_str(&format!("Work: {}\n", self.data.user_context.work_context));
         }
         if !self.data.user_context.personal_context.is_empty() {
-            ctx.push_str(&format!("Personal: {}\n", self.data.user_context.personal_context));
+            ctx.push_str(&format!(
+                "Personal: {}\n",
+                self.data.user_context.personal_context
+            ));
         }
         if !self.data.user_context.top_of_mind.is_empty() {
-            ctx.push_str(&format!("Priority: {}\n", self.data.user_context.top_of_mind));
+            ctx.push_str(&format!(
+                "Priority: {}\n",
+                self.data.user_context.top_of_mind
+            ));
         }
 
         // Inject top facts
@@ -262,7 +274,12 @@ impl FactStore {
     }
 
     /// Update user context.
-    pub fn update_context(&mut self, work: Option<&str>, personal: Option<&str>, top_of_mind: Option<&str>) {
+    pub fn update_context(
+        &mut self,
+        work: Option<&str>,
+        personal: Option<&str>,
+        top_of_mind: Option<&str>,
+    ) {
         if let Some(w) = work {
             self.data.user_context.work_context = w.to_string();
         }
@@ -287,7 +304,10 @@ impl FactStore {
 
     /// Persist to disk (atomic: write to temp, then rename).
     pub fn save(&mut self) -> std::result::Result<(), String> {
-        let path = self.storage_path.as_ref().ok_or("No storage path configured")?;
+        let path = self
+            .storage_path
+            .as_ref()
+            .ok_or("No storage path configured")?;
 
         if !self.dirty {
             return Ok(());
@@ -300,7 +320,8 @@ impl FactStore {
 
         // Atomic write: temp file + rename
         let tmp_path = path.with_extension("tmp");
-        let json = serde_json::to_string_pretty(&self.data).map_err(|e| format!("serialize: {e}"))?;
+        let json =
+            serde_json::to_string_pretty(&self.data).map_err(|e| format!("serialize: {e}"))?;
         std::fs::write(&tmp_path, &json).map_err(|e| format!("write: {e}"))?;
         std::fs::rename(&tmp_path, path).map_err(|e| format!("rename: {e}"))?;
 
@@ -321,7 +342,10 @@ impl FactStore {
 
 /// Normalize content for deduplication (whitespace collapse + trim + lowercase).
 fn normalize_content(s: &str) -> String {
-    s.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase()
+    s.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
 }
 
 #[cfg(test)]
@@ -331,7 +355,12 @@ mod tests {
     #[test]
     fn test_add_and_retrieve_facts() {
         let mut store = FactStore::new(100, 0.7);
-        assert!(store.add_fact("User prefers Rust", FactCategory::Preference, 0.95, "conversation"));
+        assert!(store.add_fact(
+            "User prefers Rust",
+            FactCategory::Preference,
+            0.95,
+            "conversation"
+        ));
         assert!(store.add_fact("BizClaw uses axum", FactCategory::Knowledge, 0.9, "code"));
         assert_eq!(store.len(), 2);
 
@@ -343,9 +372,19 @@ mod tests {
     #[test]
     fn test_deduplication_by_content() {
         let mut store = FactStore::new(100, 0.7);
-        assert!(store.add_fact("User likes dark mode", FactCategory::Preference, 0.8, "conv"));
+        assert!(store.add_fact(
+            "User likes dark mode",
+            FactCategory::Preference,
+            0.8,
+            "conv"
+        ));
         // Same content with different whitespace — should be deduplicated
-        assert!(!store.add_fact("  User  likes  dark  mode  ", FactCategory::Preference, 0.8, "conv"));
+        assert!(!store.add_fact(
+            "  User  likes  dark  mode  ",
+            FactCategory::Preference,
+            0.8,
+            "conv"
+        ));
         assert_eq!(store.len(), 1);
         // Confidence should be boosted
         assert!(store.facts()[0].confidence > 0.8);
@@ -377,8 +416,18 @@ mod tests {
     fn test_prompt_context_generation() {
         let mut store = FactStore::new(100, 0.5);
         store.update_context(Some("Building BizClaw platform"), None, Some("Ship v1.1"));
-        store.add_fact("User speaks Vietnamese", FactCategory::Preference, 0.95, "conv");
-        store.add_fact("Uses Rust + Tokio stack", FactCategory::Knowledge, 0.9, "code");
+        store.add_fact(
+            "User speaks Vietnamese",
+            FactCategory::Preference,
+            0.95,
+            "conv",
+        );
+        store.add_fact(
+            "Uses Rust + Tokio stack",
+            FactCategory::Knowledge,
+            0.9,
+            "code",
+        );
 
         let ctx = store.to_prompt_context(2000).unwrap();
         assert!(ctx.starts_with("<memory>"));

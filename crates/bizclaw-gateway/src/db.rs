@@ -58,19 +58,19 @@ fn decrypt_api_key(stored: &str) -> String {
     if stored.is_empty() {
         return String::new();
     }
-    if let Some(encoded) = stored.strip_prefix("ENC:") {
-        if let Some(encrypted) = base64_decode(encoded) {
-            let key = db_encryption_key();
-            let decrypted: Vec<u8> = encrypted
-                .iter()
-                .enumerate()
-                .map(|(i, &b)| b ^ key[i % 32])
-                .collect();
-            return String::from_utf8(decrypted).unwrap_or_else(|_| {
-                tracing::warn!("API key decryption produced invalid UTF-8");
-                stored.to_string()
-            });
-        }
+    if let Some(encoded) = stored.strip_prefix("ENC:")
+        && let Some(encrypted) = base64_decode(encoded)
+    {
+        let key = db_encryption_key();
+        let decrypted: Vec<u8> = encrypted
+            .iter()
+            .enumerate()
+            .map(|(i, &b)| b ^ key[i % 32])
+            .collect();
+        return String::from_utf8(decrypted).unwrap_or_else(|_| {
+            tracing::warn!("API key decryption produced invalid UTF-8");
+            stored.to_string()
+        });
     }
     // Legacy plain-text — return as-is
     stored.to_string()
@@ -106,11 +106,20 @@ fn base64_decode(input: &str) -> Option<Vec<u8>> {
     const DECODE: [u8; 128] = {
         let mut table = [255u8; 128];
         let mut i = 0u8;
-        while i < 26 { table[(b'A' + i) as usize] = i; i += 1; }
+        while i < 26 {
+            table[(b'A' + i) as usize] = i;
+            i += 1;
+        }
         i = 0;
-        while i < 26 { table[(b'a' + i) as usize] = 26 + i; i += 1; }
+        while i < 26 {
+            table[(b'a' + i) as usize] = 26 + i;
+            i += 1;
+        }
         i = 0;
-        while i < 10 { table[(b'0' + i) as usize] = 52 + i; i += 1; }
+        while i < 10 {
+            table[(b'0' + i) as usize] = 52 + i;
+            i += 1;
+        }
         table[b'+' as usize] = 62;
         table[b'/' as usize] = 63;
         table
@@ -121,15 +130,23 @@ fn base64_decode(input: &str) -> Option<Vec<u8>> {
     for chunk in bytes.chunks(4) {
         let mut buf = [0u32; 4];
         for (i, &b) in chunk.iter().enumerate() {
-            if b >= 128 { return None; }
+            if b >= 128 {
+                return None;
+            }
             let val = DECODE[b as usize];
-            if val == 255 { return None; }
+            if val == 255 {
+                return None;
+            }
             buf[i] = val as u32;
         }
         let triple = (buf[0] << 18) | (buf[1] << 12) | (buf[2] << 6) | buf[3];
         result.push((triple >> 16) as u8);
-        if chunk.len() > 2 { result.push((triple >> 8) as u8); }
-        if chunk.len() > 3 { result.push(triple as u8); }
+        if chunk.len() > 2 {
+            result.push((triple >> 8) as u8);
+        }
+        if chunk.len() > 3 {
+            result.push(triple as u8);
+        }
     }
     Some(result)
 }
@@ -942,18 +959,22 @@ impl GatewayDb {
         let mut stmt = conn.prepare(
             "SELECT id, timestamp, user_email, user_role, action, resource_type, resource_id, details FROM audit_log ORDER BY id DESC LIMIT ?1 OFFSET ?2"
         ).map_err(|e| format!("Prepare: {e}"))?;
-        let rows = stmt.query_map(params![limit, offset], |row| {
-            Ok(serde_json::json!({
-                "id": row.get::<_, i64>(0)?,
-                "timestamp": row.get::<_, String>(1)?,
-                "user_email": row.get::<_, String>(2)?,
-                "user_role": row.get::<_, String>(3)?,
-                "action": row.get::<_, String>(4)?,
-                "resource_type": row.get::<_, String>(5)?,
-                "resource_id": row.get::<_, String>(6)?,
-                "details": row.get::<_, String>(7)?,
-            }))
-        }).map_err(|e| format!("Query: {e}"))?.filter_map(|r| r.ok()).collect();
+        let rows = stmt
+            .query_map(params![limit, offset], |row| {
+                Ok(serde_json::json!({
+                    "id": row.get::<_, i64>(0)?,
+                    "timestamp": row.get::<_, String>(1)?,
+                    "user_email": row.get::<_, String>(2)?,
+                    "user_role": row.get::<_, String>(3)?,
+                    "action": row.get::<_, String>(4)?,
+                    "resource_type": row.get::<_, String>(5)?,
+                    "resource_id": row.get::<_, String>(6)?,
+                    "details": row.get::<_, String>(7)?,
+                }))
+            })
+            .map_err(|e| format!("Query: {e}"))?
+            .filter_map(|r| r.ok())
+            .collect();
         Ok(rows)
     }
 
@@ -1408,14 +1429,12 @@ impl GatewayDb {
                 if !val["active"].as_bool().unwrap_or(false) {
                     return Ok(None);
                 }
-                if let Some(exp) = val["expires_at"].as_str() {
-                    if !exp.is_empty() {
-                        if let Ok(exp_time) = chrono::DateTime::parse_from_rfc3339(exp) {
-                            if exp_time < chrono::Utc::now() {
-                                return Ok(None); // expired
-                            }
-                        }
-                    }
+                if let Some(exp) = val["expires_at"].as_str()
+                    && !exp.is_empty()
+                    && let Ok(exp_time) = chrono::DateTime::parse_from_rfc3339(exp)
+                    && exp_time < chrono::Utc::now()
+                {
+                    return Ok(None); // expired
                 }
                 // Update last_used_at
                 let _ = conn.execute(
@@ -1457,10 +1476,8 @@ impl GatewayDb {
             })
             .map_err(|e| format!("Query: {e}"))?;
         let mut usage = serde_json::Map::new();
-        for row in rows {
-            if let Ok((metric, value)) = row {
-                usage.insert(metric, serde_json::json!(value));
-            }
+        for (metric, value) in rows.flatten() {
+            usage.insert(metric, serde_json::json!(value));
         }
         Ok(serde_json::Value::Object(usage))
     }
@@ -1486,10 +1503,8 @@ impl GatewayDb {
             })
             .map_err(|e| format!("Query: {e}"))?;
         let mut items = Vec::new();
-        for row in rows {
-            if let Ok(v) = row {
-                items.push(v);
-            }
+        for v in rows.flatten() {
+            items.push(v);
         }
         Ok(items)
     }
@@ -1519,10 +1534,8 @@ impl GatewayDb {
             })
             .map_err(|e| format!("Query: {e}"))?;
         let mut limits = serde_json::Map::new();
-        for row in rows {
-            if let Ok((key, value)) = row {
-                limits.insert(key, serde_json::json!(value));
-            }
+        for (key, value) in rows.flatten() {
+            limits.insert(key, serde_json::json!(value));
         }
         Ok(serde_json::Value::Object(limits))
     }

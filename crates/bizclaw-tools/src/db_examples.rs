@@ -47,8 +47,8 @@ impl SqlExampleStore {
     }
 
     fn init_db(&self) -> Result<(), String> {
-        let conn = rusqlite::Connection::open(&self.db_path)
-            .map_err(|e| format!("Open DB: {e}"))?;
+        let conn =
+            rusqlite::Connection::open(&self.db_path).map_err(|e| format!("Open DB: {e}"))?;
 
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS sql_examples (
@@ -88,8 +88,8 @@ impl SqlExampleStore {
         connection_id: &str,
         tables_used: &[String],
     ) -> Result<i64, String> {
-        let conn = rusqlite::Connection::open(&self.db_path)
-            .map_err(|e| format!("Open DB: {e}"))?;
+        let conn =
+            rusqlite::Connection::open(&self.db_path).map_err(|e| format!("Open DB: {e}"))?;
 
         let tables_str = tables_used.join(",");
         conn.execute(
@@ -103,7 +103,12 @@ impl SqlExampleStore {
 
     /// Find similar examples using FTS5 search.
     /// Returns up to `limit` examples sorted by relevance.
-    pub fn find_similar(&self, question: &str, connection_id: &str, limit: usize) -> Vec<SqlExample> {
+    pub fn find_similar(
+        &self,
+        question: &str,
+        connection_id: &str,
+        limit: usize,
+    ) -> Vec<SqlExample> {
         let conn = match rusqlite::Connection::open(&self.db_path) {
             Ok(c) => c,
             Err(_) => return vec![],
@@ -120,8 +125,7 @@ impl SqlExampleStore {
         }
 
         // FTS5 search with ranking
-        let query = format!(
-            "SELECT e.id, e.question, e.normalized_question, e.sql_code,
+        let query = "SELECT e.id, e.question, e.normalized_question, e.sql_code,
                     e.connection_id, e.tables_used, e.created_at, e.verified
              FROM sql_examples e
              JOIN sql_examples_fts f ON e.id = f.rowid
@@ -130,7 +134,7 @@ impl SqlExampleStore {
                AND e.verified = 1
              ORDER BY rank
              LIMIT ?3"
-        );
+            .to_string();
 
         let mut stmt = match conn.prepare(&query) {
             Ok(s) => s,
@@ -147,7 +151,8 @@ impl SqlExampleStore {
                     normalized_question: row.get(2)?,
                     sql: row.get(3)?,
                     connection_id: row.get(4)?,
-                    tables_used: tables_str.split(',')
+                    tables_used: tables_str
+                        .split(',')
                         .filter(|s| !s.is_empty())
                         .map(|s| s.to_string())
                         .collect(),
@@ -169,8 +174,10 @@ impl SqlExampleStore {
             Ok(c) => c,
             Err(_) => return 0,
         };
-        conn.query_row("SELECT COUNT(*) FROM sql_examples", [], |row| row.get::<_, i64>(0))
-            .unwrap_or(0) as usize
+        conn.query_row("SELECT COUNT(*) FROM sql_examples", [], |row| {
+            row.get::<_, i64>(0)
+        })
+        .unwrap_or(0) as usize
     }
 
     /// List recent examples for a connection.
@@ -188,25 +195,23 @@ impl SqlExampleStore {
             Err(_) => return vec![],
         };
 
-        let results = stmt.query_map(
-            rusqlite::params![connection_id, limit as i64],
-            |row| {
-                let tables_str: String = row.get(5).unwrap_or_default();
-                Ok(SqlExample {
-                    id: row.get(0)?,
-                    question: row.get(1)?,
-                    normalized_question: row.get(2)?,
-                    sql: row.get(3)?,
-                    connection_id: row.get(4)?,
-                    tables_used: tables_str.split(',')
-                        .filter(|s| !s.is_empty())
-                        .map(|s| s.to_string())
-                        .collect(),
-                    created_at: row.get(6)?,
-                    verified: row.get::<_, i32>(7).unwrap_or(0) == 1,
-                })
-            },
-        );
+        let results = stmt.query_map(rusqlite::params![connection_id, limit as i64], |row| {
+            let tables_str: String = row.get(5).unwrap_or_default();
+            Ok(SqlExample {
+                id: row.get(0)?,
+                question: row.get(1)?,
+                normalized_question: row.get(2)?,
+                sql: row.get(3)?,
+                connection_id: row.get(4)?,
+                tables_used: tables_str
+                    .split(',')
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.to_string())
+                    .collect(),
+                created_at: row.get(6)?,
+                verified: row.get::<_, i32>(7).unwrap_or(0) == 1,
+            })
+        });
 
         match results {
             Ok(rows) => rows.filter_map(|r| r.ok()).collect(),
@@ -216,8 +221,8 @@ impl SqlExampleStore {
 
     /// Delete an example by ID.
     pub fn delete(&self, id: i64) -> Result<(), String> {
-        let conn = rusqlite::Connection::open(&self.db_path)
-            .map_err(|e| format!("Open DB: {e}"))?;
+        let conn =
+            rusqlite::Connection::open(&self.db_path).map_err(|e| format!("Open DB: {e}"))?;
         conn.execute("DELETE FROM sql_examples WHERE id = ?1", [id])
             .map_err(|e| format!("Delete: {e}"))?;
         Ok(())
@@ -276,10 +281,8 @@ impl BusinessRuleStore {
             rule: rule.to_string(),
             created_at: Some(chrono::Utc::now().to_rfc3339()),
         });
-        let json = serde_json::to_string_pretty(&rules)
-            .map_err(|e| format!("Serialize: {e}"))?;
-        std::fs::write(&self.path, json)
-            .map_err(|e| format!("Write: {e}"))?;
+        let json = serde_json::to_string_pretty(&rules).map_err(|e| format!("Serialize: {e}"))?;
+        std::fs::write(&self.path, json).map_err(|e| format!("Write: {e}"))?;
         Ok(id)
     }
 
@@ -287,10 +290,8 @@ impl BusinessRuleStore {
     pub fn delete_rule(&self, rule_id: &str) -> Result<(), String> {
         let mut rules = self.load_all();
         rules.retain(|r| r.id != rule_id);
-        let json = serde_json::to_string_pretty(&rules)
-            .map_err(|e| format!("Serialize: {e}"))?;
-        std::fs::write(&self.path, json)
-            .map_err(|e| format!("Write: {e}"))?;
+        let json = serde_json::to_string_pretty(&rules).map_err(|e| format!("Serialize: {e}"))?;
+        std::fs::write(&self.path, json).map_err(|e| format!("Write: {e}"))?;
         Ok(())
     }
 
@@ -323,13 +324,15 @@ mod tests {
         let store = SqlExampleStore::new(&dir);
 
         // Save
-        let id = store.save(
-            "doanh thu tháng này",
-            "revenue current month",
-            "SELECT SUM(total) FROM orders WHERE created_at >= date('now', 'start of month')",
-            "prod_pg",
-            &["orders".to_string()],
-        ).unwrap();
+        let id = store
+            .save(
+                "doanh thu tháng này",
+                "revenue current month",
+                "SELECT SUM(total) FROM orders WHERE created_at >= date('now', 'start of month')",
+                "prod_pg",
+                &["orders".to_string()],
+            )
+            .unwrap();
         assert!(id > 0);
 
         // Count
@@ -360,8 +363,18 @@ mod tests {
         let store = BusinessRuleStore::new(&dir);
 
         // Add rules
-        store.add_rule("prod_pg", "Revenue = SUM(order_items.quantity * order_items.price)").unwrap();
-        store.add_rule("*", "Always exclude deleted records: WHERE deleted_at IS NULL").unwrap();
+        store
+            .add_rule(
+                "prod_pg",
+                "Revenue = SUM(order_items.quantity * order_items.price)",
+            )
+            .unwrap();
+        store
+            .add_rule(
+                "*",
+                "Always exclude deleted records: WHERE deleted_at IS NULL",
+            )
+            .unwrap();
 
         // Get for connection
         let rules = store.get_rules("prod_pg");

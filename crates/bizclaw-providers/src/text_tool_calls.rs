@@ -33,19 +33,17 @@ use serde_json::Value;
 /// **Critical**: This function ONLY replaces `## Tooling` — preserving all persona
 /// context. Without persona context, models refuse tool calls (they say "I can't
 /// access files").
-pub fn transform_system_prompt_for_webchat(
-    system_text: &str,
-    tools: &[ToolDefinition],
-) -> String {
+pub fn transform_system_prompt_for_webchat(system_text: &str, tools: &[ToolDefinition]) -> String {
     let tool_names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
 
     let mut transformed = system_text.to_string();
 
     // Replace ## Tooling section with JSON action format
-    if let Some(start) = find_section_start(&transformed, "## Tooling") {
-        if let Some(end) = find_next_h2(&transformed, start) {
-            let replacement = format!(
-                r#"## Tool Use — MANDATORY
+    if let Some(start) = find_section_start(&transformed, "## Tooling")
+        && let Some(end) = find_next_h2(&transformed, start)
+    {
+        let replacement = format!(
+            r#"## Tool Use — MANDATORY
 YOU MUST USE TOOLS. You are connected to a REAL system with FULL access.
 
 ⚠️ RULE: Tool call FIRST, talk LATER. Never answer without checking first.
@@ -63,25 +61,24 @@ Tools: {}
 After tool result arrives, THEN respond to user. Plain text ONLY when no lookup needed.
 
 "#,
-                tool_names.join(" | ")
-            );
-            transformed.replace_range(start..end, &replacement);
-        }
+            tool_names.join(" | ")
+        );
+        transformed.replace_range(start..end, &replacement);
     }
 
     // Also remove ## Tool Call Style section if present
-    if let Some(start) = find_section_start(&transformed, "## Tool Call Style") {
-        if let Some(end) = find_next_h2(&transformed, start) {
-            transformed.replace_range(start..end, "");
-        }
+    if let Some(start) = find_section_start(&transformed, "## Tool Call Style")
+        && let Some(end) = find_next_h2(&transformed, start)
+    {
+        transformed.replace_range(start..end, "");
     }
 
     // Also remove ## Tool availability section if present
-    if let Some(start) = find_section_start(&transformed, "## Tool availability") {
-        if let Some(end) = find_next_h2(&transformed, start) {
-            // Keep tool list for reference but simplify
-            transformed.replace_range(start..end, "");
-        }
+    if let Some(start) = find_section_start(&transformed, "## Tool availability")
+        && let Some(end) = find_next_h2(&transformed, start)
+    {
+        // Keep tool list for reference but simplify
+        transformed.replace_range(start..end, "");
     }
 
     transformed
@@ -99,10 +96,11 @@ pub fn transform_system_prompt_for_chatgpt(
 ) -> String {
     let mut transformed = system_text.to_string();
 
-    if let Some(start) = find_section_start(&transformed, "## Tooling") {
-        if let Some(end) = find_next_h2(&transformed, start) {
-            let replacement = format!(
-                r#"## System Access (IMPORTANT — read carefully)
+    if let Some(start) = find_section_start(&transformed, "## Tooling")
+        && let Some(end) = find_next_h2(&transformed, start)
+    {
+        let replacement = format!(
+            r#"## System Access (IMPORTANT — read carefully)
 You have TWO environments:
 1. ❌ Code sandbox — an isolated container. It does NOT have the user's files.
 2. ✅ Host system — the user's real machine. Accessed ONLY through blockquote requests.
@@ -123,16 +121,15 @@ Output ALL blockquote requests FIRST. Wait for results. Then respond to the user
 ❌ NEVER use your code sandbox to read files — those are NOT the user's files.
 
 "#
-            );
-            transformed.replace_range(start..end, &replacement);
-        }
+        );
+        transformed.replace_range(start..end, &replacement);
     }
 
     // Remove ## Tool Call Style section
-    if let Some(start) = find_section_start(&transformed, "## Tool Call Style") {
-        if let Some(end) = find_next_h2(&transformed, start) {
-            transformed.replace_range(start..end, "");
-        }
+    if let Some(start) = find_section_start(&transformed, "## Tool Call Style")
+        && let Some(end) = find_next_h2(&transformed, start)
+    {
+        transformed.replace_range(start..end, "");
     }
 
     transformed
@@ -174,12 +171,10 @@ pub fn consolidate_messages(
         }
 
         match msg.role {
-            Role::System => {
-                parts.push(format!(
-                    "<system_instruction>\n{}\n</system_instruction>",
-                    text
-                ))
-            }
+            Role::System => parts.push(format!(
+                "<system_instruction>\n{}\n</system_instruction>",
+                text
+            )),
             Role::User => parts.push(format!("<user>\n{}\n</user>", text)),
             Role::Assistant => parts.push(format!("<assistant>\n{}\n</assistant>", text)),
             Role::Tool => parts.push(format!("<tool_result>\n{}\n</tool_result>", text)),
@@ -306,15 +301,15 @@ fn parse_code_block_tool_calls(text: &str) -> Vec<TextToolCall> {
         if let Some(end_idx) = after.find("```") {
             let content = after[..end_idx].trim();
 
-            if let Ok(parsed) = serde_json::from_str::<Value>(content) {
-                if let Some(name) = extract_function_name(&parsed) {
-                    let params = extract_function_params(&parsed);
-                    calls.push(TextToolCall {
-                        name,
-                        params,
-                        raw: remaining[start_idx..start_idx + 12 + end_idx + 3].to_string(),
-                    });
-                }
+            if let Ok(parsed) = serde_json::from_str::<Value>(content)
+                && let Some(name) = extract_function_name(&parsed)
+            {
+                let params = extract_function_params(&parsed);
+                calls.push(TextToolCall {
+                    name,
+                    params,
+                    raw: remaining[start_idx..start_idx + 12 + end_idx + 3].to_string(),
+                });
             }
             remaining = &after[end_idx + 3..];
         } else {
@@ -336,27 +331,21 @@ fn parse_blockquote_tool_calls(text: &str) -> Vec<TextToolCall> {
         let trimmed = line.trim();
         if let Some(json_part) = trimmed.strip_prefix("> ") {
             let json_part = json_part.trim();
-            if json_part.starts_with('{') {
-                if let Ok(parsed) = serde_json::from_str::<Value>(json_part) {
-                    if parsed
-                        .get("action")
-                        .and_then(|v| v.as_str())
-                        == Some("function_call")
-                    {
-                        if let Some(name) = parsed.get("name").and_then(|v| v.as_str()) {
-                            let params = parsed
-                                .get("arguments")
-                                .or_else(|| parsed.get("params"))
-                                .cloned()
-                                .unwrap_or(Value::Object(serde_json::Map::new()));
-                            calls.push(TextToolCall {
-                                name: name.to_string(),
-                                params,
-                                raw: line.to_string(),
-                            });
-                        }
-                    }
-                }
+            if json_part.starts_with('{')
+                && let Ok(parsed) = serde_json::from_str::<Value>(json_part)
+                && parsed.get("action").and_then(|v| v.as_str()) == Some("function_call")
+                && let Some(name) = parsed.get("name").and_then(|v| v.as_str())
+            {
+                let params = parsed
+                    .get("arguments")
+                    .or_else(|| parsed.get("params"))
+                    .cloned()
+                    .unwrap_or(Value::Object(serde_json::Map::new()));
+                calls.push(TextToolCall {
+                    name: name.to_string(),
+                    params,
+                    raw: line.to_string(),
+                });
             }
         }
     }
@@ -407,15 +396,15 @@ fn parse_json_tool_calls(text: &str) -> Vec<TextToolCall> {
 
             let candidate: String = chars[start..=i.min(chars.len() - 1)].iter().collect();
 
-            if let Ok(parsed) = serde_json::from_str::<Value>(&candidate) {
-                if let Some(name) = extract_function_name(&parsed) {
-                    let params = extract_function_params(&parsed);
-                    calls.push(TextToolCall {
-                        name,
-                        params,
-                        raw: candidate,
-                    });
-                }
+            if let Ok(parsed) = serde_json::from_str::<Value>(&candidate)
+                && let Some(name) = extract_function_name(&parsed)
+            {
+                let params = extract_function_params(&parsed);
+                calls.push(TextToolCall {
+                    name,
+                    params,
+                    raw: candidate,
+                });
             }
         }
         i += 1;
@@ -432,12 +421,11 @@ fn parse_json_tool_calls(text: &str) -> Vec<TextToolCall> {
 /// - `{"name":"read", "arguments":{...}}`
 fn extract_function_name(parsed: &Value) -> Option<String> {
     // Format 1: {"action":"function_call", "name":"..."}
-    if parsed
-        .get("action")
-        .and_then(|v| v.as_str())
-        == Some("function_call")
-    {
-        return parsed.get("name").and_then(|v| v.as_str()).map(String::from);
+    if parsed.get("action").and_then(|v| v.as_str()) == Some("function_call") {
+        return parsed
+            .get("name")
+            .and_then(|v| v.as_str())
+            .map(String::from);
     }
 
     // Format 2: {"function":"...", "params":{...}}
@@ -446,21 +434,22 @@ fn extract_function_name(parsed: &Value) -> Option<String> {
     }
 
     // Format 3: {"name":"...", "arguments":{...}} (if has arguments key)
-    if parsed.get("arguments").is_some() || parsed.get("params").is_some() {
-        if let Some(name) = parsed.get("name").and_then(|v| v.as_str()) {
-            // Avoid matching arbitrary JSON objects that just have a "name" field
-            // but aren't tool calls
-            if !name.is_empty() {
-                return Some(name.to_string());
-            }
+    if (parsed.get("arguments").is_some() || parsed.get("params").is_some())
+        && let Some(name) = parsed.get("name").and_then(|v| v.as_str())
+    {
+        // Avoid matching arbitrary JSON objects that just have a "name" field
+        // but aren't tool calls
+        if !name.is_empty() {
+            return Some(name.to_string());
         }
     }
 
     // Format 4: {"action":"read", "arguments":{...}} — action IS the function name
-    if let Some(action) = parsed.get("action").and_then(|v| v.as_str()) {
-        if action != "function_call" && parsed.get("arguments").is_some() {
-            return Some(action.to_string());
-        }
+    if let Some(action) = parsed.get("action").and_then(|v| v.as_str())
+        && action != "function_call"
+        && parsed.get("arguments").is_some()
+    {
+        return Some(action.to_string());
     }
 
     None
@@ -505,14 +494,10 @@ pub fn strip_tool_call_text(text: &str, tool_calls: &[ToolCall]) -> String {
             let trimmed = line.trim();
             if let Some(json_part) = trimmed.strip_prefix("> ") {
                 let json_part = json_part.trim();
-                if let Ok(parsed) = serde_json::from_str::<Value>(json_part) {
-                    if parsed
-                        .get("action")
-                        .and_then(|v| v.as_str())
-                        == Some("function_call")
-                    {
-                        return false; // Remove this line
-                    }
+                if let Ok(parsed) = serde_json::from_str::<Value>(json_part)
+                    && parsed.get("action").and_then(|v| v.as_str()) == Some("function_call")
+                {
+                    return false; // Remove this line
                 }
             }
             true
@@ -715,7 +700,8 @@ Done."#;
 
     #[test]
     fn test_transform_system_prompt() {
-        let system = "You are a helpful assistant.\n\n## Tooling\nUse tools wisely.\n\n## Other\nBe nice.";
+        let system =
+            "You are a helpful assistant.\n\n## Tooling\nUse tools wisely.\n\n## Other\nBe nice.";
         let tools = vec![ToolDefinition {
             name: "read".to_string(),
             description: "Read a file".to_string(),
@@ -755,7 +741,8 @@ Done."#;
 
     #[test]
     fn test_gemini_parser_isolated() {
-        let text = r#"{"action":"function_call","name":"read","arguments":{"path":"/etc/hostname"}}"#;
+        let text =
+            r#"{"action":"function_call","name":"read","arguments":{"path":"/etc/hostname"}}"#;
         let calls = parse_gemini_tool_calls(text);
         assert_eq!(calls.len(), 1);
     }

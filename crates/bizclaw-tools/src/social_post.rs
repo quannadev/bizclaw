@@ -64,13 +64,11 @@ impl SocialPostTool {
     /// Post to Facebook Page via Graph API.
     async fn post_facebook(&self, req: &PostRequest) -> String {
         if req.access_token.is_empty() || req.page_id.is_empty() {
-            return "❌ Thiếu access_token hoặc page_id cho Facebook. Cấu hình trong agent config.".into();
+            return "❌ Thiếu access_token hoặc page_id cho Facebook. Cấu hình trong agent config."
+                .into();
         }
 
-        let url = format!(
-            "https://graph.facebook.com/v21.0/{}/feed",
-            req.page_id
-        );
+        let url = format!("https://graph.facebook.com/v21.0/{}/feed", req.page_id);
 
         let mut params = vec![
             ("message", req.content.as_str()),
@@ -97,9 +95,7 @@ impl SocialPostTool {
                                 truncate_safe(&req.content, 100)
                             )
                         } else {
-                            let err = body["error"]["message"]
-                                .as_str()
-                                .unwrap_or("Unknown error");
+                            let err = body["error"]["message"].as_str().unwrap_or("Unknown error");
                             format!("❌ Facebook API error: {}", err)
                         }
                     }
@@ -116,10 +112,7 @@ impl SocialPostTool {
             return "❌ Thiếu bot_token hoặc chat_id cho Telegram.".into();
         }
 
-        let url = format!(
-            "https://api.telegram.org/bot{}/sendMessage",
-            req.bot_token
-        );
+        let url = format!("https://api.telegram.org/bot{}/sendMessage", req.bot_token);
 
         let body = serde_json::json!({
             "chat_id": req.chat_id,
@@ -134,9 +127,7 @@ impl SocialPostTool {
                 match resp.json::<serde_json::Value>().await {
                     Ok(result) => {
                         if status.is_success() && result["ok"].as_bool() == Some(true) {
-                            let msg_id = result["result"]["message_id"]
-                                .as_i64()
-                                .unwrap_or(0);
+                            let msg_id = result["result"]["message_id"].as_i64().unwrap_or(0);
                             format!(
                                 "✅ Đã đăng bài lên Telegram Channel!\n\
                                  • Message ID: {}\n\
@@ -147,9 +138,7 @@ impl SocialPostTool {
                                 truncate_safe(&req.content, 100)
                             )
                         } else {
-                            let err = result["description"]
-                                .as_str()
-                                .unwrap_or("Unknown error");
+                            let err = result["description"].as_str().unwrap_or("Unknown error");
                             format!("❌ Telegram API error: {}", err)
                         }
                     }
@@ -194,7 +183,10 @@ impl SocialPostTool {
         let now = chrono::Local::now();
         let suggestions = vec![
             (now + chrono::Duration::hours(1), "Giờ tiếp theo"),
-            (now + chrono::Duration::hours(3), "Khung giờ vàng buổi chiều"),
+            (
+                now + chrono::Duration::hours(3),
+                "Khung giờ vàng buổi chiều",
+            ),
             (now + chrono::Duration::days(1), "Sáng mai"),
         ];
 
@@ -318,13 +310,15 @@ impl Tool for SocialPostTool {
                         "telegram" => self.post_telegram(&req).await,
                         "webhook" => self.post_webhook(&req).await,
                         "" => "❌ Chưa chọn platform (facebook/telegram/webhook)".into(),
-                        other => format!("❌ Platform '{}' chưa hỗ trợ. Dùng: facebook, telegram, webhook", other),
+                        other => format!(
+                            "❌ Platform '{}' chưa hỗ trợ. Dùng: facebook, telegram, webhook",
+                            other
+                        ),
                     }
                 }
             }
             "schedule_suggest" => self.suggest_schedule(&req.content),
-            "list_platforms" | _ => {
-                "📱 Nền tảng hỗ trợ đăng bài:\n\n\
+            "list_platforms" | _ => "📱 Nền tảng hỗ trợ đăng bài:\n\n\
                  1. 📘 **Facebook Page** — Cần: page_id + access_token\n\
                     • Đăng bài text, link, ảnh lên Page\n\
                     • Lấy access_token tại: developers.facebook.com\n\n\
@@ -339,8 +333,7 @@ impl Tool for SocialPostTool {
                     • Custom endpoint\n\n\
                  💡 Ví dụ: action='create_post', platform='telegram', \
                     content='Hello world!', bot_token='xxx', chat_id='@mychannel'"
-                    .into()
-            }
+                .into(),
         };
 
         Ok(ToolResult {
@@ -421,9 +414,7 @@ mod tests {
     async fn test_facebook_missing_token() {
         let tool = SocialPostTool::new();
         let result = tool
-            .execute(
-                r#"{"action": "create_post", "platform": "facebook", "content": "test"}"#,
-            )
+            .execute(r#"{"action": "create_post", "platform": "facebook", "content": "test"}"#)
             .await
             .unwrap();
         assert!(result.output.contains("Thiếu access_token"));
@@ -433,9 +424,7 @@ mod tests {
     async fn test_telegram_missing_token() {
         let tool = SocialPostTool::new();
         let result = tool
-            .execute(
-                r#"{"action": "create_post", "platform": "telegram", "content": "test"}"#,
-            )
+            .execute(r#"{"action": "create_post", "platform": "telegram", "content": "test"}"#)
             .await
             .unwrap();
         assert!(result.output.contains("Thiếu bot_token"));

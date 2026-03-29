@@ -99,7 +99,9 @@ async fn main() -> Result<()> {
     });
 
     // Override system prompt for local mode
-    if config.identity.system_prompt.is_empty() || config.identity.system_prompt.contains("AI assistant") {
+    if config.identity.system_prompt.is_empty()
+        || config.identity.system_prompt.contains("AI assistant")
+    {
         config.identity.system_prompt = format!(
             "Bạn là BizClaw Local — trợ lý AI chạy trực tiếp trên máy người dùng.\n\
              Bạn có TOÀN QUYỀN truy cập hệ thống file và terminal.\n\
@@ -129,7 +131,11 @@ async fn main() -> Result<()> {
     } else {
         // ── Interactive mode ──
         println!("🦀 BizClaw Local v{}", env!("CARGO_PKG_VERSION"));
-        println!("   Provider: {} | Workdir: {}", agent.provider_name(), workdir);
+        println!(
+            "   Provider: {} | Workdir: {}",
+            agent.provider_name(),
+            workdir
+        );
         println!("   Tools: file, shell, edit_file, glob, grep, web_search, social_post, ...");
         if cli.sync {
             println!("   🔗 Sync: {}", cli.remote);
@@ -180,16 +186,14 @@ async fn main() -> Result<()> {
                     println!("   zalo_tool     — Zalo automation");
                     println!("   nl_query      — Natural language → SQL\n");
                 }
-                _ => {
-                    match agent.handle_incoming(&incoming).await {
-                        Ok(response) => {
-                            cli_channel.send(response).await?;
-                        }
-                        Err(e) => {
-                            println!("\n❌ Error: {e}\n");
-                        }
+                _ => match agent.handle_incoming(&incoming).await {
+                    Ok(response) => {
+                        cli_channel.send(response).await?;
                     }
-                }
+                    Err(e) => {
+                        println!("\n❌ Error: {e}\n");
+                    }
+                },
             }
             print!("You: ");
             std::io::stdout().flush()?;

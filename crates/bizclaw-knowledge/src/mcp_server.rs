@@ -169,9 +169,7 @@ pub fn knowledge_tools() -> Vec<McpToolDef> {
 }
 
 /// Build the list of MCP resources (document URIs).
-pub fn knowledge_resources(
-    documents: &[crate::store::DocumentInfo],
-) -> Vec<McpResourceDef> {
+pub fn knowledge_resources(documents: &[crate::store::DocumentInfo]) -> Vec<McpResourceDef> {
     documents
         .iter()
         .map(|d| McpResourceDef {
@@ -179,7 +177,10 @@ pub fn knowledge_resources(
             name: d.name.clone(),
             description: format!(
                 "{} ({}, {} chunks, {})",
-                d.name, d.mimetype, d.chunk_count, format_bytes(d.file_size)
+                d.name,
+                d.mimetype,
+                d.chunk_count,
+                format_bytes(d.file_size)
             ),
             mime_type: if d.mimetype.is_empty() {
                 "text/plain".into()

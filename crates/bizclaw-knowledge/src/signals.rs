@@ -82,8 +82,7 @@ pub struct SignalLogger {
 impl SignalLogger {
     /// Open or create the signal database.
     pub fn open(path: &std::path::Path) -> Result<Self, String> {
-        let conn = rusqlite::Connection::open(path)
-            .map_err(|e| format!("Open signal DB: {e}"))?;
+        let conn = rusqlite::Connection::open(path).map_err(|e| format!("Open signal DB: {e}"))?;
 
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS interaction_signals (
@@ -104,7 +103,7 @@ impl SignalLogger {
             CREATE INDEX IF NOT EXISTS idx_signals_reward
                 ON interaction_signals(reward);
             CREATE INDEX IF NOT EXISTS idx_signals_created
-                ON interaction_signals(created_at);"
+                ON interaction_signals(created_at);",
         )
         .map_err(|e| format!("Create signal schema: {e}"))?;
 
@@ -148,30 +147,44 @@ impl SignalLogger {
         let msg = user_next_message.to_lowercase();
 
         // Positive signals
-        if msg.contains("cảm ơn") || msg.contains("thank")
-            || msg.contains("đúng rồi") || msg.contains("correct")
-            || msg.contains("tốt lắm") || msg.contains("great")
-            || msg.contains("ok") || msg.contains("perfect")
-            || msg.contains("👍") || msg.contains("✅")
-            || msg.contains("hay") || msg.contains("good")
+        if msg.contains("cảm ơn")
+            || msg.contains("thank")
+            || msg.contains("đúng rồi")
+            || msg.contains("correct")
+            || msg.contains("tốt lắm")
+            || msg.contains("great")
+            || msg.contains("ok")
+            || msg.contains("perfect")
+            || msg.contains("👍")
+            || msg.contains("✅")
+            || msg.contains("hay")
+            || msg.contains("good")
         {
             return (SignalType::Positive, 1);
         }
 
         // Negative signals
-        if msg.contains("không phải") || msg.contains("sai rồi")
-            || msg.contains("wrong") || msg.contains("incorrect")
-            || msg.contains("không đúng") || msg.contains("nhầm")
-            || msg.contains("lại đi") || msg.contains("try again")
-            || msg.contains("👎") || msg.contains("❌")
-            || msg.contains("làm lại") || msg.contains("sửa lại")
+        if msg.contains("không phải")
+            || msg.contains("sai rồi")
+            || msg.contains("wrong")
+            || msg.contains("incorrect")
+            || msg.contains("không đúng")
+            || msg.contains("nhầm")
+            || msg.contains("lại đi")
+            || msg.contains("try again")
+            || msg.contains("👎")
+            || msg.contains("❌")
+            || msg.contains("làm lại")
+            || msg.contains("sửa lại")
         {
             return (SignalType::Negative, -1);
         }
 
         // Directive (correction with content)
-        if msg.starts_with("không,") || msg.starts_with("sai,")
-            || msg.starts_with("actually") || msg.starts_with("no,")
+        if msg.starts_with("không,")
+            || msg.starts_with("sai,")
+            || msg.starts_with("actually")
+            || msg.starts_with("no,")
         {
             return (SignalType::Negative, -1);
         }
@@ -196,19 +209,23 @@ impl SignalLogger {
                 .unwrap_or(0)
         } else {
             self.conn
-                .query_row(
-                    "SELECT COUNT(*) FROM interaction_signals",
-                    [],
-                    |row| row.get(0),
-                )
+                .query_row("SELECT COUNT(*) FROM interaction_signals", [], |row| {
+                    row.get(0)
+                })
                 .unwrap_or(0)
         };
 
         let positive: i64 = if let Some(name) = param {
             self.conn
                 .query_row(
-                    &format!("SELECT COUNT(*) FROM interaction_signals {} AND reward > 0",
-                        if where_clause.is_empty() { "WHERE 1=1" } else { where_clause }),
+                    &format!(
+                        "SELECT COUNT(*) FROM interaction_signals {} AND reward > 0",
+                        if where_clause.is_empty() {
+                            "WHERE 1=1"
+                        } else {
+                            where_clause
+                        }
+                    ),
                     params![name],
                     |row| row.get(0),
                 )
@@ -226,8 +243,14 @@ impl SignalLogger {
         let negative: i64 = if let Some(name) = param {
             self.conn
                 .query_row(
-                    &format!("SELECT COUNT(*) FROM interaction_signals {} AND reward < 0",
-                        if where_clause.is_empty() { "WHERE 1=1" } else { where_clause }),
+                    &format!(
+                        "SELECT COUNT(*) FROM interaction_signals {} AND reward < 0",
+                        if where_clause.is_empty() {
+                            "WHERE 1=1"
+                        } else {
+                            where_clause
+                        }
+                    ),
                     params![name],
                     |row| row.get(0),
                 )
@@ -277,8 +300,7 @@ impl SignalLogger {
                     session_id: row.get(2)?,
                     signal_type: {
                         let s: String = row.get(3)?;
-                        serde_json::from_str(&format!("\"{}\"", s))
-                            .unwrap_or(SignalType::Neutral)
+                        serde_json::from_str(&format!("\"{}\"", s)).unwrap_or(SignalType::Neutral)
                     },
                     user_message: row.get(4)?,
                     agent_response: row.get(5)?,
@@ -292,11 +314,11 @@ impl SignalLogger {
 
         let mut jsonl = String::new();
         for row in rows {
-            if let Ok(signal) = row {
-                if let Ok(json) = serde_json::to_string(&signal) {
-                    jsonl.push_str(&json);
-                    jsonl.push('\n');
-                }
+            if let Ok(signal) = row
+                && let Ok(json) = serde_json::to_string(&signal)
+            {
+                jsonl.push_str(&json);
+                jsonl.push('\n');
             }
         }
         Ok(jsonl)

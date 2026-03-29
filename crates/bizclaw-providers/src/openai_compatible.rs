@@ -380,17 +380,19 @@ impl Provider for OpenAiCompatibleProvider {
         let reasoning_content = choice["message"]["reasoning_content"]
             .as_str()
             .map(String::from);
-        if content.as_ref().map(|c| c.trim().is_empty()).unwrap_or(true) {
-            if let Some(ref reasoning) = reasoning_content {
-                if !reasoning.trim().is_empty() {
-                    tracing::info!(
-                        "🧠 Model returned empty content but has reasoning_content ({} chars) — synthesizing response",
-                        reasoning.len()
-                    );
-                    // Use the reasoning as the response content
-                    content = Some(reasoning.clone());
-                }
-            }
+        if content
+            .as_ref()
+            .map(|c| c.trim().is_empty())
+            .unwrap_or(true)
+            && let Some(ref reasoning) = reasoning_content
+            && !reasoning.trim().is_empty()
+        {
+            tracing::info!(
+                "🧠 Model returned empty content but has reasoning_content ({} chars) — synthesizing response",
+                reasoning.len()
+            );
+            // Use the reasoning as the response content
+            content = Some(reasoning.clone());
         }
 
         // Parse tool_calls FIRST so we can inspect them in detection below
@@ -555,27 +557,27 @@ impl Provider for OpenAiCompatibleProvider {
         // If model returned no native tool_calls but content contains structured
         // text-based tool calls (from WebAuth proxy or text-prompted models),
         // parse them and convert to OpenAI format.
-        if tool_calls.is_empty() && !tools.is_empty() {
-            if let Some(ref text) = content {
-                let text_calls = crate::text_tool_calls::parse_text_tool_calls(text);
-                if !text_calls.is_empty() {
-                    tracing::info!(
-                        "🔧 Parsed {} text-based tool call(s) from response",
-                        text_calls.len()
-                    );
-                    let clean_text =
-                        crate::text_tool_calls::strip_tool_call_text(text, &text_calls);
-                    return Ok(ProviderResponse {
-                        content: if clean_text.is_empty() {
-                            None
-                        } else {
-                            Some(clean_text)
-                        },
-                        tool_calls: text_calls,
-                        finish_reason: Some("tool_calls".into()),
-                        usage,
-                    });
-                }
+        if tool_calls.is_empty()
+            && !tools.is_empty()
+            && let Some(ref text) = content
+        {
+            let text_calls = crate::text_tool_calls::parse_text_tool_calls(text);
+            if !text_calls.is_empty() {
+                tracing::info!(
+                    "🔧 Parsed {} text-based tool call(s) from response",
+                    text_calls.len()
+                );
+                let clean_text = crate::text_tool_calls::strip_tool_call_text(text, &text_calls);
+                return Ok(ProviderResponse {
+                    content: if clean_text.is_empty() {
+                        None
+                    } else {
+                        Some(clean_text)
+                    },
+                    tool_calls: text_calls,
+                    finish_reason: Some("tool_calls".into()),
+                    usage,
+                });
             }
         }
 
@@ -645,7 +647,7 @@ fn sanitize_error_text(text: &str, max_len: usize) -> String {
     } else {
         text.to_string()
     };
-    
+
     // Mask anything that looks like an API key
     let mut result = truncated;
     for prefix in &["sk-", "key-", "api-", "Bearer "] {
@@ -653,7 +655,11 @@ fn sanitize_error_text(text: &str, max_len: usize) -> String {
             let start = idx + prefix.len();
             let end = (start + 8).min(result.len());
             let before = &result[..start];
-            let after = if end < result.len() { &result[end..] } else { "" };
+            let after = if end < result.len() {
+                &result[end..]
+            } else {
+                ""
+            };
             result = format!("{}••••{}", before, after);
         }
     }

@@ -324,16 +324,27 @@ impl AdminServer {
                     let mut mgr = watchdog_state.manager.lock().await;
                     for t in tenants {
                         if t.status == "running" && !mgr.is_running(&t.id) {
-                            tracing::warn!("🐕 Watchdog: Tenant {} marked 'running' but process missing. Restarting...", t.slug);
+                            tracing::warn!(
+                                "🐕 Watchdog: Tenant {} marked 'running' but process missing. Restarting...",
+                                t.slug
+                            );
                             // Avoid dropping lock while restarting
-                            match mgr.start_tenant(&t, &watchdog_state.bizclaw_bin, &*db) {
+                            match mgr.start_tenant(&t, &watchdog_state.bizclaw_bin, &db) {
                                 Ok(pid) => {
                                     db.update_tenant_status(&t.id, "running", Some(pid)).ok();
-                                    tracing::info!("🐕 Watchdog: Restarted tenant {} (pid={})", t.slug, pid);
+                                    tracing::info!(
+                                        "🐕 Watchdog: Restarted tenant {} (pid={})",
+                                        t.slug,
+                                        pid
+                                    );
                                 }
                                 Err(e) => {
                                     db.update_tenant_status(&t.id, "error", None).ok();
-                                    tracing::error!("🐕 Watchdog: Failed to restart tenant {}: {}", t.slug, e);
+                                    tracing::error!(
+                                        "🐕 Watchdog: Failed to restart tenant {}: {}",
+                                        t.slug,
+                                        e
+                                    );
                                 }
                             }
                         }
@@ -360,24 +371,40 @@ async fn platform_security_headers(
 ) -> axum::response::Response {
     let mut response = next.run(req).await;
     let headers = response.headers_mut();
-    headers.insert("X-Content-Type-Options", "nosniff".parse().expect("static header"));
-    headers.insert("X-Frame-Options", "SAMEORIGIN".parse().expect("static header"));
-    headers.insert("X-XSS-Protection", "1; mode=block".parse().expect("static header"));
+    headers.insert(
+        "X-Content-Type-Options",
+        "nosniff".parse().expect("static header"),
+    );
+    headers.insert(
+        "X-Frame-Options",
+        "SAMEORIGIN".parse().expect("static header"),
+    );
+    headers.insert(
+        "X-XSS-Protection",
+        "1; mode=block".parse().expect("static header"),
+    );
     headers.insert(
         "Referrer-Policy",
-        "strict-origin-when-cross-origin".parse().expect("static header"),
+        "strict-origin-when-cross-origin"
+            .parse()
+            .expect("static header"),
     );
     // HSTS — only when behind reverse proxy (production)
     if std::env::var("BIZCLAW_BIND_ALL").unwrap_or_default() != "1" {
         headers.insert(
             "Strict-Transport-Security",
-            "max-age=31536000; includeSubDomains".parse().expect("static header"),
+            "max-age=31536000; includeSubDomains"
+                .parse()
+                .expect("static header"),
         );
     }
     // Permissions-Policy — restrict browser features
-    headers.insert("Permissions-Policy",
+    headers.insert(
+        "Permissions-Policy",
         "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
-        .parse().expect("static header"));
+            .parse()
+            .expect("static header"),
+    );
     response
 }
 
@@ -807,19 +834,20 @@ async fn create_tenant(
     match create_result {
         Ok(tenant) => {
             db.log_event(
-                    "tenant_created",
-                    "admin",
-                    &tenant.id,
-                    Some(&format!("slug={}", slug)),
-                )
-                .ok();
+                "tenant_created",
+                "admin",
+                &tenant.id,
+                Some(&format!("slug={}", slug)),
+            )
+            .ok();
 
             // Auto-start the tenant so subdomain works immediately
             {
                 let mut mgr = state.manager.lock().await;
-                match mgr.start_tenant(&tenant, &state.bizclaw_bin, &*db) {
+                match mgr.start_tenant(&tenant, &state.bizclaw_bin, &db) {
                     Ok(pid) => {
-                        db.update_tenant_status(&tenant.id, "running", Some(pid)).ok();
+                        db.update_tenant_status(&tenant.id, "running", Some(pid))
+                            .ok();
                         tracing::info!(
                             "auto-start: tenant '{}' started on port {} (pid={})",
                             slug,
@@ -829,11 +857,7 @@ async fn create_tenant(
                     }
                     Err(e) => {
                         db.update_tenant_status(&tenant.id, "error", None).ok();
-                        tracing::error!(
-                            "auto-start failed for tenant '{}': {}",
-                            slug,
-                            e
-                        );
+                        tracing::error!("auto-start failed for tenant '{}': {}", slug, e);
                     }
                 }
             }
@@ -868,7 +892,9 @@ async fn delete_tenant(
 ) -> Json<serde_json::Value> {
     // Demo mode: block tenant deletion
     if std::env::var("BIZCLAW_DEMO_MODE").unwrap_or_default() == "1" {
-        return Json(serde_json::json!({"ok": false, "error": "🔒 Demo server — không thể xóa tenant."}));
+        return Json(
+            serde_json::json!({"ok": false, "error": "🔒 Demo server — không thể xóa tenant."}),
+        );
     }
 
     // RBAC: only superadmin or owner-admin can delete
@@ -1049,7 +1075,10 @@ async fn login(
 ) -> Json<serde_json::Value> {
     // Rate limiting — max 5 attempts per email per 5 minutes
     {
-        let mut attempts = state.login_attempts.lock().unwrap_or_else(|p| p.into_inner());
+        let mut attempts = state
+            .login_attempts
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
         let now = std::time::Instant::now();
         if let Some((count, first_at)) = attempts.get(&req.email) {
             if now.duration_since(*first_at).as_secs() < 300 && *count >= 5 {
@@ -1184,9 +1213,7 @@ async fn hub_skills_page() -> impl axum::response::IntoResponse {
             (axum::http::header::CACHE_CONTROL, "public, max-age=300"),
             (axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8"),
         ],
-        axum::response::Html(include_str!(
-            "../../bizclaw-gateway/src/dashboard/hub.html"
-        )),
+        axum::response::Html(include_str!("../../bizclaw-gateway/src/dashboard/hub.html")),
     )
 }
 

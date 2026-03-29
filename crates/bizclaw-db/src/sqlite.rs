@@ -1042,7 +1042,10 @@ mod tests {
         let count = store.active_delegation_count("worker").await.unwrap();
         assert_eq!(count, 2); // both pending
 
-        store.update_delegation(&d1.id, DelegationStatus::Completed, Some("ok"), None).await.unwrap();
+        store
+            .update_delegation(&d1.id, DelegationStatus::Completed, Some("ok"), None)
+            .await
+            .unwrap();
         let count = store.active_delegation_count("worker").await.unwrap();
         assert_eq!(count, 1); // one completed
     }
@@ -1075,7 +1078,10 @@ mod tests {
 
         let task = TeamTask::new(&team.id, "Test", "Desc", "creator");
         store.create_task(&task).await.unwrap();
-        store.update_task(&task.id, TaskStatus::InProgress, Some("worker"), None).await.unwrap();
+        store
+            .update_task(&task.id, TaskStatus::InProgress, Some("worker"), None)
+            .await
+            .unwrap();
 
         let tasks = store.list_agent_tasks("worker").await.unwrap();
         assert_eq!(tasks.len(), 1);
@@ -1146,7 +1152,10 @@ mod tests {
         let d = Delegation::new("a", "b", "task", DelegationMode::Sync);
         store.create_delegation(&d).await.unwrap();
 
-        store.update_delegation(&d.id, DelegationStatus::Failed, None, Some("timeout")).await.unwrap();
+        store
+            .update_delegation(&d.id, DelegationStatus::Failed, None, Some("timeout"))
+            .await
+            .unwrap();
         let fetched = store.get_delegation(&d.id).await.unwrap().unwrap();
         assert_eq!(fetched.status, DelegationStatus::Failed);
         assert_eq!(fetched.error.as_deref(), Some("timeout"));

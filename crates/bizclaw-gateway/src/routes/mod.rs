@@ -373,13 +373,19 @@ pub async fn update_config(
                 let sync_path = parent.join("config_sync.json");
                 if let Ok(json) = serde_json::to_string_pretty(&sync_data) {
                     if let Err(e) = std::fs::write(&sync_path, json) {
-                        tracing::warn!("Failed to write config sync file to {}: {e}", sync_path.display());
+                        tracing::warn!(
+                            "Failed to write config sync file to {}: {e}",
+                            sync_path.display()
+                        );
                     }
                     // SECURITY: Set 0600 — file contains api_key
                     #[cfg(unix)]
                     {
                         use std::os::unix::fs::PermissionsExt;
-                        let _ = std::fs::set_permissions(&sync_path, std::fs::Permissions::from_mode(0o600));
+                        let _ = std::fs::set_permissions(
+                            &sync_path,
+                            std::fs::Permissions::from_mode(0o600),
+                        );
                     }
                     tracing::info!("📋 Config sync file written to {}", sync_path.display());
                 }
@@ -481,7 +487,10 @@ pub async fn update_channel(
                     .unwrap_or(std::path::Path::new("."));
                 let cookie_path = cookie_dir.join("zalo_cookie.txt");
                 if let Err(e) = std::fs::write(&cookie_path, v) {
-                    tracing::warn!("Failed to save Zalo cookie to {}: {e}", cookie_path.display());
+                    tracing::warn!(
+                        "Failed to save Zalo cookie to {}: {e}",
+                        cookie_path.display()
+                    );
                 }
                 zalo_cfg.personal.cookie_path = cookie_path.display().to_string();
             }
@@ -708,7 +717,10 @@ pub async fn update_channel(
                     &sync_path,
                     serde_json::to_string_pretty(&channels_json).unwrap_or_default(),
                 ) {
-                    tracing::warn!("Failed to write channels sync to {}: {e}", sync_path.display());
+                    tracing::warn!(
+                        "Failed to write channels sync to {}: {e}",
+                        sync_path.display()
+                    );
                 }
             }
             Json(serde_json::json!({"ok": true, "message": format!("{channel_type} config saved")}))
@@ -744,7 +756,10 @@ fn save_channel_instances(state: &AppState, instances: &[serde_json::Value]) {
     let path = channel_instances_path(state);
     let json = serde_json::to_string_pretty(instances).unwrap_or_default();
     if let Err(e) = std::fs::write(&path, json) {
-        tracing::warn!("Failed to save channel instances to {}: {e}", path.display());
+        tracing::warn!(
+            "Failed to save channel instances to {}: {e}",
+            path.display()
+        );
     }
     // SECURITY: Set file permissions to 0600 (owner-only) since it contains secrets
     #[cfg(unix)]
@@ -1166,7 +1181,7 @@ pub async fn spawn_telegram_polling(
                                     let parts: Vec<&str> = msg.thread_id.split(':').collect();
                                     let chat_id: i64 = parts[0].parse().unwrap_or(0);
                                     let message_thread_id: Option<i64> = parts.get(1).and_then(|id| id.parse().ok());
-                                    
+
                                     let sender = msg.sender_name.clone().unwrap_or_default();
                                     let text = msg.content.clone();
 
@@ -1649,10 +1664,10 @@ pub async fn fetch_provider_models(
                 }
             }
         }
-        if !models.is_empty() {
-            if let Err(e) = state.db.update_provider_models("brain", &models) {
-                tracing::warn!("Failed to cache brain models in DB: {e}");
-            }
+        if !models.is_empty()
+            && let Err(e) = state.db.update_provider_models("brain", &models)
+        {
+            tracing::warn!("Failed to cache brain models in DB: {e}");
         }
         return Json(serde_json::json!({
             "ok": true,
@@ -1832,7 +1847,9 @@ pub async fn ollama_models() -> Json<serde_json::Value> {
         }
         Err(e) => {
             tracing::warn!("[security] Ollama connection failed: {e}");
-            Json(serde_json::json!({"ok": false, "error": "Local AI service is not running or unreachable"}))
+            Json(
+                serde_json::json!({"ok": false, "error": "Local AI service is not running or unreachable"}),
+            )
         }
     }
 }
@@ -2409,7 +2426,7 @@ pub async fn workflow_rules_add(
         .cloned()
         .unwrap_or(serde_json::json!({}));
     let priority = body["priority"].as_i64().unwrap_or(10) as i32;
-    let cooldown = body["cooldown_secs"].as_u64().unwrap_or(60) as u64;
+    let cooldown = body["cooldown_secs"].as_u64().unwrap_or(60);
 
     let mut rule = bizclaw_scheduler::persistence::WorkflowRule::new(
         name,
@@ -2500,14 +2517,18 @@ pub async fn knowledge_list_docs(State(state): State<Arc<AppState>>) -> Json<ser
     let kb = state.knowledge.lock().await;
     match kb.as_ref() {
         Some(store) => {
-            let docs: Vec<_> = store.list_documents().iter().map(|d| {
-                serde_json::json!({
-                    "id": d.id, "name": d.name, "source": d.source,
-                    "chunks": d.chunk_count, "mimetype": d.mimetype,
-                    "owner": d.owner, "file_size": d.file_size,
-                    "created_at": d.created_at,
+            let docs: Vec<_> = store
+                .list_documents()
+                .iter()
+                .map(|d| {
+                    serde_json::json!({
+                        "id": d.id, "name": d.name, "source": d.source,
+                        "chunks": d.chunk_count, "mimetype": d.mimetype,
+                        "owner": d.owner, "file_size": d.file_size,
+                        "created_at": d.created_at,
+                    })
                 })
-            }).collect();
+                .collect();
             let (total_docs, total_chunks) = store.stats();
             Json(serde_json::json!({
                 "ok": true, "documents": docs,
@@ -2543,9 +2564,8 @@ pub async fn knowledge_nudges(
     match kb.as_ref() {
         Some(store) => {
             let results = store.search(message, 5);
-            let mut engine = bizclaw_knowledge::NudgeEngine::new(
-                bizclaw_knowledge::NudgeConfig::default(),
-            );
+            let mut engine =
+                bizclaw_knowledge::NudgeEngine::new(bizclaw_knowledge::NudgeConfig::default());
             let nudges = engine.generate_nudges(message, &results, context);
             let items: Vec<_> = nudges
                 .iter()
@@ -2589,7 +2609,10 @@ pub async fn knowledge_mcp_call(
     Json(body): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {
     let tool_name = body["name"].as_str().unwrap_or("");
-    let arguments = body.get("arguments").cloned().unwrap_or(serde_json::json!({}));
+    let arguments = body
+        .get("arguments")
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
 
     let kb = state.knowledge.lock().await;
     match kb.as_ref() {
@@ -2598,10 +2621,10 @@ pub async fn knowledge_mcp_call(
                 name: tool_name.to_string(),
                 arguments,
             };
-            let mut engine = bizclaw_knowledge::NudgeEngine::new(
-                bizclaw_knowledge::NudgeConfig::default(),
-            );
-            let response = bizclaw_knowledge::mcp_server::handle_tool_call(store, &mut engine, &call);
+            let mut engine =
+                bizclaw_knowledge::NudgeEngine::new(bizclaw_knowledge::NudgeConfig::default());
+            let response =
+                bizclaw_knowledge::mcp_server::handle_tool_call(store, &mut engine, &call);
             Json(serde_json::json!({
                 "ok": true,
                 "content": response.content,
@@ -2613,24 +2636,28 @@ pub async fn knowledge_mcp_call(
 }
 
 /// Scan the knowledge folder for new files and auto-ingest.
-pub async fn knowledge_watch_scan(
-    State(state): State<Arc<AppState>>,
-) -> Json<serde_json::Value> {
+pub async fn knowledge_watch_scan(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let kb = state.knowledge.lock().await;
     match kb.as_ref() {
         Some(store) => {
             let watcher = bizclaw_knowledge::FolderWatcher::default_folder();
             let results = watcher.scan_and_ingest(store);
-            let added = results.iter().filter(|r| r.status == bizclaw_knowledge::watcher::IngestStatus::Added).count();
-            let items: Vec<_> = results.iter().map(|r| {
-                serde_json::json!({
-                    "filename": r.filename,
-                    "status": r.status,
-                    "chunks": r.chunks,
-                    "file_size": r.file_size,
-                    "message": r.message,
+            let added = results
+                .iter()
+                .filter(|r| r.status == bizclaw_knowledge::watcher::IngestStatus::Added)
+                .count();
+            let items: Vec<_> = results
+                .iter()
+                .map(|r| {
+                    serde_json::json!({
+                        "filename": r.filename,
+                        "status": r.status,
+                        "chunks": r.chunks,
+                        "file_size": r.file_size,
+                        "message": r.message,
+                    })
                 })
-            }).collect();
+                .collect();
             let summary = watcher.summary();
             Json(serde_json::json!({
                 "ok": true,
@@ -2678,7 +2705,8 @@ pub async fn knowledge_signal_feedback(
             let session_id = body["session_id"].as_str().unwrap_or("unknown");
 
             // Auto-detect signal type from feedback
-            let (signal_type, reward) = bizclaw_knowledge::SignalLogger::detect_signal(feedback_text);
+            let (signal_type, reward) =
+                bizclaw_knowledge::SignalLogger::detect_signal(feedback_text);
 
             let signal = bizclaw_knowledge::InteractionSignal {
                 id: uuid::Uuid::new_v4().to_string(),
@@ -2687,13 +2715,19 @@ pub async fn knowledge_signal_feedback(
                 signal_type,
                 user_message: user_message.to_string(),
                 agent_response: agent_response.to_string(),
-                feedback: if feedback_text.is_empty() { None } else { Some(feedback_text.to_string()) },
+                feedback: if feedback_text.is_empty() {
+                    None
+                } else {
+                    Some(feedback_text.to_string())
+                },
                 reward,
                 created_at: chrono::Utc::now().to_rfc3339(),
             };
 
             match logger.log(&signal) {
-                Ok(()) => Json(serde_json::json!({"ok": true, "reward": reward, "signal_type": signal.signal_type})),
+                Ok(()) => Json(
+                    serde_json::json!({"ok": true, "reward": reward, "signal_type": signal.signal_type}),
+                ),
                 Err(e) => Json(serde_json::json!({"ok": false, "error": e})),
             }
         }
@@ -2713,10 +2747,12 @@ pub async fn knowledge_add_doc(
 
     let kb = state.knowledge.lock().await;
     match kb.as_ref() {
-        Some(store) => match store.add_document_with_meta(name, content, source, owner, content.len()) {
-            Ok(chunks) => Json(serde_json::json!({"ok": true, "chunks": chunks})),
-            Err(e) => Json(serde_json::json!({"ok": false, "error": e})),
-        },
+        Some(store) => {
+            match store.add_document_with_meta(name, content, source, owner, content.len()) {
+                Ok(chunks) => Json(serde_json::json!({"ok": true, "chunks": chunks})),
+                Err(e) => Json(serde_json::json!({"ok": false, "error": e})),
+            }
+        }
         None => Json(serde_json::json!({"ok": false, "error": "Knowledge base not available"})),
     }
 }
@@ -2788,7 +2824,8 @@ pub async fn knowledge_upload_file(
                 _ => {
                     // Text-based files: convert bytes to string
                     match String::from_utf8(file_data) {
-                        Ok(content) => store.add_document_with_meta(&file_name, &content, "upload", "", file_size),
+                        Ok(content) => store
+                            .add_document_with_meta(&file_name, &content, "upload", "", file_size),
                         Err(_) => Err("File is not valid UTF-8 text".into()),
                     }
                 }
@@ -3324,7 +3361,7 @@ pub async fn connect_telegram(
                                     let parts: Vec<&str> = msg.thread_id.split(':').collect();
                                     let chat_id: i64 = parts[0].parse().unwrap_or(0);
                                     let message_thread_id: Option<i64> = parts.get(1).and_then(|id| id.parse().ok());
-                                    
+
                                     let sender = msg.sender_name.clone().unwrap_or_default();
                                     let text = msg.content.clone();
 
@@ -3546,7 +3583,9 @@ Output ONLY valid JSON, no markdown fences."#
             Ok(r) => r,
             Err(e) => {
                 tracing::error!("[security] Agent processing error: {e}");
-                return Json(serde_json::json!({"ok": false, "error": "AI processing error — please try again"}));
+                return Json(
+                    serde_json::json!({"ok": false, "error": "AI processing error — please try again"}),
+                );
             }
         },
         None => {
@@ -4134,7 +4173,8 @@ pub async fn gallery_list(State(state): State<Arc<AppState>>) -> Json<serde_json
 
     // Load built-in skills from embedded data
     let builtin: Vec<serde_json::Value> =
-        serde_json::from_str(include_str!("../../../../data/gallery-skills.json")).unwrap_or_default();
+        serde_json::from_str(include_str!("../../../../data/gallery-skills.json"))
+            .unwrap_or_default();
 
     // Load user-created skills
     let user_skills: Vec<serde_json::Value> = if gallery_path.exists() {
@@ -4675,10 +4715,10 @@ pub async fn mcp_catalog() -> Json<serde_json::Value> {
         "/root/.bizclaw/data/mcp-servers-catalog.json",
     ];
     for path in &paths {
-        if let Ok(content) = std::fs::read_to_string(path) {
-            if let Ok(catalog) = serde_json::from_str::<serde_json::Value>(&content) {
-                return Json(catalog);
-            }
+        if let Ok(content) = std::fs::read_to_string(path)
+            && let Ok(catalog) = serde_json::from_str::<serde_json::Value>(&content)
+        {
+            return Json(catalog);
         }
     }
     // Fallback: empty
@@ -4688,9 +4728,7 @@ pub async fn mcp_catalog() -> Json<serde_json::Value> {
 // ═══ Enterprise SSO API ═══
 
 /// GET /api/v1/sso/config — get SSO configuration
-pub async fn sso_config_get(
-    State(state): State<Arc<AppState>>,
-) -> Json<serde_json::Value> {
+pub async fn sso_config_get(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
     Json(serde_json::json!({
         "enabled": config.sso.enabled,
@@ -4733,7 +4771,10 @@ pub async fn sso_config_post(
         if let Some(auto) = val.get("auto_provision").and_then(|v| v.as_bool()) {
             config.sso.auto_provision = auto;
         }
-        tracing::info!("[sso] Configuration updated: provider={}", config.sso.provider);
+        tracing::info!(
+            "[sso] Configuration updated: provider={}",
+            config.sso.provider
+        );
         Json(serde_json::json!({"ok": true, "message": "SSO configuration saved"}))
     } else {
         Json(serde_json::json!({"ok": false, "error": "Invalid JSON body"}))
@@ -4775,9 +4816,7 @@ pub async fn analytics_metrics(
 // ═══ Fine-Tuning Pipeline API ═══
 
 /// GET /api/v1/fine-tuning/config — get fine-tuning configuration
-pub async fn fine_tuning_config_get(
-    State(state): State<Arc<AppState>>,
-) -> Json<serde_json::Value> {
+pub async fn fine_tuning_config_get(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
     Json(serde_json::json!({
         "enabled": config.fine_tuning.enabled,
@@ -4801,16 +4840,16 @@ pub async fn fine_tuning_datasets() -> Json<serde_json::Value> {
     let mut datasets = vec![];
     if let Ok(entries) = std::fs::read_dir(&dataset_dir) {
         for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.ends_with(".jsonl") {
-                    let meta = entry.metadata().ok();
-                    let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
-                    datasets.push(serde_json::json!({
-                        "name": name,
-                        "size_bytes": size,
-                        "path": entry.path().to_string_lossy(),
-                    }));
-                }
+            if let Some(name) = entry.file_name().to_str()
+                && name.ends_with(".jsonl")
+            {
+                let meta = entry.metadata().ok();
+                let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+                datasets.push(serde_json::json!({
+                    "name": name,
+                    "size_bytes": size,
+                    "path": entry.path().to_string_lossy(),
+                }));
             }
         }
     }
@@ -4820,9 +4859,7 @@ pub async fn fine_tuning_datasets() -> Json<serde_json::Value> {
 // ═══ Edge IoT Gateway API ═══
 
 /// GET /api/v1/edge/status — get edge gateway status
-pub async fn edge_gateway_status(
-    State(state): State<Arc<AppState>>,
-) -> Json<serde_json::Value> {
+pub async fn edge_gateway_status(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
     Json(serde_json::json!({
         "enabled": config.edge_gateway.enabled,
@@ -4841,17 +4878,20 @@ pub async fn edge_gateway_status(
 // ═══ Plugin Marketplace API ═══
 
 /// GET /api/v1/plugins — list all plugins (catalog + installed)
-pub async fn plugins_list(
-    State(state): State<Arc<AppState>>,
-) -> Json<serde_json::Value> {
+pub async fn plugins_list(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
-    let installed: Vec<serde_json::Value> = config.plugin_marketplace.installed.iter().map(|p| {
-        serde_json::json!({
-            "id": p.id,
-            "version": p.version,
-            "enabled": p.enabled,
+    let installed: Vec<serde_json::Value> = config
+        .plugin_marketplace
+        .installed
+        .iter()
+        .map(|p| {
+            serde_json::json!({
+                "id": p.id,
+                "version": p.version,
+                "enabled": p.enabled,
+            })
         })
-    }).collect();
+        .collect();
     Json(serde_json::json!({
         "marketplace_enabled": config.plugin_marketplace.enabled,
         "registry_url": config.plugin_marketplace.registry_url,
@@ -4867,26 +4907,36 @@ pub async fn plugin_install(
 ) -> Json<serde_json::Value> {
     if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
         let plugin_id = val.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
-        let version = val.get("version").and_then(|v| v.as_str()).unwrap_or("latest");
+        let version = val
+            .get("version")
+            .and_then(|v| v.as_str())
+            .unwrap_or("latest");
         tracing::info!("[plugins] Installing plugin: {} v{}", plugin_id, version);
 
         let mut config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
         // Check if already installed
-        if config.plugin_marketplace.installed.iter().any(|p| p.id == plugin_id) {
+        if config
+            .plugin_marketplace
+            .installed
+            .iter()
+            .any(|p| p.id == plugin_id)
+        {
             return Json(serde_json::json!({"ok": false, "error": "Plugin already installed"}));
         }
-        config.plugin_marketplace.installed.push(bizclaw_core::config::PluginEntry {
-            id: plugin_id.to_string(),
-            version: version.to_string(),
-            enabled: true,
-            config: serde_json::Value::Null,
-        });
+        config
+            .plugin_marketplace
+            .installed
+            .push(bizclaw_core::config::PluginEntry {
+                id: plugin_id.to_string(),
+                version: version.to_string(),
+                enabled: true,
+                config: serde_json::Value::Null,
+            });
         Json(serde_json::json!({"ok": true, "message": format!("Plugin {} installed", plugin_id)}))
     } else {
         Json(serde_json::json!({"ok": false, "error": "Invalid JSON"}))
     }
 }
-
 
 // ═══ Xiaozhi Webhook Bridge ═══
 
@@ -4904,9 +4954,7 @@ pub async fn xiaozhi_webhook(
         Ok(r) => r,
         Err(e) => {
             tracing::warn!("[security] Invalid Xiaozhi request format: {e}");
-            return Json(
-                serde_json::json!({"ok": false, "error": "Invalid request format"}),
-            );
+            return Json(serde_json::json!({"ok": false, "error": "Invalid request format"}));
         }
     };
 
@@ -4999,17 +5047,16 @@ pub async fn workflows_list(State(state): State<Arc<AppState>>) -> Json<serde_js
         .parent()
         .unwrap_or(std::path::Path::new("."))
         .join("workflows");
-    if wf_dir.exists() {
-        if let Ok(entries) = std::fs::read_dir(&wf_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().map(|e| e == "json").unwrap_or(false) {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        if let Ok(wf) = serde_json::from_str::<serde_json::Value>(&content) {
-                            workflows.push(wf);
-                        }
-                    }
-                }
+    if wf_dir.exists()
+        && let Ok(entries) = std::fs::read_dir(&wf_dir)
+    {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().map(|e| e == "json").unwrap_or(false)
+                && let Ok(content) = std::fs::read_to_string(&path)
+                && let Ok(wf) = serde_json::from_str::<serde_json::Value>(&content)
+            {
+                workflows.push(wf);
             }
         }
     }
@@ -5334,19 +5381,18 @@ pub async fn skills_list(State(state): State<Arc<AppState>>) -> Json<serde_json:
 
     // Load user-created skills
     let dir = skills_dir(&state);
-    if dir.exists() {
-        if let Ok(entries) = std::fs::read_dir(&dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().map(|e| e == "json").unwrap_or(false) {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        if let Ok(mut sk) = serde_json::from_str::<serde_json::Value>(&content) {
-                            let id = sk["id"].as_str().unwrap_or("").to_string();
-                            sk["installed"] = serde_json::json!(installed.contains(&id));
-                            skills.push(sk);
-                        }
-                    }
-                }
+    if dir.exists()
+        && let Ok(entries) = std::fs::read_dir(&dir)
+    {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().map(|e| e == "json").unwrap_or(false)
+                && let Ok(content) = std::fs::read_to_string(&path)
+                && let Ok(mut sk) = serde_json::from_str::<serde_json::Value>(&content)
+            {
+                let id = sk["id"].as_str().unwrap_or("").to_string();
+                sk["installed"] = serde_json::json!(installed.contains(&id));
+                skills.push(sk);
             }
         }
     }
@@ -5504,12 +5550,11 @@ pub async fn skills_detail(
     // Check user skills first
     let dir = skills_dir(&state);
     let path = dir.join(format!("{}.json", id));
-    if path.exists() {
-        if let Ok(content) = std::fs::read_to_string(&path) {
-            if let Ok(skill) = serde_json::from_str::<serde_json::Value>(&content) {
-                return Json(serde_json::json!({"ok": true, "skill": skill}));
-            }
-        }
+    if path.exists()
+        && let Ok(content) = std::fs::read_to_string(&path)
+        && let Ok(skill) = serde_json::from_str::<serde_json::Value>(&content)
+    {
+        return Json(serde_json::json!({"ok": true, "skill": skill}));
     }
     // Check built-in
     let list_resp = skills_list(State(state.clone())).await;
@@ -5569,12 +5614,11 @@ pub async fn tools_list(State(state): State<Arc<AppState>>) -> Json<serde_json::
     let dir = tools_dir(&state);
     if let Ok(entries) = std::fs::read_dir(&dir) {
         for entry in entries.flatten() {
-            if entry.path().extension().map_or(false, |e| e == "json") {
-                if let Ok(content) = std::fs::read_to_string(entry.path()) {
-                    if let Ok(tool) = serde_json::from_str::<serde_json::Value>(&content) {
-                        tools.push(tool);
-                    }
-                }
+            if entry.path().extension().is_some_and(|e| e == "json")
+                && let Ok(content) = std::fs::read_to_string(entry.path())
+                && let Ok(tool) = serde_json::from_str::<serde_json::Value>(&content)
+            {
+                tools.push(tool);
             }
         }
     }
@@ -5589,10 +5633,10 @@ pub async fn tools_list(State(state): State<Arc<AppState>>) -> Json<serde_json::
         .and_then(|s| serde_json::from_str(&s).ok())
         .unwrap_or_default();
     for tool in tools.iter_mut() {
-        if let Some(name) = tool["name"].as_str() {
-            if disabled.contains(&name.to_string()) {
-                tool["enabled"] = serde_json::Value::Bool(false);
-            }
+        if let Some(name) = tool["name"].as_str()
+            && disabled.contains(&name.to_string())
+        {
+            tool["enabled"] = serde_json::Value::Bool(false);
         }
     }
     Json(serde_json::json!({"tools": tools}))
@@ -5714,7 +5758,11 @@ pub async fn create_api_key(
 
     match state.db.create_api_key(name, scopes, expires_days) {
         Ok((id, raw_key)) => {
-            tracing::info!("🔑 API key created: {} ({})", name, raw_key.chars().take(10).collect::<String>());
+            tracing::info!(
+                "🔑 API key created: {} ({})",
+                name,
+                raw_key.chars().take(10).collect::<String>()
+            );
             // Track usage
             let _ = state.db.track_usage("api_keys_created", 1.0);
             Json(serde_json::json!({
@@ -5877,7 +5925,11 @@ pub async fn prometheus_metrics(State(state): State<Arc<AppState>>) -> axum::res
         orch.list_agents().len()
     };
     let providers = state.db.list_providers("").map(|p| p.len()).unwrap_or(0);
-    let active_providers = state.db.list_providers("").map(|p| p.iter().filter(|x| x.is_active).count()).unwrap_or(0);
+    let active_providers = state
+        .db
+        .list_providers("")
+        .map(|p| p.iter().filter(|x| x.is_active).count())
+        .unwrap_or(0);
     let api_keys = state.db.list_api_keys().map(|k| k.len()).unwrap_or(0);
     let (traces_count, total_tokens, total_cost) = {
         let traces = state.traces.lock().unwrap_or_else(|e| e.into_inner());
@@ -5901,10 +5953,12 @@ pub async fn prometheus_metrics(State(state): State<Arc<AppState>>) -> axum::res
     output.push_str("# HELP bizclaw_api_keys_total Number of API keys\n");
     output.push_str("# TYPE bizclaw_api_keys_total gauge\n");
     output.push_str(&format!("bizclaw_api_keys_total {api_keys}\n"));
-    output.push_str("# HELP bizclaw_traces_session_total Number of LLM traces in current session\n");
+    output
+        .push_str("# HELP bizclaw_traces_session_total Number of LLM traces in current session\n");
     output.push_str("# TYPE bizclaw_traces_session_total counter\n");
     output.push_str(&format!("bizclaw_traces_session_total {traces_count}\n"));
-    output.push_str("# HELP bizclaw_tokens_session_total Total tokens consumed in current session\n");
+    output
+        .push_str("# HELP bizclaw_tokens_session_total Total tokens consumed in current session\n");
     output.push_str("# TYPE bizclaw_tokens_session_total counter\n");
     output.push_str(&format!("bizclaw_tokens_session_total {total_tokens}\n"));
     output.push_str("# HELP bizclaw_cost_session_usd Total cost in USD for current session\n");
@@ -5921,16 +5975,23 @@ pub async fn prometheus_metrics(State(state): State<Arc<AppState>>) -> axum::res
         .unwrap()
 }
 
-
 /// GET /api/v1/audit — List audit log entries.
 pub async fn list_audit_log(
     State(state): State<Arc<AppState>>,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Json<serde_json::Value> {
-    let limit = params.get("limit").and_then(|v| v.parse().ok()).unwrap_or(50i64);
-    let offset = params.get("offset").and_then(|v| v.parse().ok()).unwrap_or(0i64);
+    let limit = params
+        .get("limit")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(50i64);
+    let offset = params
+        .get("offset")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0i64);
     match state.db.get_audit_log(limit, offset) {
-        Ok(entries) => Json(serde_json::json!({ "ok": true, "entries": entries, "count": entries.len() })),
+        Ok(entries) => {
+            Json(serde_json::json!({ "ok": true, "entries": entries, "count": entries.len() }))
+        }
         Err(e) => Json(serde_json::json!({ "ok": false, "error": e })),
     }
 }
@@ -5948,13 +6009,16 @@ pub async fn export_backup(State(state): State<Arc<AppState>>) -> axum::response
 
     // Providers (mask API keys)
     if let Ok(providers) = state.db.list_providers("") {
-        let masked: Vec<_> = providers.iter().map(|p| {
-            let mut v = serde_json::to_value(p).unwrap_or_default();
-            if let Some(obj) = v.as_object_mut() {
-                obj.insert("api_key".into(), serde_json::json!("***MASKED***"));
-            }
-            v
-        }).collect();
+        let masked: Vec<_> = providers
+            .iter()
+            .map(|p| {
+                let mut v = serde_json::to_value(p).unwrap_or_default();
+                if let Some(obj) = v.as_object_mut() {
+                    obj.insert("api_key".into(), serde_json::json!("***MASKED***"));
+                }
+                v
+            })
+            .collect();
         backup["providers"] = serde_json::json!(masked);
     }
 
@@ -5985,7 +6049,10 @@ pub async fn export_backup(State(state): State<Arc<AppState>>) -> axum::response
     axum::response::Response::builder()
         .status(200)
         .header("Content-Type", "application/json")
-        .header("Content-Disposition", format!("attachment; filename=\"{filename}\""))
+        .header(
+            "Content-Disposition",
+            format!("attachment; filename=\"{filename}\""),
+        )
         .body(axum::body::Body::from(body))
         .unwrap()
 }
@@ -5998,7 +6065,9 @@ pub async fn import_restore(
 ) -> Json<serde_json::Value> {
     // Validate backup format
     if backup.get("type").and_then(|v| v.as_str()) != Some("bizclaw-backup") {
-        return Json(serde_json::json!({ "ok": false, "error": "Invalid backup format — missing type: bizclaw-backup" }));
+        return Json(
+            serde_json::json!({ "ok": false, "error": "Invalid backup format — missing type: bizclaw-backup" }),
+        );
     }
 
     let mut restored = serde_json::Map::new();
@@ -6008,15 +6077,33 @@ pub async fn import_restore(
         let mut count = 0;
         for agent in agents {
             let name = agent.get("name").and_then(|v| v.as_str()).unwrap_or("");
-            let role = agent.get("role").and_then(|v| v.as_str()).unwrap_or("assistant");
-            let description = agent.get("description").and_then(|v| v.as_str()).unwrap_or("");
-            let provider = agent.get("provider").and_then(|v| v.as_str()).unwrap_or("openai");
-            let model = agent.get("model").and_then(|v| v.as_str()).unwrap_or("gpt-4o-mini");
-            let system_prompt = agent.get("system_prompt").and_then(|v| v.as_str()).unwrap_or("");
-            if !name.is_empty() {
-                if state.db.upsert_agent(name, role, description, provider, model, system_prompt).is_ok() {
-                    count += 1;
-                }
+            let role = agent
+                .get("role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("assistant");
+            let description = agent
+                .get("description")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let provider = agent
+                .get("provider")
+                .and_then(|v| v.as_str())
+                .unwrap_or("openai");
+            let model = agent
+                .get("model")
+                .and_then(|v| v.as_str())
+                .unwrap_or("gpt-4o-mini");
+            let system_prompt = agent
+                .get("system_prompt")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            if !name.is_empty()
+                && state
+                    .db
+                    .upsert_agent(name, role, description, provider, model, system_prompt)
+                    .is_ok()
+            {
+                count += 1;
             }
         }
         restored.insert("agents_restored".into(), serde_json::json!(count));
@@ -6027,7 +6114,8 @@ pub async fn import_restore(
         let mut count = 0;
         for (agent_name, channels) in bindings {
             if let Some(ch_arr) = channels.as_array() {
-                let channels: Vec<String> = ch_arr.iter()
+                let channels: Vec<String> = ch_arr
+                    .iter()
                     .filter_map(|v| v.as_str().map(|s| s.to_string()))
                     .collect();
                 if state.db.set_agent_channels(agent_name, &channels).is_ok() {
@@ -6052,14 +6140,18 @@ pub async fn nl_query_status(State(_state): State<Arc<AppState>>) -> Json<serde_
     let conn_mgr = bizclaw_tools::db_connection::DbConnectionManager::load_default();
     let schema_store = bizclaw_tools::db_semantic::SchemaLayerStore::default();
 
-    let connections: Vec<serde_json::Value> = conn_mgr.list().iter().map(|c| {
-        serde_json::json!({
-            "id": c.id,
-            "db_type": c.db_type,
-            "description": c.description,
-            "read_only": c.read_only,
+    let connections: Vec<serde_json::Value> = conn_mgr
+        .list()
+        .iter()
+        .map(|c| {
+            serde_json::json!({
+                "id": c.id,
+                "db_type": c.db_type,
+                "description": c.description,
+                "read_only": c.read_only,
+            })
         })
-    }).collect();
+        .collect();
 
     let indexed = schema_store.list_indexed();
     let example_store = bizclaw_tools::db_examples::SqlExampleStore::default();
@@ -6080,7 +6172,9 @@ pub async fn nl_query_ask(
     let question = body["question"].as_str().unwrap_or("");
 
     if conn_id.is_empty() || question.is_empty() {
-        return Json(serde_json::json!({"ok": false, "error": "connection_id and question required"}));
+        return Json(
+            serde_json::json!({"ok": false, "error": "connection_id and question required"}),
+        );
     }
 
     let tool = bizclaw_tools::nl_query::NlQueryTool::new();
@@ -6135,20 +6229,22 @@ pub async fn nl_query_rules_get(
     axum::extract::Path(conn_id): axum::extract::Path<String>,
 ) -> Json<serde_json::Value> {
     let store = bizclaw_tools::db_examples::BusinessRuleStore::default();
-    let rules: Vec<serde_json::Value> = store.get_rules(&conn_id).iter().map(|r| {
-        serde_json::json!({
-            "id": r.id,
-            "connection_id": r.connection_id,
-            "rule": r.rule,
+    let rules: Vec<serde_json::Value> = store
+        .get_rules(&conn_id)
+        .iter()
+        .map(|r| {
+            serde_json::json!({
+                "id": r.id,
+                "connection_id": r.connection_id,
+                "rule": r.rule,
+            })
         })
-    }).collect();
+        .collect();
     Json(serde_json::json!({"rules": rules}))
 }
 
 /// POST /api/v1/nl-query/rules — add a rule
-pub async fn nl_query_rules_add(
-    Json(body): Json<serde_json::Value>,
-) -> Json<serde_json::Value> {
+pub async fn nl_query_rules_add(Json(body): Json<serde_json::Value>) -> Json<serde_json::Value> {
     let conn_id = body["connection_id"].as_str().unwrap_or("");
     let rule = body["rule"].as_str().unwrap_or("");
 
@@ -6168,15 +6264,19 @@ pub async fn nl_query_examples_get(
     axum::extract::Path(conn_id): axum::extract::Path<String>,
 ) -> Json<serde_json::Value> {
     let store = bizclaw_tools::db_examples::SqlExampleStore::default();
-    let examples: Vec<serde_json::Value> = store.list_recent(&conn_id, 50).iter().map(|e| {
-        serde_json::json!({
-            "id": e.id,
-            "question": e.question,
-            "sql": e.sql,
-            "tables_used": e.tables_used,
-            "created_at": e.created_at,
+    let examples: Vec<serde_json::Value> = store
+        .list_recent(&conn_id, 50)
+        .iter()
+        .map(|e| {
+            serde_json::json!({
+                "id": e.id,
+                "question": e.question,
+                "sql": e.sql,
+                "tables_used": e.tables_used,
+                "created_at": e.created_at,
+            })
         })
-    }).collect();
+        .collect();
     Json(serde_json::json!({"examples": examples}))
 }
 
@@ -6211,25 +6311,29 @@ pub async fn zalo_oa_webhook(
     tracing::info!("[zalo-oa] Webhook received: {} bytes", body.len());
 
     // ── 1. Validate MAC signature (optional but recommended) ──
-    let cfg = state.full_config.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    let cfg = state
+        .full_config
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .clone();
     let zalo_configs = &cfg.channel.zalo;
     let oa_config = zalo_configs.iter().find(|z| z.mode == "official");
 
-    if let Some(mac_header) = headers.get("X-ZaloOA-Signature").or(headers.get("mac")) {
-        if let (Some(config), Ok(mac_value)) = (oa_config, mac_header.to_str()) {
-            let app_secret = &config.official.app_secret;
-            if !app_secret.is_empty() {
-                use hmac::Mac;
-                type HmacSha256 = hmac::Hmac<sha2::Sha256>;
-                if let Ok(mut mac) = HmacSha256::new_from_slice(app_secret.as_bytes()) {
-                    mac.update(body_str.as_bytes());
-                    let expected = hex::encode(mac.finalize().into_bytes());
-                    if mac_value != expected {
-                        tracing::warn!("[zalo-oa] Invalid MAC signature");
-                        return Json(serde_json::json!({"error": "Invalid signature"}));
-                    }
-                    tracing::debug!("[zalo-oa] MAC signature validated ✓");
+    if let Some(mac_header) = headers.get("X-ZaloOA-Signature").or(headers.get("mac"))
+        && let (Some(config), Ok(mac_value)) = (oa_config, mac_header.to_str())
+    {
+        let app_secret = &config.official.app_secret;
+        if !app_secret.is_empty() {
+            use hmac::Mac;
+            type HmacSha256 = hmac::Hmac<sha2::Sha256>;
+            if let Ok(mut mac) = HmacSha256::new_from_slice(app_secret.as_bytes()) {
+                mac.update(body_str.as_bytes());
+                let expected = hex::encode(mac.finalize().into_bytes());
+                if mac_value != expected {
+                    tracing::warn!("[zalo-oa] Invalid MAC signature");
+                    return Json(serde_json::json!({"error": "Invalid signature"}));
                 }
+                tracing::debug!("[zalo-oa] MAC signature validated ✓");
             }
         }
     }
@@ -6262,7 +6366,11 @@ pub async fn zalo_oa_webhook(
             tracing::info!(
                 "[zalo-oa] Text from {}: '{}' (msg_id={})",
                 sender_id,
-                if message_text.len() > 50 { &message_text[..50] } else { message_text },
+                if message_text.len() > 50 {
+                    &message_text[..50]
+                } else {
+                    message_text
+                },
                 msg_id
             );
 
@@ -6275,7 +6383,8 @@ pub async fn zalo_oa_webhook(
                         Err(e) => format!("⚠️ Agent error: {e}"),
                     }
                 } else {
-                    "⚠️ Chưa có agent được cấu hình. Vui lòng thiết lập trong Dashboard.".to_string()
+                    "⚠️ Chưa có agent được cấu hình. Vui lòng thiết lập trong Dashboard."
+                        .to_string()
                 }
             };
 
@@ -6298,12 +6407,22 @@ pub async fn zalo_oa_webhook(
                     {
                         Ok(resp) => {
                             let status = resp.status();
-                            let reply_body = resp.json::<serde_json::Value>().await.unwrap_or_default();
-                            if status.is_success() && reply_body["error"].as_i64().unwrap_or(-1) == 0 {
-                                tracing::info!("[zalo-oa] ✅ Replied to {} successfully", sender_id);
+                            let reply_body =
+                                resp.json::<serde_json::Value>().await.unwrap_or_default();
+                            if status.is_success()
+                                && reply_body["error"].as_i64().unwrap_or(-1) == 0
+                            {
+                                tracing::info!(
+                                    "[zalo-oa] ✅ Replied to {} successfully",
+                                    sender_id
+                                );
                             } else {
                                 let err_msg = reply_body["message"].as_str().unwrap_or("Unknown");
-                                tracing::error!("[zalo-oa] Reply failed: {} (code: {})", err_msg, reply_body["error"]);
+                                tracing::error!(
+                                    "[zalo-oa] Reply failed: {} (code: {})",
+                                    err_msg,
+                                    reply_body["error"]
+                                );
                             }
                         }
                         Err(e) => {

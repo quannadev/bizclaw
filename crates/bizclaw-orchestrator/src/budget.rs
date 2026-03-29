@@ -37,8 +37,10 @@ fn default_alert_threshold() -> f32 {
 /// What to do when budget is exceeded.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum BudgetExceedAction {
     /// Just notify, don't stop
+    #[default]
     Notify,
     /// Pause the agent
     Pause,
@@ -46,12 +48,6 @@ pub enum BudgetExceedAction {
     SwitchToLocal,
     /// Hard stop — reject all requests
     HardStop,
-}
-
-impl Default for BudgetExceedAction {
-    fn default() -> Self {
-        Self::Notify
-    }
 }
 
 /// Current usage stats for an agent.
@@ -376,7 +372,9 @@ mod tests {
         .await;
 
         let status = mgr.record_usage("agent-2", 5000, 5000, 0.50).await;
-        assert!(matches!(status, BudgetStatus::Ok { .. }) || matches!(status, BudgetStatus::Unlimited));
+        assert!(
+            matches!(status, BudgetStatus::Ok { .. }) || matches!(status, BudgetStatus::Unlimited)
+        );
 
         // Exceed the USD limit
         let status = mgr.record_usage("agent-2", 10000, 10000, 0.60).await;

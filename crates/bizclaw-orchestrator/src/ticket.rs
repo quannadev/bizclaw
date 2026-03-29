@@ -45,17 +45,13 @@ impl std::fmt::Display for TicketStatus {
 /// Priority level.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum Priority {
     Low,
+    #[default]
     Normal,
     High,
     Urgent,
-}
-
-impl Default for Priority {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// An event in the ticket audit trail.
@@ -515,8 +511,7 @@ mod tests {
             .create_ticket("telegram", "t-1", "u-1", "Urgent issue")
             .await;
 
-        mgr.update(&id, |t| t.escalate("Customer is VIP"))
-            .await;
+        mgr.update(&id, |t| t.escalate("Customer is VIP")).await;
         let ticket = mgr.get_ticket(&id).await.unwrap();
         assert_eq!(ticket.status, TicketStatus::Escalated);
         // Should have 3 events: Created + Escalated + StatusChanged
@@ -526,9 +521,7 @@ mod tests {
     #[tokio::test]
     async fn test_ticket_token_recording() {
         let mgr = TicketManager::new();
-        let id = mgr
-            .create_ticket("zalo", "t-2", "u-2", "Test")
-            .await;
+        let id = mgr.create_ticket("zalo", "t-2", "u-2", "Test").await;
 
         mgr.update(&id, |t| {
             t.record_tokens(1000, 0.01);
@@ -544,9 +537,7 @@ mod tests {
     #[tokio::test]
     async fn test_ticket_resolution_time() {
         let mgr = TicketManager::new();
-        let id = mgr
-            .create_ticket("messenger", "t-3", "u-3", "Help")
-            .await;
+        let id = mgr.create_ticket("messenger", "t-3", "u-3", "Help").await;
 
         mgr.update(&id, |t| t.resolve("agent-1")).await;
         let ticket = mgr.get_ticket(&id).await.unwrap();

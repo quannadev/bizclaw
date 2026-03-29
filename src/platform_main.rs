@@ -153,8 +153,8 @@ async fn main() -> Result<()> {
             }
         };
         // Read admin email from env var or CLI arg
-        let admin_email = std::env::var("BIZCLAW_ADMIN_EMAIL")
-            .unwrap_or_else(|_| cli.admin_email.clone());
+        let admin_email =
+            std::env::var("BIZCLAW_ADMIN_EMAIL").unwrap_or_else(|_| cli.admin_email.clone());
         let hash = bizclaw_platform::auth::hash_password(&admin_password)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         db.create_user(&admin_email, &hash, "superadmin", None)?;

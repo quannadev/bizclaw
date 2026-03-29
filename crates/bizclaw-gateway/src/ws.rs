@@ -137,12 +137,14 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                     Err(panic_info) => {
                         tracing::error!(
                             "[resilience] WS message handler panicked: {:?}",
-                            panic_info.downcast_ref::<String>()
+                            panic_info
+                                .downcast_ref::<String>()
                                 .map(|s| s.as_str())
                                 .or_else(|| panic_info.downcast_ref::<&str>().copied())
                                 .unwrap_or("unknown panic")
                         );
-                        send_error(&mut socket, "Internal server error (recovered from panic)").await;
+                        send_error(&mut socket, "Internal server error (recovered from panic)")
+                            .await;
                         continue;
                     }
                 };
@@ -182,7 +184,8 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                             )
                             .await;
                         } else {
-                            send_error(&mut socket, "Agent engine not available for compaction").await;
+                            send_error(&mut socket, "Agent engine not available for compaction")
+                                .await;
                         }
                     }
 
@@ -206,7 +209,11 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                             tracing::warn!(
                                 "🔐 SecretRedactor: {} secret(s) detected in user message (types: {})",
                                 incoming_findings.len(),
-                                incoming_findings.iter().map(|f| f.pattern_name).collect::<Vec<_>>().join(", ")
+                                incoming_findings
+                                    .iter()
+                                    .map(|f| f.pattern_name)
+                                    .collect::<Vec<_>>()
+                                    .join(", ")
                             );
                         }
 
@@ -380,7 +387,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                                     // ── SecretRedactor: scan OUTGOING response ──
                                     let (redacted, count) = REDACTOR.redact(&response);
                                     if count > 0 {
-                                        tracing::warn!("🔐 SecretRedactor: redacted {count} secret(s) from agent response");
+                                        tracing::warn!(
+                                            "🔐 SecretRedactor: redacted {count} secret(s) from agent response"
+                                        );
                                         response = redacted;
                                     }
                                     if stream {
@@ -533,7 +542,9 @@ async fn handle_socket(mut socket: WebSocket, state: Arc<AppState>) {
                                     // ── SecretRedactor: scan OUTGOING response ──
                                     let (redacted, count) = REDACTOR.redact(&response);
                                     if count > 0 {
-                                        tracing::warn!("🔐 SecretRedactor: redacted {count} secret(s) from direct response");
+                                        tracing::warn!(
+                                            "🔐 SecretRedactor: redacted {count} secret(s) from direct response"
+                                        );
                                         response = redacted;
                                     }
                                     // Add assistant response to fallback history
@@ -737,7 +748,7 @@ async fn chat_ollama(
             .as_str()
             .unwrap_or("")
             .to_string();
-            
+
         content = strip_think_tags(&content);
 
         let _ = send_json(
@@ -889,7 +900,7 @@ async fn chat_openai(
             .as_str()
             .unwrap_or("")
             .to_string();
-            
+
         content = strip_think_tags(&content);
 
         let _ = send_json(
@@ -934,7 +945,7 @@ async fn send_error(socket: &mut WebSocket, message: &str) {
 fn strip_think_tags(text: &str) -> String {
     let mut output = String::new();
     let mut current = text;
-    
+
     while let Some(start_idx) = current.find("<think>") {
         output.push_str(&current[..start_idx]);
         if let Some(end_idx) = current[start_idx..].find("</think>") {
@@ -946,7 +957,7 @@ fn strip_think_tags(text: &str) -> String {
         }
     }
     output.push_str(current);
-    
+
     let trimmed = output.trim();
     if trimmed.is_empty() && !text.trim().is_empty() {
         return "*(Đã suy nghĩ xong, nhưng không có thông điệp trả lời)*".to_string();
@@ -970,7 +981,7 @@ impl StreamingThinkFilter {
 
     fn process(&mut self, chunk: &str) -> String {
         self.buffer.push_str(chunk);
-        
+
         let mut result = String::new();
         loop {
             if !self.in_think {
@@ -978,7 +989,12 @@ impl StreamingThinkFilter {
                     result.push_str(&self.buffer[..idx]);
                     self.in_think = true;
                     self.buffer = self.buffer[idx + 7..].to_string();
-                } else if self.buffer.contains("<t") || self.buffer.contains("<th") || self.buffer.contains("<thi") || self.buffer.contains("<thin") || self.buffer.contains("<think") {
+                } else if self.buffer.contains("<t")
+                    || self.buffer.contains("<th")
+                    || self.buffer.contains("<thi")
+                    || self.buffer.contains("<thin")
+                    || self.buffer.contains("<think")
+                {
                     // Possible start of <think>, hold in buffer
                     break;
                 } else {
@@ -986,25 +1002,31 @@ impl StreamingThinkFilter {
                     self.buffer.clear();
                     break;
                 }
+            } else if let Some(idx) = self.buffer.find("</think>") {
+                self.in_think = false;
+                self.buffer = self.buffer[idx + 8..].to_string();
             } else {
-                if let Some(idx) = self.buffer.find("</think>") {
-                    self.in_think = false;
-                    self.buffer = self.buffer[idx + 8..].to_string();
-                } else {
-                    // Inside think block, discard safely
-                    // Keep the end if it looks like the start of </think>
-                    let mut safe_idx = self.buffer.len();
-                    if self.buffer.ends_with("<") { safe_idx -= 1; }
-                    else if self.buffer.ends_with("</") { safe_idx -= 2; }
-                    else if self.buffer.ends_with("</t") { safe_idx -= 3; }
-                    else if self.buffer.ends_with("</th") { safe_idx -= 4; }
-                    else if self.buffer.ends_with("</thi") { safe_idx -= 5; }
-                    else if self.buffer.ends_with("</thin") { safe_idx -= 6; }
-                    else if self.buffer.ends_with("</think") { safe_idx -= 7; }
-                    
-                    self.buffer = self.buffer[safe_idx..].to_string();
-                    break;
+                // Inside think block, discard safely
+                // Keep the end if it looks like the start of </think>
+                let mut safe_idx = self.buffer.len();
+                if self.buffer.ends_with("<") {
+                    safe_idx -= 1;
+                } else if self.buffer.ends_with("</") {
+                    safe_idx -= 2;
+                } else if self.buffer.ends_with("</t") {
+                    safe_idx -= 3;
+                } else if self.buffer.ends_with("</th") {
+                    safe_idx -= 4;
+                } else if self.buffer.ends_with("</thi") {
+                    safe_idx -= 5;
+                } else if self.buffer.ends_with("</thin") {
+                    safe_idx -= 6;
+                } else if self.buffer.ends_with("</think") {
+                    safe_idx -= 7;
                 }
+
+                self.buffer = self.buffer[safe_idx..].to_string();
+                break;
             }
         }
         result

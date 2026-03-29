@@ -138,11 +138,7 @@ impl EmbeddingClient {
                     delay = std::cmp::min(delay * 2, MAX_DELAY);
                 }
                 Err(e) => {
-                    tracing::error!(
-                        "❌ Embedding failed after {} attempts: {}",
-                        max_retries,
-                        e
-                    );
+                    tracing::error!("❌ Embedding failed after {} attempts: {}", max_retries, e);
                     return Err(format!(
                         "Embedding failed after {max_retries} attempts: {e}"
                     ));
@@ -206,10 +202,7 @@ impl EmbeddingClient {
     pub async fn health_check(&self) -> Result<(), String> {
         let url = match self.config.provider.as_str() {
             "ollama" => format!("{}/api/tags", self.config.endpoint.trim_end_matches('/')),
-            _ => format!(
-                "{}/v1/models",
-                self.config.endpoint.trim_end_matches('/')
-            ),
+            _ => format!("{}/v1/models", self.config.endpoint.trim_end_matches('/')),
         };
 
         let mut req = self.client.get(&url);

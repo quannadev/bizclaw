@@ -26,7 +26,8 @@ pub struct AppState {
     /// When set, Gateway accepts `Authorization: Bearer <JWT>` from Platform login.
     pub jwt_secret: String,
     /// Brute-force protection — per-IP tracking: IP → (failed_count, last_failed_at)
-    pub auth_failures: Arc<tokio::sync::Mutex<std::collections::HashMap<String, (u32, std::time::Instant)>>>,
+    pub auth_failures:
+        Arc<tokio::sync::Mutex<std::collections::HashMap<String, (u32, std::time::Instant)>>>,
     /// The Agent engine — handles chat with tools, memory, and all providers.
     pub agent: Arc<tokio::sync::Mutex<Option<bizclaw_agent::Agent>>>,
     /// Multi-Agent Orchestrator — manages multiple named agents.
@@ -150,11 +151,11 @@ async fn require_auth(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("")
         .to_string();
-    if let Some(token) = auth_header.strip_prefix("Bearer ") {
-        if let Ok(claims) = validate_jwt(token, &state.jwt_secret) {
-            inject_user(&mut req, &claims);
-            return next.run(req).await;
-        }
+    if let Some(token) = auth_header.strip_prefix("Bearer ")
+        && let Ok(claims) = validate_jwt(token, &state.jwt_secret)
+    {
+        inject_user(&mut req, &claims);
+        return next.run(req).await;
     }
 
     // Source 2: Cookie: bizclaw_token=<JWT>
@@ -166,36 +167,39 @@ async fn require_auth(
         .to_string();
     for part in cookie_header.split(';') {
         let part = part.trim();
-        if let Some(token) = part.strip_prefix("bizclaw_token=") {
-            if let Ok(claims) = validate_jwt(token.trim(), &state.jwt_secret) {
-                inject_user(&mut req, &claims);
-                return next.run(req).await;
-            }
+        if let Some(token) = part.strip_prefix("bizclaw_token=")
+            && let Ok(claims) = validate_jwt(token.trim(), &state.jwt_secret)
+        {
+            inject_user(&mut req, &claims);
+            return next.run(req).await;
         }
     }
 
     // Source 3: Query param ?token=<JWT>
     let query_str = req.uri().query().unwrap_or("").to_string();
     for pair in query_str.split('&') {
-        if let Some(token) = pair.strip_prefix("token=") {
-            if let Ok(claims) = validate_jwt(token, &state.jwt_secret) {
-                inject_user(&mut req, &claims);
-                return next.run(req).await;
-            }
+        if let Some(token) = pair.strip_prefix("token=")
+            && let Ok(claims) = validate_jwt(token, &state.jwt_secret)
+        {
+            inject_user(&mut req, &claims);
+            return next.run(req).await;
         }
     }
 
     // ── Brute-force protection (per-IP) ──
     // Extract client IP from X-Forwarded-For (behind reverse proxy) or X-Real-IP
-    let client_ip = req.headers()
+    let client_ip = req
+        .headers()
         .get("X-Forwarded-For")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.split(',').next())
         .map(|s| s.trim().to_string())
-        .or_else(|| req.headers()
-            .get("X-Real-IP")
-            .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_string()))
+        .or_else(|| {
+            req.headers()
+                .get("X-Real-IP")
+                .and_then(|v| v.to_str().ok())
+                .map(|s| s.to_string())
+        })
         .unwrap_or_else(|| "unknown".to_string());
 
     {
@@ -205,13 +209,16 @@ async fn require_auth(
             failures.retain(|_, (_, last)| last.elapsed().as_secs() < 120);
         }
         // Check if this IP is locked out
-        if let Some((count, last)) = failures.get(&client_ip) {
-            if *count >= 5 && last.elapsed().as_secs() < 60 {
-                tracing::warn!(
-                    "[security] Auth locked out for IP {} — {} failed attempts",
-                    client_ip, count
-                );
-                return axum::response::Response::builder()
+        if let Some((count, last)) = failures.get(&client_ip)
+            && *count >= 5
+            && last.elapsed().as_secs() < 60
+        {
+            tracing::warn!(
+                "[security] Auth locked out for IP {} — {} failed attempts",
+                client_ip,
+                count
+            );
+            return axum::response::Response::builder()
                     .status(axum::http::StatusCode::TOO_MANY_REQUESTS)
                     .header("Content-Type", "application/json")
                     .header("Retry-After", "60")
@@ -219,14 +226,15 @@ async fn require_auth(
                         serde_json::json!({"ok": false, "error": "Too many failed attempts. Try again in 60 seconds."}).to_string()
                     ))
                     .expect("429 response");
-            }
         }
     }
 
     // Track failed attempt (per-IP)
     {
         let mut failures = state.auth_failures.lock().await;
-        let entry = failures.entry(client_ip.clone()).or_insert((0, std::time::Instant::now()));
+        let entry = failures
+            .entry(client_ip.clone())
+            .or_insert((0, std::time::Instant::now()));
         // Reset counter if previous attempts were > 60s ago
         if entry.1.elapsed().as_secs() >= 60 {
             entry.0 = 0;
@@ -235,7 +243,8 @@ async fn require_auth(
         entry.1 = std::time::Instant::now();
         tracing::warn!(
             "[security] Failed auth attempt #{} from IP {}",
-            entry.0, client_ip
+            entry.0,
+            client_ip
         );
     }
     axum::response::Response::builder()
@@ -300,17 +309,16 @@ async fn verify_auth(
     State(state): State<Arc<AppState>>,
     Json(body): Json<serde_json::Value>,
 ) -> Json<serde_json::Value> {
-    if let Some(token) = body["token"].as_str() {
-        if !state.jwt_secret.is_empty() {
-            if let Ok(claims) = validate_jwt(token, &state.jwt_secret) {
-                return Json(serde_json::json!({
-                    "ok": true,
-                    "auth": "jwt",
-                    "email": claims.email,
-                    "role": claims.role
-                }));
-            }
-        }
+    if let Some(token) = body["token"].as_str()
+        && !state.jwt_secret.is_empty()
+        && let Ok(claims) = validate_jwt(token, &state.jwt_secret)
+    {
+        return Json(serde_json::json!({
+            "ok": true,
+            "auth": "jwt",
+            "email": claims.email,
+            "role": claims.role
+        }));
     }
     // Dev mode fallback: no JWT secret configured
     if state.jwt_secret.is_empty() {
@@ -397,7 +405,11 @@ async fn require_role_admin(
         if user.role >= Role::Admin {
             return next.run(req).await;
         }
-        tracing::warn!("[rbac] User '{}' (role={}) denied access to admin route", user.email, user.role_str);
+        tracing::warn!(
+            "[rbac] User '{}' (role={}) denied access to admin route",
+            user.email,
+            user.role_str
+        );
         return axum::response::Response::builder()
             .status(axum::http::StatusCode::FORBIDDEN)
             .header("Content-Type", "application/json")
@@ -423,7 +435,11 @@ async fn require_role_manager(
         if user.role >= Role::Manager {
             return next.run(req).await;
         }
-        tracing::warn!("[rbac] User '{}' (role={}) denied access to manager route", user.email, user.role_str);
+        tracing::warn!(
+            "[rbac] User '{}' (role={}) denied access to manager route",
+            user.email,
+            user.role_str
+        );
         return axum::response::Response::builder()
             .status(axum::http::StatusCode::FORBIDDEN)
             .header("Content-Type", "application/json")
@@ -445,17 +461,27 @@ async fn security_headers(
 ) -> axum::response::Response {
     let mut response = next.run(req).await;
     let headers = response.headers_mut();
-    headers.insert("X-Content-Type-Options", "nosniff".parse().expect("static header"));
+    headers.insert(
+        "X-Content-Type-Options",
+        "nosniff".parse().expect("static header"),
+    );
     headers.insert("X-Frame-Options", "DENY".parse().expect("static header"));
     headers.insert(
         "Referrer-Policy",
-        "strict-origin-when-cross-origin".parse().expect("static header"),
+        "strict-origin-when-cross-origin"
+            .parse()
+            .expect("static header"),
     );
-    headers.insert("X-XSS-Protection", "1; mode=block".parse().expect("static header"));
+    headers.insert(
+        "X-XSS-Protection",
+        "1; mode=block".parse().expect("static header"),
+    );
     // HSTS — tell browsers to always use HTTPS (1 year)
     headers.insert(
         "Strict-Transport-Security",
-        "max-age=31536000; includeSubDomains".parse().expect("static header"),
+        "max-age=31536000; includeSubDomains"
+            .parse()
+            .expect("static header"),
     );
     // CSP — restrict script/style sources (includes esm.sh for Preact CDN)
     // SECURITY: removed 'unsafe-eval' — only 'unsafe-inline' kept for embedded Preact dashboard
@@ -468,7 +494,6 @@ async fn security_headers(
         .parse().expect("static header"));
     response
 }
-
 
 /// Build the Axum router with all routes.
 pub fn build_router(state: AppState) -> Router {
@@ -821,24 +846,54 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route("/api/v1/usage/daily", get(super::routes::get_usage_daily))
         .route("/api/v1/usage/limits", get(super::routes::get_plan_limits))
         // Enterprise: SSO
-        .route("/api/v1/sso/config", get(super::routes::sso_config_get).post(super::routes::sso_config_post))
+        .route(
+            "/api/v1/sso/config",
+            get(super::routes::sso_config_get).post(super::routes::sso_config_post),
+        )
         // Enterprise: Analytics
         .route("/api/v1/analytics", get(super::routes::analytics_metrics))
         // Enterprise: Fine-Tuning
-        .route("/api/v1/fine-tuning/config", get(super::routes::fine_tuning_config_get))
-        .route("/api/v1/fine-tuning/datasets", get(super::routes::fine_tuning_datasets))
+        .route(
+            "/api/v1/fine-tuning/config",
+            get(super::routes::fine_tuning_config_get),
+        )
+        .route(
+            "/api/v1/fine-tuning/datasets",
+            get(super::routes::fine_tuning_datasets),
+        )
         // Enterprise: Edge IoT Gateway
-        .route("/api/v1/edge/status", get(super::routes::edge_gateway_status))
+        .route(
+            "/api/v1/edge/status",
+            get(super::routes::edge_gateway_status),
+        )
         // Enterprise: Plugin Marketplace
         .route("/api/v1/plugins", get(super::routes::plugins_list))
-        .route("/api/v1/plugins/install", post(super::routes::plugin_install))
+        .route(
+            "/api/v1/plugins/install",
+            post(super::routes::plugin_install),
+        )
         // NL Query (Text2SQL RAG)
-        .route("/api/v1/nl-query/status", get(super::routes::nl_query_status))
+        .route(
+            "/api/v1/nl-query/status",
+            get(super::routes::nl_query_status),
+        )
         .route("/api/v1/nl-query/ask", post(super::routes::nl_query_ask))
-        .route("/api/v1/nl-query/index", post(super::routes::nl_query_index))
-        .route("/api/v1/nl-query/rules/{conn_id}", get(super::routes::nl_query_rules_get))
-        .route("/api/v1/nl-query/rules", post(super::routes::nl_query_rules_add))
-        .route("/api/v1/nl-query/examples/{conn_id}", get(super::routes::nl_query_examples_get))
+        .route(
+            "/api/v1/nl-query/index",
+            post(super::routes::nl_query_index),
+        )
+        .route(
+            "/api/v1/nl-query/rules/{conn_id}",
+            get(super::routes::nl_query_rules_get),
+        )
+        .route(
+            "/api/v1/nl-query/rules",
+            post(super::routes::nl_query_rules_add),
+        )
+        .route(
+            "/api/v1/nl-query/examples/{conn_id}",
+            get(super::routes::nl_query_examples_get),
+        )
         // WebSocket (chat)
         .route("/ws", get(super::ws::ws_handler));
 
@@ -929,7 +984,9 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
                 cors.allow_origin(Any)
             } else {
                 // Production with JWT but no explicit CORS — restrict to same-origin
-                tracing::info!("🔒 CORS: same-origin only (set BIZCLAW_CORS_ORIGINS to whitelist domains)");
+                tracing::info!(
+                    "🔒 CORS: same-origin only (set BIZCLAW_CORS_ORIGINS to whitelist domains)"
+                );
                 cors
             }
         })
@@ -1211,15 +1268,13 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
                     let _ = tx.send(super::openai_compat::ActivityEvent {
                         event_type: "hand.completed".into(),
                         agent: task_name.clone(),
-                        detail: format!(
-                            "{}",
-                            if response.chars().count() > 150 {
-                                let t: String = response.chars().take(150).collect();
-                                format!("{}...", t)
-                            } else {
-                                response.clone()
-                            }
-                        ),
+                        detail: (if response.chars().count() > 150 {
+                            let t: String = response.chars().take(150).collect();
+                            format!("{}...", t)
+                        } else {
+                            response.clone()
+                        })
+                        .to_string(),
                         timestamp: chrono::Utc::now(),
                     });
 

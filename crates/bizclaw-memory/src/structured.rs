@@ -16,7 +16,6 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::path::PathBuf;
 use tracing::{debug, info, warn};
 
@@ -147,11 +146,21 @@ pub struct StructuredMemoryConfig {
     pub max_injection_tokens: usize,
 }
 
-fn default_true() -> bool { true }
-fn default_memory_path() -> String { DEFAULT_MEMORY_PATH.into() }
-fn default_max_facts() -> usize { DEFAULT_MAX_FACTS }
-fn default_confidence_threshold() -> f32 { DEFAULT_CONFIDENCE_THRESHOLD }
-fn default_max_injection_tokens() -> usize { DEFAULT_MAX_INJECTION_TOKENS }
+fn default_true() -> bool {
+    true
+}
+fn default_memory_path() -> String {
+    DEFAULT_MEMORY_PATH.into()
+}
+fn default_max_facts() -> usize {
+    DEFAULT_MAX_FACTS
+}
+fn default_confidence_threshold() -> f32 {
+    DEFAULT_CONFIDENCE_THRESHOLD
+}
+fn default_max_injection_tokens() -> usize {
+    DEFAULT_MAX_INJECTION_TOKENS
+}
 
 impl Default for StructuredMemoryConfig {
     fn default() -> Self {
@@ -180,12 +189,10 @@ impl StructuredMemory {
 
         let state = if storage_path.exists() {
             match std::fs::read_to_string(&storage_path) {
-                Ok(content) => {
-                    serde_json::from_str(&content).unwrap_or_else(|e| {
-                        warn!("Failed to parse memory.json: {e}, starting fresh");
-                        MemoryState::default()
-                    })
-                }
+                Ok(content) => serde_json::from_str(&content).unwrap_or_else(|e| {
+                    warn!("Failed to parse memory.json: {e}, starting fresh");
+                    MemoryState::default()
+                }),
                 Err(e) => {
                     warn!("Failed to read memory.json: {e}, starting fresh");
                     MemoryState::default()
@@ -237,9 +244,11 @@ impl StructuredMemory {
 
         // Whitespace-normalized dedup (matches DeerFlow behavior)
         let normalized = normalize_whitespace(&fact.content);
-        let exists = self.state.facts.iter().any(|f| {
-            normalize_whitespace(&f.content) == normalized
-        });
+        let exists = self
+            .state
+            .facts
+            .iter()
+            .any(|f| normalize_whitespace(&f.content) == normalized);
 
         if exists {
             debug!("Fact already exists (dedup): {}", fact.content);
@@ -251,7 +260,9 @@ impl StructuredMemory {
         // Enforce max facts limit — remove lowest confidence first
         if self.state.facts.len() > self.config.max_facts {
             self.state.facts.sort_by(|a, b| {
-                b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+                b.confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
             self.state.facts.truncate(self.config.max_facts);
         }
@@ -334,7 +345,9 @@ impl StructuredMemory {
             parts.push("\nKnown facts:".to_string());
             let mut sorted: Vec<&MemoryFact> = self.state.facts.iter().collect();
             sorted.sort_by(|a, b| {
-                b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+                b.confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             });
 
             for fact in sorted.iter().take(15) {
@@ -372,7 +385,11 @@ impl StructuredMemory {
         std::fs::write(&tmp_path, &json)?;
         std::fs::rename(&tmp_path, &self.storage_path)?;
 
-        debug!("💾 Memory saved: {} facts, {} bytes", self.state.facts.len(), json.len());
+        debug!(
+            "💾 Memory saved: {} facts, {} bytes",
+            self.state.facts.len(),
+            json.len()
+        );
         Ok(())
     }
 
@@ -394,7 +411,11 @@ impl StructuredMemory {
 
     /// Get facts by category.
     pub fn facts_by_category(&self, category: &FactCategory) -> Vec<&MemoryFact> {
-        self.state.facts.iter().filter(|f| &f.category == category).collect()
+        self.state
+            .facts
+            .iter()
+            .filter(|f| &f.category == category)
+            .collect()
     }
 
     /// Get user profile.
@@ -410,7 +431,8 @@ impl StructuredMemory {
     /// Search facts by keyword.
     pub fn search_facts(&self, query: &str) -> Vec<&MemoryFact> {
         let query_lower = query.to_lowercase();
-        self.state.facts
+        self.state
+            .facts
             .iter()
             .filter(|f| f.content.to_lowercase().contains(&query_lower))
             .collect()
@@ -464,7 +486,11 @@ pub struct MemoryStats {
 
 /// Normalize whitespace for dedup comparison (matches DeerFlow).
 fn normalize_whitespace(s: &str) -> String {
-    s.split_whitespace().collect::<Vec<_>>().join(" ").trim().to_lowercase()
+    s.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .to_lowercase()
 }
 
 #[cfg(test)]
@@ -490,15 +516,27 @@ mod tests {
         };
         let mut mem = StructuredMemory::new(config);
 
-        let added = mem.add_fact(make_fact("User prefers Rust", FactCategory::Preference, 0.9));
+        let added = mem.add_fact(make_fact(
+            "User prefers Rust",
+            FactCategory::Preference,
+            0.9,
+        ));
         assert!(added);
 
         // Same content → dedup
-        let added = mem.add_fact(make_fact("User prefers Rust", FactCategory::Preference, 0.95));
+        let added = mem.add_fact(make_fact(
+            "User prefers Rust",
+            FactCategory::Preference,
+            0.95,
+        ));
         assert!(!added);
 
         // Whitespace-normalized dedup
-        let added = mem.add_fact(make_fact("  User  prefers  Rust  ", FactCategory::Preference, 0.8));
+        let added = mem.add_fact(make_fact(
+            "  User  prefers  Rust  ",
+            FactCategory::Preference,
+            0.8,
+        ));
         assert!(!added);
 
         assert_eq!(mem.facts().len(), 1);
@@ -519,7 +557,11 @@ mod tests {
         assert_eq!(mem.facts().len(), 0);
 
         // Above threshold → accepted
-        let added = mem.add_fact(make_fact("High confidence fact", FactCategory::Context, 0.8));
+        let added = mem.add_fact(make_fact(
+            "High confidence fact",
+            FactCategory::Context,
+            0.8,
+        ));
         assert!(added);
         assert_eq!(mem.facts().len(), 1);
     }
@@ -592,9 +634,21 @@ mod tests {
         };
         let mut mem = StructuredMemory::new(config);
 
-        mem.add_fact(make_fact("Uses Rust for backend", FactCategory::Knowledge, 0.9));
-        mem.add_fact(make_fact("Prefers TypeScript for frontend", FactCategory::Preference, 0.8));
-        mem.add_fact(make_fact("Works on BizClaw platform", FactCategory::Context, 0.85));
+        mem.add_fact(make_fact(
+            "Uses Rust for backend",
+            FactCategory::Knowledge,
+            0.9,
+        ));
+        mem.add_fact(make_fact(
+            "Prefers TypeScript for frontend",
+            FactCategory::Preference,
+            0.8,
+        ));
+        mem.add_fact(make_fact(
+            "Works on BizClaw platform",
+            FactCategory::Context,
+            0.85,
+        ));
 
         let results = mem.search_facts("Rust");
         assert_eq!(results.len(), 1);

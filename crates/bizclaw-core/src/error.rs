@@ -247,7 +247,8 @@ mod tests {
 
     #[test]
     fn test_tool_error_sanitizes() {
-        let err = BizClawError::tool_error("db_query", "SQLITE_ERROR: no such table 'internal_secrets'");
+        let err =
+            BizClawError::tool_error("db_query", "SQLITE_ERROR: no such table 'internal_secrets'");
         let display = err.to_string();
         // Should NOT contain the real internal error detail
         assert!(!display.contains("internal_secrets"));

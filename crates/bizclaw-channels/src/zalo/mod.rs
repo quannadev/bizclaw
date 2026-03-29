@@ -55,11 +55,19 @@ impl ZaloChannel {
             } else {
                 config.personal.user_agent.clone()
             },
-            proxy: if config.personal.proxy.is_empty() { None } else { Some(config.personal.proxy.clone()) },
+            proxy: if config.personal.proxy.is_empty() {
+                None
+            } else {
+                Some(config.personal.proxy.clone())
+            },
         };
-        
-        let proxy_opt = if config.personal.proxy.is_empty() { None } else { Some(config.personal.proxy.clone()) };
-        
+
+        let proxy_opt = if config.personal.proxy.is_empty() {
+            None
+        } else {
+            Some(config.personal.proxy.clone())
+        };
+
         Self {
             auth: ZaloAuth::new(creds),
             messaging: ZaloMessaging::with_proxy(proxy_opt),
@@ -71,11 +79,7 @@ impl ZaloChannel {
             own_uid: String::new(),
             listener: None,
             msg_receiver: Arc::new(Mutex::new(None)),
-            circuit_breaker: CircuitBreaker::named(
-                "zalo",
-                5,
-                std::time::Duration::from_secs(30),
-            ),
+            circuit_breaker: CircuitBreaker::named("zalo", 5, std::time::Duration::from_secs(30)),
         }
     }
 
@@ -154,7 +158,6 @@ impl ZaloChannel {
             .with_own_uid(&self.own_uid)
             .with_self_listen(self.config.personal.self_listen)
             .with_webhook(webhook_url);
-
 
         let rx = listener.start_listening(cookie);
 
@@ -268,7 +271,8 @@ impl Channel for ZaloChannel {
             .as_ref()
             .ok_or_else(|| BizClawError::Channel("Zalo not logged in".into()))?;
 
-        match self.messaging
+        match self
+            .messaging
             .send_text(
                 &message.thread_id,
                 ZaloThreadType::User,
@@ -284,7 +288,10 @@ impl Channel for ZaloChannel {
             }
             Err(e) => {
                 self.circuit_breaker.record_failure();
-                tracing::error!("Zalo send failed: {e} (CB: {})", self.circuit_breaker.summary());
+                tracing::error!(
+                    "Zalo send failed: {e} (CB: {})",
+                    self.circuit_breaker.summary()
+                );
                 Err(e)
             }
         }

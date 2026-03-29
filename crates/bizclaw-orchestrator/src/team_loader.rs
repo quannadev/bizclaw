@@ -103,8 +103,7 @@ impl TeamConfig {
     pub fn load(path: &Path) -> Result<Self, String> {
         let content = std::fs::read_to_string(path)
             .map_err(|e| format!("Failed to read team config '{}': {}", path.display(), e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse team config: {e}"))
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse team config: {e}"))
     }
 
     /// Load from default path (`data/agent-team/team.json`).
@@ -198,9 +197,7 @@ impl TeamConfig {
 
     /// Get guard rails for an agent (as JSON value).
     pub fn get_guard_rails(&self, agent_id: &str) -> Option<serde_json::Value> {
-        self.get_agent(agent_id)?
-            .guard_rails
-            .clone()
+        self.get_agent(agent_id)?.guard_rails.clone()
     }
 
     /// Validate the configuration.
@@ -217,10 +214,16 @@ impl TeamConfig {
         let agent_ids: Vec<&str> = self.agents.iter().map(|a| a.id.as_str()).collect();
         for link in &self.delegation_links {
             if !agent_ids.contains(&link.source.as_str()) {
-                errors.push(format!("Delegation link source '{}' not found", link.source));
+                errors.push(format!(
+                    "Delegation link source '{}' not found",
+                    link.source
+                ));
             }
             if !agent_ids.contains(&link.target.as_str()) {
-                errors.push(format!("Delegation link target '{}' not found", link.target));
+                errors.push(format!(
+                    "Delegation link target '{}' not found",
+                    link.target
+                ));
             }
         }
 
@@ -256,8 +259,14 @@ impl TeamConfig {
                 out.push_str(&format!("    Specialties: {}\n", a.specialties.join(", ")));
             }
         }
-        out.push_str(&format!("\n🔗 Delegation links: {}\n", self.delegation_links.len()));
-        out.push_str(&format!("⚡ Escalation rules: {}\n", self.escalation_rules.len()));
+        out.push_str(&format!(
+            "\n🔗 Delegation links: {}\n",
+            self.delegation_links.len()
+        ));
+        out.push_str(&format!(
+            "⚡ Escalation rules: {}\n",
+            self.escalation_rules.len()
+        ));
         out
     }
 }

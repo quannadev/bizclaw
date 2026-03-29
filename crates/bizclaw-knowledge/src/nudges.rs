@@ -126,11 +126,20 @@ impl NudgeEngine {
 
         // 3. Question nudges — follow-up questions
         if self.config.suggest_questions {
-            self.add_question_nudges(user_message, search_results, conversation_context, &mut nudges);
+            self.add_question_nudges(
+                user_message,
+                search_results,
+                conversation_context,
+                &mut nudges,
+            );
         }
 
         // Sort by relevance, take top N
-        nudges.sort_by(|a, b| b.relevance.partial_cmp(&a.relevance).unwrap_or(std::cmp::Ordering::Equal));
+        nudges.sort_by(|a, b| {
+            b.relevance
+                .partial_cmp(&a.relevance)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         nudges.truncate(self.config.max_nudges);
 
         // Filter out recently shown nudges
@@ -209,8 +218,10 @@ impl NudgeEngine {
             let content_lower = r.content.to_lowercase();
 
             // Detect financial data mentions
-            if (message_lower.contains("doanh") || message_lower.contains("revenue")
-                || message_lower.contains("chi phí") || message_lower.contains("giá"))
+            if (message_lower.contains("doanh")
+                || message_lower.contains("revenue")
+                || message_lower.contains("chi phí")
+                || message_lower.contains("giá"))
                 && contains_numbers(&content_lower)
             {
                 nudges.push(Nudge {
@@ -292,7 +303,8 @@ fn generate_follow_up_questions(message: &str, results: &[SearchResult]) -> Vec<
         questions.push("Có ngoại lệ nào cho chính sách này không?".into());
     }
 
-    if message.contains("khách hàng") || message.contains("client") || message.contains("customer") {
+    if message.contains("khách hàng") || message.contains("client") || message.contains("customer")
+    {
         questions.push("Lịch sử giao dịch gần đây với khách hàng này?".into());
         questions.push("Ai là người liên hệ chính?".into());
     }
@@ -333,8 +345,12 @@ fn generate_follow_up_questions(message: &str, results: &[SearchResult]) -> Vec<
 /// Check if text contains number patterns (prices, quantities, etc.).
 fn contains_numbers(text: &str) -> bool {
     text.chars().any(|c| c.is_ascii_digit())
-        && (text.contains("triệu") || text.contains("tỷ") || text.contains("vnđ")
-            || text.contains("usd") || text.contains("đồng") || text.contains('%')
+        && (text.contains("triệu")
+            || text.contains("tỷ")
+            || text.contains("vnđ")
+            || text.contains("usd")
+            || text.contains("đồng")
+            || text.contains('%')
             || text.contains("vnd"))
 }
 
@@ -404,7 +420,9 @@ mod tests {
 
         let nudges = engine.generate_nudges("chính sách nghỉ phép", &results, None);
         // Should have a document nudge for policy.md (2 matching chunks)
-        let doc_nudge = nudges.iter().find(|n| n.category == NudgeCategory::Document);
+        let doc_nudge = nudges
+            .iter()
+            .find(|n| n.category == NudgeCategory::Document);
         assert!(doc_nudge.is_some(), "Should suggest policy.md document");
     }
 
@@ -412,7 +430,10 @@ mod tests {
     fn test_question_nudges() {
         let mut engine = NudgeEngine::new(NudgeConfig::default());
         let nudges = engine.generate_nudges("meeting với khách hàng ABC", &[], None);
-        let q_nudges: Vec<_> = nudges.iter().filter(|n| n.category == NudgeCategory::Question).collect();
+        let q_nudges: Vec<_> = nudges
+            .iter()
+            .filter(|n| n.category == NudgeCategory::Question)
+            .collect();
         assert!(!q_nudges.is_empty(), "Should suggest follow-up questions");
     }
 
@@ -428,16 +449,22 @@ mod tests {
         let nudges2 = engine.generate_nudges("test", &results, None);
         // Second call should not repeat nudges
         for n in &nudges2 {
-            assert!(!nudges1.iter().any(|n1| n1.id == n.id), "Should not repeat nudge: {}", n.id);
+            assert!(
+                !nudges1.iter().any(|n1| n1.id == n.id),
+                "Should not repeat nudge: {}",
+                n.id
+            );
         }
     }
 
     #[test]
     fn test_insight_nudge_financial() {
         let mut engine = NudgeEngine::new(NudgeConfig::default());
-        let results = vec![
-            make_result("report.md", "Doanh thu tháng 3: 500 triệu VNĐ", 0.9),
-        ];
+        let results = vec![make_result(
+            "report.md",
+            "Doanh thu tháng 3: 500 triệu VNĐ",
+            0.9,
+        )];
         let nudges = engine.generate_nudges("doanh thu tháng này", &results, None);
         let insight = nudges.iter().find(|n| n.category == NudgeCategory::Insight);
         assert!(insight.is_some(), "Should detect financial data");

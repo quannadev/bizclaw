@@ -239,9 +239,11 @@ mod tests {
 
     #[test]
     fn test_sse_auth_header() {
-        let transport = SseTransport::new("http://example.com/mcp")
-            .with_auth("my-token-123");
-        assert_eq!(transport.headers.get("Authorization").unwrap(), "Bearer my-token-123");
+        let transport = SseTransport::new("http://example.com/mcp").with_auth("my-token-123");
+        assert_eq!(
+            transport.headers.get("Authorization").unwrap(),
+            "Bearer my-token-123"
+        );
     }
 
     #[test]

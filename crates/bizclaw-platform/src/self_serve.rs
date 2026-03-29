@@ -115,7 +115,10 @@ pub async fn register_handler(
 ) -> Json<serde_json::Value> {
     // Rate limiting — max 3 registration attempts per email per 10 minutes
     {
-        let mut attempts = state.register_attempts.lock().unwrap_or_else(|p| p.into_inner());
+        let mut attempts = state
+            .register_attempts
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
         let now = std::time::Instant::now();
         if let Some((count, first_at)) = attempts.get(&req.email) {
             if now.duration_since(*first_at).as_secs() < 600 && *count >= 3 {
@@ -286,7 +289,10 @@ pub async fn forgot_password_handler(
 ) -> Json<serde_json::Value> {
     // C3 FIX: Rate limiting — max 3 password reset requests per email per 15 minutes
     {
-        let mut attempts = state.register_attempts.lock().unwrap_or_else(|p| p.into_inner()); // Reuse register_attempts for reset
+        let mut attempts = state
+            .register_attempts
+            .lock()
+            .unwrap_or_else(|p| p.into_inner()); // Reuse register_attempts for reset
         let key = format!("reset:{}", req.email);
         let now = std::time::Instant::now();
         if let Some((count, first_at)) = attempts.get(&key) {

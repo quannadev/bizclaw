@@ -110,12 +110,7 @@ impl ApprovalGate {
     }
 
     /// Submit an action for approval. Returns the approval ID.
-    pub async fn submit(
-        &self,
-        tool_name: &str,
-        arguments: &str,
-        session_id: &str,
-    ) -> ApprovalId {
+    pub async fn submit(&self, tool_name: &str, arguments: &str, session_id: &str) -> ApprovalId {
         let id = uuid::Uuid::new_v4().to_string();
 
         // Summarize arguments (truncate for safety — never expose full secrets)
@@ -265,7 +260,9 @@ mod tests {
         assert!(!gate.requires_approval("web_search"));
 
         // Submit action
-        let id = gate.submit("shell", r#"{"command":"ls -la"}"#, "session-1").await;
+        let id = gate
+            .submit("shell", r#"{"command":"ls -la"}"#, "session-1")
+            .await;
         assert!(!id.is_empty());
 
         // Check pending

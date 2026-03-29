@@ -64,7 +64,11 @@ impl WebAuthPipeline {
 
         // 1. Try to connect to existing Chrome, or launch new one
         if cdp::find_chrome_ws_url(self.cdp_port).await.is_err() {
-            tracing::info!("{} No Chrome found on port {}, launching...", LOG_TAG, self.cdp_port);
+            tracing::info!(
+                "{} No Chrome found on port {}, launching...",
+                LOG_TAG,
+                self.cdp_port
+            );
             self.launch_chrome()?;
             // Give Chrome time to start
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -129,7 +133,12 @@ impl WebAuthPipeline {
                 "about:blank",
             ])
             .spawn()
-            .map_err(|e| format!("{} Could not launch Chrome at '{}': {}", LOG_TAG, chrome_path, e))?;
+            .map_err(|e| {
+                format!(
+                    "{} Could not launch Chrome at '{}': {}",
+                    LOG_TAG, chrome_path, e
+                )
+            })?;
 
         tracing::info!("{} Chrome launched (PID: {})", LOG_TAG, child.id());
         self.chrome_process = Some(child);
@@ -191,21 +200,21 @@ fn find_chrome_binary() -> Result<String, String> {
     }
 
     // Try which/where
-    if let Ok(output) = Command::new("which").arg("google-chrome").output() {
-        if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path.is_empty() {
-                return Ok(path);
-            }
+    if let Ok(output) = Command::new("which").arg("google-chrome").output()
+        && output.status.success()
+    {
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !path.is_empty() {
+            return Ok(path);
         }
     }
 
-    if let Ok(output) = Command::new("which").arg("chromium").output() {
-        if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path.is_empty() {
-                return Ok(path);
-            }
+    if let Ok(output) = Command::new("which").arg("chromium").output()
+        && output.status.success()
+    {
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !path.is_empty() {
+            return Ok(path);
         }
     }
 
@@ -235,10 +244,7 @@ mod tests {
     #[test]
     fn test_proxy_url() {
         let pipeline = WebAuthPipeline::new();
-        assert_eq!(
-            pipeline.proxy_url(8080),
-            "http://127.0.0.1:8080/v1"
-        );
+        assert_eq!(pipeline.proxy_url(8080), "http://127.0.0.1:8080/v1");
     }
 
     #[test]

@@ -38,8 +38,8 @@
 pub mod cdp;
 pub mod cookie_auth;
 pub mod pipeline;
-pub mod proxy;
 pub mod providers;
+pub mod proxy;
 pub mod types;
 
 pub use pipeline::WebAuthPipeline;

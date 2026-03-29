@@ -118,15 +118,14 @@ pub struct ZaloAuth {
 impl ZaloAuth {
     pub fn new(credentials: ZaloCredentials) -> Self {
         let mut builder = reqwest::Client::builder().cookie_store(true);
-        
-        if let Some(ref p) = credentials.proxy {
-            if !p.is_empty() {
-                if let Ok(proxy) = reqwest::Proxy::all(p) {
-                    builder = builder.proxy(proxy);
-                }
-            }
+
+        if let Some(ref p) = credentials.proxy
+            && !p.is_empty()
+            && let Ok(proxy) = reqwest::Proxy::all(p)
+        {
+            builder = builder.proxy(proxy);
         }
-        
+
         Self {
             client: builder.build().unwrap_or_default(),
             credentials,

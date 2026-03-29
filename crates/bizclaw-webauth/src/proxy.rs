@@ -204,10 +204,7 @@ async fn handle_chat(
                             .and_then(|d| d.as_str())
                             .unwrap_or("")
                             .to_string(),
-                        parameters: func
-                            .get("parameters")
-                            .cloned()
-                            .unwrap_or_else(|| json!({})),
+                        parameters: func.get("parameters").cloned().unwrap_or_else(|| json!({})),
                     })
                 })
                 .collect()
@@ -225,8 +222,7 @@ async fn handle_chat(
     };
 
     // Consolidate messages into single prompt
-    let prompt =
-        text_tool_calls::consolidate_messages(&core_messages, &tool_defs, provider_type);
+    let prompt = text_tool_calls::consolidate_messages(&core_messages, &tool_defs, provider_type);
 
     // Send to provider
     match provider.chat(cdp, &prompt).await {
@@ -269,13 +265,19 @@ async fn handle_chat(
                         tc_values,
                     );
 
-                    return (StatusCode::OK, axum::Json(serde_json::to_value(resp).unwrap()));
+                    return (
+                        StatusCode::OK,
+                        axum::Json(serde_json::to_value(resp).unwrap()),
+                    );
                 }
             }
 
             // No tool calls — text-only response
             let resp = OpenAIChatResponse::text(model_id, &response_text);
-            (StatusCode::OK, axum::Json(serde_json::to_value(resp).unwrap()))
+            (
+                StatusCode::OK,
+                axum::Json(serde_json::to_value(resp).unwrap()),
+            )
         }
         Err(e) => {
             tracing::error!("{} Provider error: {}", LOG_TAG, e);

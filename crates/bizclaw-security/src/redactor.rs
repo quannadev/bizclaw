@@ -396,8 +396,7 @@ mod tests {
     #[test]
     fn test_detect_openai_key() {
         let redactor = SecretRedactor::new();
-        let text =
-            "key is sk-abcdefghijABCDEFGHIJabcdefghijABCDEFGHIJ12345678";
+        let text = "key is sk-abcdefghijABCDEFGHIJabcdefghijABCDEFGHIJ12345678";
         let findings = redactor.scan(text);
         assert!(findings.iter().any(|f| f.pattern_name == "openai_key"));
     }
@@ -440,15 +439,21 @@ mod tests {
         let redactor = SecretRedactor::new();
         let text = "Server at 192.168.1.100 is fine. Also 10.0.0.1 and 8.8.8.8.";
         let findings = redactor.scan(text);
-        assert!(!findings
-            .iter()
-            .any(|f| f.pattern_name == "ip_address" && f.matched_text.starts_with("192.168.")));
-        assert!(!findings
-            .iter()
-            .any(|f| f.pattern_name == "ip_address" && f.matched_text.starts_with("10.")));
-        assert!(!findings
-            .iter()
-            .any(|f| f.pattern_name == "ip_address" && f.matched_text == "8.8.8.8"));
+        assert!(
+            !findings
+                .iter()
+                .any(|f| f.pattern_name == "ip_address" && f.matched_text.starts_with("192.168."))
+        );
+        assert!(
+            !findings
+                .iter()
+                .any(|f| f.pattern_name == "ip_address" && f.matched_text.starts_with("10."))
+        );
+        assert!(
+            !findings
+                .iter()
+                .any(|f| f.pattern_name == "ip_address" && f.matched_text == "8.8.8.8")
+        );
     }
 
     #[test]
@@ -484,7 +489,9 @@ mod tests {
         let text = "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
         let findings = redactor.scan(text);
         assert!(
-            findings.iter().any(|f| f.pattern_name == "bearer" || f.pattern_name == "jwt"),
+            findings
+                .iter()
+                .any(|f| f.pattern_name == "bearer" || f.pattern_name == "jwt"),
             "Should detect bearer/jwt pattern"
         );
     }
@@ -511,7 +518,8 @@ mod tests {
     fn test_redact_custom_strings() {
         let redactor = SecretRedactor::new();
         let text = "The internal project codename is OperationPhoenix and our domain is secret-corp.internal.com";
-        let (clean, count) = redactor.redact_custom(text, &["OperationPhoenix", "secret-corp.internal.com"]);
+        let (clean, count) =
+            redactor.redact_custom(text, &["OperationPhoenix", "secret-corp.internal.com"]);
         assert!(count > 0);
         assert!(!clean.contains("OperationPhoenix"));
         assert!(clean.contains(REDACTED));

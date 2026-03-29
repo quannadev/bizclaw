@@ -72,10 +72,10 @@ impl SearchFilter {
     /// Check if a search result passes all active filters.
     pub fn matches(&self, result: &SearchResult) -> bool {
         // Check doc_names filter
-        if let Some(names) = &self.doc_names {
-            if !names.iter().any(|n| n == &result.doc_name) {
-                return false;
-            }
+        if let Some(names) = &self.doc_names
+            && !names.iter().any(|n| n == &result.doc_name)
+        {
+            return false;
         }
 
         // Check mimetypes filter
@@ -103,10 +103,10 @@ impl SearchFilter {
         }
 
         // Check score threshold
-        if let Some(threshold) = self.score_threshold {
-            if result.score < threshold {
-                return false;
-            }
+        if let Some(threshold) = self.score_threshold
+            && result.score < threshold
+        {
+            return false;
         }
 
         true
@@ -119,31 +119,28 @@ impl SearchFilter {
         let mut clauses = Vec::new();
         let mut params = Vec::new();
 
-        if let Some(names) = &self.doc_names {
-            if !names.is_empty() {
-                let placeholders: Vec<String> =
-                    (0..names.len()).map(|_| "?".to_string()).collect();
-                clauses.push(format!("d.name IN ({})", placeholders.join(",")));
-                params.extend(names.clone());
-            }
+        if let Some(names) = &self.doc_names
+            && !names.is_empty()
+        {
+            let placeholders: Vec<String> = (0..names.len()).map(|_| "?".to_string()).collect();
+            clauses.push(format!("d.name IN ({})", placeholders.join(",")));
+            params.extend(names.clone());
         }
 
-        if let Some(types) = &self.mimetypes {
-            if !types.is_empty() {
-                let placeholders: Vec<String> =
-                    (0..types.len()).map(|_| "?".to_string()).collect();
-                clauses.push(format!("d.mimetype IN ({})", placeholders.join(",")));
-                params.extend(types.clone());
-            }
+        if let Some(types) = &self.mimetypes
+            && !types.is_empty()
+        {
+            let placeholders: Vec<String> = (0..types.len()).map(|_| "?".to_string()).collect();
+            clauses.push(format!("d.mimetype IN ({})", placeholders.join(",")));
+            params.extend(types.clone());
         }
 
-        if let Some(owners) = &self.owners {
-            if !owners.is_empty() {
-                let placeholders: Vec<String> =
-                    (0..owners.len()).map(|_| "?".to_string()).collect();
-                clauses.push(format!("d.owner IN ({})", placeholders.join(",")));
-                params.extend(owners.clone());
-            }
+        if let Some(owners) = &self.owners
+            && !owners.is_empty()
+        {
+            let placeholders: Vec<String> = (0..owners.len()).map(|_| "?".to_string()).collect();
+            clauses.push(format!("d.owner IN ({})", placeholders.join(",")));
+            params.extend(owners.clone());
         }
 
         let clause = if clauses.is_empty() {
@@ -173,7 +170,12 @@ pub fn format_knowledge_context(results: &[SearchResult]) -> String {
 mod tests {
     use super::*;
 
-    fn make_result(name: &str, mime: Option<&str>, owner: Option<&str>, score: f64) -> SearchResult {
+    fn make_result(
+        name: &str,
+        mime: Option<&str>,
+        owner: Option<&str>,
+        score: f64,
+    ) -> SearchResult {
         SearchResult {
             doc_name: name.to_string(),
             chunk_idx: 0,

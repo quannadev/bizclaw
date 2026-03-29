@@ -18,6 +18,12 @@ pub struct DeepSeekWebProvider {
     models: Vec<WebAuthModel>,
 }
 
+impl Default for DeepSeekWebProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DeepSeekWebProvider {
     pub fn new() -> Self {
         Self {
@@ -156,9 +162,6 @@ mod tests {
         let p = DeepSeekWebProvider::new();
         assert_eq!(p.id(), "deepseek");
         assert_eq!(p.models().len(), 2);
-        assert!(p
-            .models()
-            .iter()
-            .any(|m| m.id == "webauth-deepseek-chat"));
+        assert!(p.models().iter().any(|m| m.id == "webauth-deepseek-chat"));
     }
 }

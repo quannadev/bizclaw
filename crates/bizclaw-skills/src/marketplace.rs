@@ -131,7 +131,11 @@ impl SkillMarketplace {
 
     /// Fetch skills from all enabled registries.
     /// Maps to ClawHub: `GET /api/v1/skills?limit=N&sort=S`
-    pub async fn fetch_from_registries(&mut self, limit: u32, sort: &str) -> Result<Vec<SkillListing>, String> {
+    pub async fn fetch_from_registries(
+        &mut self,
+        limit: u32,
+        sort: &str,
+    ) -> Result<Vec<SkillListing>, String> {
         let client = reqwest::Client::new();
         let mut all_skills = Vec::new();
 
@@ -152,7 +156,9 @@ impl SkillMarketplace {
                             }
                             tracing::info!("📦 {} skills from {}", skills.len(), source.name);
                             all_skills.extend(skills);
-                        } else if let Ok(resp) = serde_json::from_str::<ClawHubSkillsResponse>(&body) {
+                        } else if let Ok(resp) =
+                            serde_json::from_str::<ClawHubSkillsResponse>(&body)
+                        {
                             let mut skills = resp.skills;
                             for s in &mut skills {
                                 s.source = source.name.clone();
@@ -185,11 +191,7 @@ impl SkillMarketplace {
             if !source.enabled {
                 continue;
             }
-            let url = format!(
-                "{}/search?q={}",
-                source.api_url,
-                urlencoding::encode(query)
-            );
+            let url = format!("{}/search?q={}", source.api_url, urlencoding::encode(query));
             match client.get(&url).send().await {
                 Ok(resp) if resp.status().is_success() => {
                     if let Ok(mut skills) = resp.json::<Vec<SkillListing>>().await {
@@ -215,12 +217,11 @@ impl SkillMarketplace {
                 continue;
             }
             let url = format!("{}/skills/{}", source.api_url, slug);
-            if let Ok(resp) = client.get(&url).send().await {
-                if resp.status().is_success() {
-                    if let Ok(skill) = resp.json::<SkillListing>().await {
-                        return Ok(skill);
-                    }
-                }
+            if let Ok(resp) = client.get(&url).send().await
+                && resp.status().is_success()
+                && let Ok(skill) = resp.json::<SkillListing>().await
+            {
+                return Ok(skill);
             }
         }
         Err(format!("Skill '{}' not found in any registry", slug))
@@ -248,15 +249,13 @@ impl SkillMarketplace {
             // 1. Get skill metadata
             let meta_url = format!("{}/skills/{}", source.api_url, slug);
             let listing = match client.get(&meta_url).send().await {
-                Ok(r) if r.status().is_success() => {
-                    match r.json::<SkillListing>().await {
-                        Ok(mut s) => {
-                            s.source = source.name.clone();
-                            s
-                        }
-                        Err(_) => continue,
+                Ok(r) if r.status().is_success() => match r.json::<SkillListing>().await {
+                    Ok(mut s) => {
+                        s.source = source.name.clone();
+                        s
                     }
-                }
+                    Err(_) => continue,
+                },
                 _ => continue,
             };
 
@@ -266,9 +265,10 @@ impl SkillMarketplace {
                 source.api_url, slug, listing.version
             );
             let archive = match client.get(&download_url).send().await {
-                Ok(r) if r.status().is_success() => {
-                    r.bytes().await.map_err(|e| format!("Download failed: {}", e))?
-                }
+                Ok(r) if r.status().is_success() => r
+                    .bytes()
+                    .await
+                    .map_err(|e| format!("Download failed: {}", e))?,
                 Ok(r) => {
                     tracing::warn!("Download returned HTTP {}", r.status());
                     continue;
@@ -311,7 +311,9 @@ impl SkillMarketplace {
 
             tracing::info!(
                 "✅ Installed '{}' v{} from {}",
-                slug, listing.version, source.name
+                slug,
+                listing.version,
+                source.name
             );
             return Ok(listing);
         }
@@ -320,15 +322,10 @@ impl SkillMarketplace {
     }
 
     /// Uninstall a skill.
-    pub fn uninstall(
-        &mut self,
-        slug: &str,
-        install_dir: &std::path::Path,
-    ) -> Result<(), String> {
+    pub fn uninstall(&mut self, slug: &str, install_dir: &std::path::Path) -> Result<(), String> {
         let skill_dir = install_dir.join(slug);
         if skill_dir.exists() {
-            std::fs::remove_dir_all(&skill_dir)
-                .map_err(|e| format!("Failed to remove: {}", e))?;
+            std::fs::remove_dir_all(&skill_dir).map_err(|e| format!("Failed to remove: {}", e))?;
         }
         self.cache.retain(|s| s.name != slug);
         tracing::info!("🗑️ Uninstalled skill '{}'", slug);
@@ -337,7 +334,10 @@ impl SkillMarketplace {
 
     /// Check for updates across all installed skills.
     /// Compares local versions with registry versions.
-    pub async fn check_updates(&self, install_dir: &std::path::Path) -> Vec<(String, String, String)> {
+    pub async fn check_updates(
+        &self,
+        install_dir: &std::path::Path,
+    ) -> Vec<(String, String, String)> {
         let client = reqwest::Client::new();
         let mut updates = Vec::new();
 
@@ -356,19 +356,17 @@ impl SkillMarketplace {
 
             // Check remote version
             for source in &self.sources {
-                if !source.enabled { continue; }
+                if !source.enabled {
+                    continue;
+                }
                 let url = format!("{}/skills/{}", source.api_url, skill.name);
-                if let Ok(resp) = client.get(&url).send().await {
-                    if let Ok(remote) = resp.json::<SkillListing>().await {
-                        if remote.version != local_version {
-                            updates.push((
-                                skill.name.clone(),
-                                local_version.clone(),
-                                remote.version,
-                            ));
-                        }
-                        break; // Found in this source, don't check others
+                if let Ok(resp) = client.get(&url).send().await
+                    && let Ok(remote) = resp.json::<SkillListing>().await
+                {
+                    if remote.version != local_version {
+                        updates.push((skill.name.clone(), local_version.clone(), remote.version));
                     }
+                    break; // Found in this source, don't check others
                 }
             }
         }
@@ -408,10 +406,7 @@ impl SkillMarketplace {
 
     /// Filter by source registry.
     pub fn by_source(&self, source: &str) -> Vec<&SkillListing> {
-        self.cache
-            .iter()
-            .filter(|s| s.source == source)
-            .collect()
+        self.cache.iter().filter(|s| s.source == source).collect()
     }
 
     /// Add a listing to the cache (for built-in/offline mode).

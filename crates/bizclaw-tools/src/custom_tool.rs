@@ -61,10 +61,7 @@ impl CustomToolManager {
                 "Tool name must be 1-64 characters".into(),
             ));
         }
-        if !name
-            .chars()
-            .all(|c| c.is_alphanumeric() || c == '_')
-        {
+        if !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
             return Err(BizClawError::Tool(
                 "Tool name must be alphanumeric with underscores only".into(),
             ));
@@ -120,9 +117,7 @@ impl CustomToolManager {
         }
         // Max script size: 10KB
         if script.len() > 10_240 {
-            return Err(BizClawError::Tool(
-                "Script too large (max 10KB)".into(),
-            ));
+            return Err(BizClawError::Tool("Script too large (max 10KB)".into()));
         }
         Ok(())
     }
@@ -190,24 +185,20 @@ impl CustomToolManager {
         if let Ok(entries) = std::fs::read_dir(&self.tools_dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
-                if path.extension().map_or(false, |e| e == "json")
+                if path.extension().is_some_and(|e| e == "json")
                     && path
                         .file_name()
-                        .map_or(false, |n| n.to_string_lossy().ends_with(".meta.json"))
+                        .is_some_and(|n| n.to_string_lossy().ends_with(".meta.json"))
+                    && let Ok(content) = std::fs::read_to_string(&path)
+                    && let Ok(meta) = serde_json::from_str::<CustomToolMeta>(&content)
                 {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        if let Ok(meta) = serde_json::from_str::<CustomToolMeta>(&content) {
-                            tools.push(meta);
-                        }
-                    }
+                    tools.push(meta);
                 }
             }
         }
 
         if tools.is_empty() {
-            return Ok(
-                "No custom tools found. Use action='create' to create one.".to_string(),
-            );
+            return Ok("No custom tools found. Use action='create' to create one.".to_string());
         }
 
         let mut output = format!("📦 {} custom tool(s):\n\n", tools.len());
@@ -294,12 +285,12 @@ impl CustomToolManager {
 
         // Update usage count
         let meta_path = self.tools_dir.join(format!("{name}.meta.json"));
-        if let Ok(content) = std::fs::read_to_string(&meta_path) {
-            if let Ok(mut meta) = serde_json::from_str::<CustomToolMeta>(&content) {
-                meta.usage_count += 1;
-                if let Ok(json) = serde_json::to_string_pretty(&meta) {
-                    let _ = std::fs::write(&meta_path, json);
-                }
+        if let Ok(content) = std::fs::read_to_string(&meta_path)
+            && let Ok(mut meta) = serde_json::from_str::<CustomToolMeta>(&content)
+        {
+            meta.usage_count += 1;
+            if let Ok(json) = serde_json::to_string_pretty(&meta) {
+                let _ = std::fs::write(&meta_path, json);
             }
         }
 
@@ -393,15 +384,14 @@ impl Tool for CustomToolManager {
                     .get("name")
                     .and_then(|v| v.as_str())
                     .ok_or_else(|| BizClawError::Tool("'name' required for execute".into()))?;
-                let input = args
-                    .get("input")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
+                let input = args.get("input").and_then(|v| v.as_str()).unwrap_or("");
                 self.execute_tool(name, input)?
             }
-            _ => return Err(BizClawError::Tool(format!(
-                "Unknown action: {action}. Use: create, list, delete, execute"
-            ))),
+            _ => {
+                return Err(BizClawError::Tool(format!(
+                    "Unknown action: {action}. Use: create, list, delete, execute"
+                )));
+            }
         };
 
         Ok(ToolResult {
@@ -423,20 +413,18 @@ pub fn load_custom_tools(workspace_dir: &Path) -> Vec<Box<dyn Tool>> {
     if let Ok(entries) = std::fs::read_dir(&tools_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().map_or(false, |e| e == "json")
+            if path.extension().is_some_and(|e| e == "json")
                 && path
                     .file_name()
-                    .map_or(false, |n| n.to_string_lossy().ends_with(".meta.json"))
+                    .is_some_and(|n| n.to_string_lossy().ends_with(".meta.json"))
+                && let Ok(content) = std::fs::read_to_string(&path)
+                && let Ok(meta) = serde_json::from_str::<CustomToolMeta>(&content)
             {
-                if let Ok(content) = std::fs::read_to_string(&path) {
-                    if let Ok(meta) = serde_json::from_str::<CustomToolMeta>(&content) {
-                        tools.push(Box::new(CustomToolRunner {
-                            meta: meta.clone(),
-                            tools_dir: tools_dir.clone(),
-                        }));
-                        info!("📦 Loaded custom tool: {} ({})", meta.name, meta.language);
-                    }
-                }
+                tools.push(Box::new(CustomToolRunner {
+                    meta: meta.clone(),
+                    tools_dir: tools_dir.clone(),
+                }));
+                info!("📦 Loaded custom tool: {} ({})", meta.name, meta.language);
             }
         }
     }
@@ -474,10 +462,7 @@ impl Tool for CustomToolRunner {
 
     async fn execute(&self, arguments: &str) -> Result<ToolResult> {
         let args: serde_json::Value = serde_json::from_str(arguments).unwrap_or_default();
-        let input = args
-            .get("input")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let input = args.get("input").and_then(|v| v.as_str()).unwrap_or("");
 
         let manager = CustomToolManager {
             tools_dir: self.tools_dir.clone(),
@@ -527,7 +512,12 @@ mod tests {
 
         // Create
         let result = manager
-            .create_tool("test_tool", "bash", "A test tool", "#!/bin/bash\necho hello")
+            .create_tool(
+                "test_tool",
+                "bash",
+                "A test tool",
+                "#!/bin/bash\necho hello",
+            )
             .unwrap();
         assert!(result.contains("created successfully"));
 
@@ -535,7 +525,7 @@ mod tests {
         let list = manager.list_tools().unwrap();
         assert!(list.contains("test_tool"));
 
-        // Delete 
+        // Delete
         let del = manager.delete_tool("test_tool").unwrap();
         assert!(del.contains("deleted"));
 

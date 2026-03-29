@@ -166,7 +166,14 @@ pub fn mask_secret(value: &str) -> String {
         return "••••••••".to_string();
     }
     let first: String = value.chars().take(4).collect();
-    let last: String = value.chars().rev().take(2).collect::<Vec<_>>().into_iter().rev().collect();
+    let last: String = value
+        .chars()
+        .rev()
+        .take(2)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
     format!("{first}••••{last}")
 }
 

@@ -1173,7 +1173,7 @@ pub fn vigor_trend_scout() -> Workflow {
                  - Upvote count\n\
                  - Relevance score (1-10) to our Micro SaaS\n\
                  - Key takeaway or competitive insight\n\n\
-                 Context: {{input}}"
+                 Context: {{input}}",
             )
             .with_timeout(180),
     )
@@ -1187,7 +1187,7 @@ pub fn vigor_trend_scout() -> Workflow {
                  - Key discussion themes\n\
                  - Relevance score (1-10)\n\
                  - Actionable insight for our product\n\n\
-                 Context: {{input}}"
+                 Context: {{input}}",
             )
             .with_timeout(180),
     )
@@ -1201,7 +1201,7 @@ pub fn vigor_trend_scout() -> Workflow {
                  - Key pain point or opportunity\n\
                  - Relevance score (1-10)\n\
                  - Potential content/engagement opportunity\n\n\
-                 Context: {{input}}"
+                 Context: {{input}}",
             )
             .with_timeout(180),
     )
@@ -1242,7 +1242,7 @@ pub fn vigor_trend_scout() -> Workflow {
                  💡 CONTENT OPPORTUNITIES\n\
                  • [Blog/social post idea based on trends]\n\n\
                  ⚡ COMPETITOR ALERTS\n\
-                 • [Any competitor launches or major moves]"
+                 • [Any competitor launches or major moves]",
             )
             .with_timeout(180),
     )
@@ -1257,7 +1257,14 @@ pub fn vigor_blog_pipeline() -> Workflow {
         "vigor_blog_pipeline",
         "Blog Pipeline — Keyword Research → Draft → SEO Optimize → Quality Review",
     )
-    .with_tags(vec!["growth", "blog", "seo", "vigor", "agent_team", "content"])
+    .with_tags(vec![
+        "growth",
+        "blog",
+        "seo",
+        "vigor",
+        "agent_team",
+        "content",
+    ])
     .with_timeout(1200)
     .add_step(
         WorkflowStep::new("keyword-research", "vigor", StepType::Sequential)
@@ -1271,7 +1278,7 @@ pub fn vigor_blog_pipeline() -> Workflow {
                  4. Search intent analysis (informational/transactional/navigational)\n\
                  5. Competitor content analysis (top 3 ranking pages)\n\
                  6. Content gap opportunities\n\
-                 7. Recommended word count and structure"
+                 7. Recommended word count and structure",
             )
             .with_timeout(300)
             .with_retries(1),
@@ -1290,7 +1297,7 @@ pub fn vigor_blog_pipeline() -> Workflow {
                  - Include a FAQ section (3-5 questions) for featured snippets\n\
                  - End with a clear CTA related to our product\n\
                  - Tone: Professional, helpful, slightly casual (American English)\n\
-                 - E-E-A-T compliant: show expertise and experience"
+                 - E-E-A-T compliant: show expertise and experience",
             )
             .with_timeout(600)
             .with_retries(1),
@@ -1309,7 +1316,7 @@ pub fn vigor_blog_pipeline() -> Workflow {
                  6. Schema markup recommendation\n\
                  7. Readability score check (aim for Grade 8)\n\
                  8. Keyword placement audit\n\n\
-                 Return the optimized post with all SEO metadata."
+                 Return the optimized post with all SEO metadata.",
             )
             .with_timeout(300),
     )
@@ -1346,7 +1353,14 @@ pub fn fidus_health_check() -> Workflow {
         "fidus_health_check",
         "Health Check — Instance · DB · Disk · RAM · Cache → Alert if Critical",
     )
-    .with_tags(vec!["ops", "health", "monitoring", "fidus", "agent_team", "automated"])
+    .with_tags(vec![
+        "ops",
+        "health",
+        "monitoring",
+        "fidus",
+        "agent_team",
+        "automated",
+    ])
     .with_timeout(120)
     .add_step(
         WorkflowStep::new("check-infra", "fidus", StepType::Sequential)
@@ -1366,7 +1380,7 @@ pub fn fidus_health_check() -> Workflow {
                  Cache:    [🟢/🟡/🔴] | Hit rate: [X]%\n\n\
                  ⚠️ ALERTS: [list any issues]\n\
                  ✅ ALL CLEAR [if none]\n\n\
-                 Context: {{input}}"
+                 Context: {{input}}",
             )
             .with_timeout(60),
     )
@@ -1380,7 +1394,7 @@ pub fn fidus_health_check() -> Workflow {
                  3. Identify source: bot traffic, retry storm, infinite loop, DDoS\n\
                  4. Recommendation (throttle, block, investigate)\n\n\
                  ⚠️ NEVER auto-block or restart without Max approval.\n\
-                 Report anomalies only."
+                 Report anomalies only.",
             )
             .with_timeout(60),
     )
@@ -1395,7 +1409,14 @@ pub fn fidus_cost_tracker() -> Workflow {
         "fidus_cost_tracker",
         "Daily Cost Report — Token usage by model · Budget tracking · Anomaly detection",
     )
-    .with_tags(vec!["ops", "cost", "budget", "fidus", "agent_team", "automated"])
+    .with_tags(vec![
+        "ops",
+        "cost",
+        "budget",
+        "fidus",
+        "agent_team",
+        "automated",
+    ])
     .with_timeout(300)
     .add_step(
         WorkflowStep::new("collect-costs", "fidus", StepType::Sequential)
@@ -1415,7 +1436,7 @@ pub fn fidus_cost_tracker() -> Workflow {
                  📊 vs Yesterday: [+/-X]% tokens, [+/-X]% cost\n\
                  📈 Month-to-date: $[X] / $[X] budget ([X]%)\n\n\
                  ⚠️ ANOMALIES: [cost spikes > 2x daily average]\n\
-                 💡 OPTIMIZATION: [suggestions to reduce cost]"
+                 💡 OPTIMIZATION: [suggestions to reduce cost]",
             )
             .with_timeout(180),
     )
@@ -1441,7 +1462,14 @@ pub fn optimo_funnel_audit() -> Workflow {
         "optimo_funnel_audit",
         "Weekly Funnel Audit — Conversion metrics · Drop-off analysis · A/B test suggestions",
     )
-    .with_tags(vec!["optimizer", "funnel", "conversion", "ab_test", "optimo", "agent_team"])
+    .with_tags(vec![
+        "optimizer",
+        "funnel",
+        "conversion",
+        "ab_test",
+        "optimo",
+        "agent_team",
+    ])
     .with_timeout(900)
     .add_step(
         WorkflowStep::new("analyze-funnel", "optimo", StepType::Sequential)
@@ -1456,7 +1484,7 @@ pub fn optimo_funnel_audit() -> Workflow {
                  For each stage:\n\
                  - Current rate vs target vs last week\n\
                  - Trend direction (↑↓→)\n\
-                 - Drop-off volume (how many users lost)"
+                 - Drop-off volume (how many users lost)",
             )
             .with_timeout(300),
     )
@@ -1477,7 +1505,7 @@ pub fn optimo_funnel_audit() -> Workflow {
                  ⚠️ RULES:\n\
                  - Only 1 A/B test at a time\n\
                  - Minimum 7 days before any decision\n\
-                 - 95% confidence required to declare winner"
+                 - 95% confidence required to declare winner",
             )
             .with_timeout(300),
     )
@@ -1494,7 +1522,7 @@ pub fn optimo_funnel_audit() -> Workflow {
                  Confidence: [X]% (need 95%)\n\
                  Estimated completion: [Date]\n\
                  Decision: WAIT / WINNER / LOSER / INCONCLUSIVE\n\n\
-                 If no tests running, state that clearly and reference the new proposal."
+                 If no tests running, state that clearly and reference the new proposal.",
             )
             .with_timeout(180),
     )
@@ -1521,7 +1549,14 @@ pub fn mercury_outreach() -> Workflow {
         "mercury_outreach",
         "Cold Outreach — Prospect Research → Draft Email → Opt-out Check → Send via SES",
     )
-    .with_tags(vec!["sales", "outreach", "email", "mercury", "agent_team", "cold_email"])
+    .with_tags(vec![
+        "sales",
+        "outreach",
+        "email",
+        "mercury",
+        "agent_team",
+        "cold_email",
+    ])
     .with_timeout(900)
     .add_step(
         WorkflowStep::new("research-prospects", "mercury", StepType::Sequential)
@@ -1541,7 +1576,7 @@ pub fn mercury_outreach() -> Workflow {
                  Hook: [Personal detail for email personalization]\n\
                  Score: [1-10 fit score]\n\
                  Email: [If publicly available]\n\n\
-                 Only include prospects with score ≥ 7."
+                 Only include prospects with score ≥ 7.",
             )
             .with_timeout(300)
             .with_retries(1),
@@ -1562,7 +1597,7 @@ pub fn mercury_outreach() -> Workflow {
                  - NO generic greetings (Dear Sir/Madam)\n\
                  - NO multiple CTAs\n\
                  - NO aggressive sales language\n\n\
-                 Format each email clearly with SUBJECT and BODY separated."
+                 Format each email clearly with SUBJECT and BODY separated.",
             )
             .with_timeout(300),
     )
@@ -1579,7 +1614,7 @@ pub fn mercury_outreach() -> Workflow {
                  For each email, mark:\n\
                  ✅ CLEAR — safe to send\n\
                  ❌ BLOCKED — [reason]\n\n\
-                 Only CLEAR emails proceed to sending."
+                 Only CLEAR emails proceed to sending.",
             )
             .with_timeout(120),
     )

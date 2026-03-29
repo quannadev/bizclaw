@@ -16,11 +16,11 @@ use std::sync::Arc;
 use chrono::Utc;
 use tokio::sync::Mutex;
 
-use bizclaw_core::safe_truncate;
 use crate::cron;
 use crate::notify::{NotifyPriority, NotifyRouter};
 use crate::store::TaskStore;
 use crate::tasks::{Task, TaskAction, TaskStatus, TaskType};
+use bizclaw_core::safe_truncate;
 
 /// The scheduler engine — manages tasks and triggers them.
 pub struct SchedulerEngine {
@@ -346,7 +346,11 @@ pub async fn spawn_scheduler_with_agent<F, Fut, R, RFut>(
                 match execution_result {
                     Ok(ref response) => {
                         task.mark_success();
-                        tracing::info!("✅ Task '{}' succeeded: {}", task_name, safe_truncate(response, 200));
+                        tracing::info!(
+                            "✅ Task '{}' succeeded: {}",
+                            task_name,
+                            safe_truncate(response, 200)
+                        );
                     }
                     Err(ref e) => {
                         let will_retry = task.schedule_retry(e);
@@ -360,7 +364,11 @@ pub async fn spawn_scheduler_with_agent<F, Fut, R, RFut>(
                                      Action: {}",
                                     task_name,
                                     task.fail_count,
-                                    if e.len() > 200 { safe_truncate(e, 200) } else { e },
+                                    if e.len() > 200 {
+                                        safe_truncate(e, 200)
+                                    } else {
+                                        e
+                                    },
                                     action_summary(action),
                                 ),
                                 "scheduler",

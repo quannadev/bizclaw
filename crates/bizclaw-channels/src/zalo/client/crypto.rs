@@ -3,7 +3,7 @@
 
 use aes::Aes256;
 use aes::cipher::{BlockDecrypt, BlockEncrypt, KeyInit, generic_array::GenericArray};
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 type Aes256CbcEnc = cbc::Encryptor<aes::Aes256>;
 type Aes128CbcEnc = cbc::Encryptor<aes::Aes128>;
@@ -86,10 +86,14 @@ pub fn encode_aes_cbc_base64(data: &str, secret_key_b64: &str) -> Option<String>
 
     let encrypted_len = if key.len() == 32 {
         let enc = Aes256CbcEnc::new_from_slices(&key, &iv).ok()?;
-        enc.encrypt_padded_mut::<Pkcs7>(&mut buf, pt_len).ok()?.len()
+        enc.encrypt_padded_mut::<Pkcs7>(&mut buf, pt_len)
+            .ok()?
+            .len()
     } else if key.len() == 16 {
         let enc = Aes128CbcEnc::new_from_slices(&key, &iv).ok()?;
-        enc.encrypt_padded_mut::<Pkcs7>(&mut buf, pt_len).ok()?.len()
+        enc.encrypt_padded_mut::<Pkcs7>(&mut buf, pt_len)
+            .ok()?
+            .len()
     } else {
         return None;
     };

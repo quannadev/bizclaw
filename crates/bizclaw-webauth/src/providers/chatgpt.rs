@@ -22,6 +22,12 @@ pub struct ChatGPTWebProvider {
     models: Vec<WebAuthModel>,
 }
 
+impl Default for ChatGPTWebProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ChatGPTWebProvider {
     pub fn new() -> Self {
         Self {
@@ -61,10 +67,7 @@ impl ChatGPTWebProvider {
         let token = result.as_str().unwrap_or("");
 
         if token.is_empty() || token.starts_with("ERROR:") {
-            Err(format!(
-                "{} Could not get access token: {}",
-                LOG_TAG, token
-            ))
+            Err(format!("{} Could not get access token: {}", LOG_TAG, token))
         } else {
             Ok(token.to_string())
         }
@@ -83,9 +86,7 @@ impl ChatGPTWebProvider {
             .replace('\"', "\\\"")
             .replace('\n', "\\n")
             .replace('\r', "\\r");
-        let escaped_token = access_token
-            .replace('\\', "\\\\")
-            .replace('\"', "\\\"");
+        let escaped_token = access_token.replace('\\', "\\\\").replace('\"', "\\\"");
 
         let js = format!(
             r#"

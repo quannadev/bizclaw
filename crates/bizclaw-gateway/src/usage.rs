@@ -64,6 +64,12 @@ pub struct UsageTracker {
     started_at: std::time::Instant,
 }
 
+impl Default for UsageTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UsageTracker {
     pub fn new() -> Self {
         Self {

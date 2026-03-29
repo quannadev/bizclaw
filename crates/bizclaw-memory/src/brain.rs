@@ -114,11 +114,7 @@ impl BrainWorkspace {
                 // Limit to prevent context window overflow (max ~4KB from context tree)
                 let truncated = if ctx_content.chars().count() > 4096 {
                     let t: String = ctx_content.chars().take(4096).collect();
-                    format!(
-                        "{}...\n(truncated — {} total files)",
-                        t,
-                        files_loaded
-                    )
+                    format!("{}...\n(truncated — {} total files)", t, files_loaded)
                 } else {
                     ctx_content
                 };
@@ -143,20 +139,16 @@ impl BrainWorkspace {
                 let path = entry.path();
                 if path.is_dir() {
                     Self::collect_context_tree(&path, output, count);
-                } else if path.extension().map_or(false, |e| e == "md") {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
-                        let trimmed = content.trim();
-                        if !trimmed.is_empty() {
-                            let rel_path = path
-                                .strip_prefix(dir.parent().unwrap_or(dir))
-                                .unwrap_or(&path);
-                            output.push_str(&format!(
-                                "### {}\n{}\n\n",
-                                rel_path.display(),
-                                trimmed
-                            ));
-                            *count += 1;
-                        }
+                } else if path.extension().is_some_and(|e| e == "md")
+                    && let Ok(content) = std::fs::read_to_string(&path)
+                {
+                    let trimmed = content.trim();
+                    if !trimmed.is_empty() {
+                        let rel_path = path
+                            .strip_prefix(dir.parent().unwrap_or(dir))
+                            .unwrap_or(&path);
+                        output.push_str(&format!("### {}\n{}\n\n", rel_path.display(), trimmed));
+                        *count += 1;
                     }
                 }
             }

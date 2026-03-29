@@ -14,13 +14,13 @@
 //!   3. Phân tích → "Doanh thu tháng 3: 150M, tăng 23% so với tháng 2"
 //! ```
 
+use crate::db_connection::DbConnectionManager;
 use async_trait::async_trait;
 use bizclaw_core::error::Result;
 use bizclaw_core::traits::Tool;
 use bizclaw_core::types::{ToolDefinition, ToolResult};
 use sqlx::any::AnyPoolOptions;
 use sqlx::{Column, Row, ValueRef};
-use crate::db_connection::DbConnectionManager;
 
 pub struct DbSchemaTool {
     connection_manager: DbConnectionManager,
@@ -70,7 +70,8 @@ impl Tool for DbSchemaTool {
                 - 'describe' — Show columns, types, and keys for a specific table\n\
                 - 'sample' — Show 5 sample rows from a table\n\
                 - 'summary' — Overview: all tables with row counts and column counts\n\n\
-                Available connections:\n{}", conn_list
+                Available connections:\n{}",
+                conn_list
             ),
             parameters: serde_json::json!({
                 "type": "object",
@@ -98,9 +99,9 @@ impl Tool for DbSchemaTool {
         let args: serde_json::Value = serde_json::from_str(arguments)
             .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Invalid JSON: {}", e)))?;
 
-        let conn_id = args["connection_id"]
-            .as_str()
-            .ok_or_else(|| bizclaw_core::error::BizClawError::Tool("Missing 'connection_id'".into()))?;
+        let conn_id = args["connection_id"].as_str().ok_or_else(|| {
+            bizclaw_core::error::BizClawError::Tool("Missing 'connection_id'".into())
+        })?;
 
         let action = args["action"]
             .as_str()
@@ -108,37 +109,40 @@ impl Tool for DbSchemaTool {
 
         // Resolve connection
         let profile = self.connection_manager.get(conn_id).ok_or_else(|| {
-            let available = self.connection_manager.list()
+            let available = self
+                .connection_manager
+                .list()
                 .iter()
                 .map(|c| c.id.clone())
                 .collect::<Vec<_>>()
                 .join(", ");
             bizclaw_core::error::BizClawError::Tool(format!(
-                "Unknown connection_id '{}'. Available: [{}]", conn_id, available
+                "Unknown connection_id '{}'. Available: [{}]",
+                conn_id, available
             ))
         })?;
 
         // Check table allowlist for describe/sample
-        if let Some(table) = args["table_name"].as_str() {
-            if !profile.allowed_tables.is_empty()
-                && !profile.allowed_tables.iter().any(|t| t.eq_ignore_ascii_case(table))
-            {
-                return Ok(ToolResult {
-                    tool_call_id: String::new(),
-                    output: format!(
-                        "🛡️ Table '{}' is not in the allowlist. Allowed: {:?}",
-                        table, profile.allowed_tables
-                    ),
-                    success: false,
-                });
-            }
+        if let Some(table) = args["table_name"].as_str()
+            && !profile.allowed_tables.is_empty()
+            && !profile
+                .allowed_tables
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case(table))
+        {
+            return Ok(ToolResult {
+                tool_call_id: String::new(),
+                output: format!(
+                    "🛡️ Table '{}' is not in the allowlist. Allowed: {:?}",
+                    table, profile.allowed_tables
+                ),
+                success: false,
+            });
         }
 
         let vault = bizclaw_security::vault::Vault::new();
-        let uri = DbConnectionManager::resolve_connection_string(
-            &profile.connection_string,
-            &vault,
-        );
+        let uri =
+            DbConnectionManager::resolve_connection_string(&profile.connection_string, &vault);
 
         // Connect
         let pool = AnyPoolOptions::new()
@@ -146,7 +150,9 @@ impl Tool for DbSchemaTool {
             .acquire_timeout(std::time::Duration::from_secs(10))
             .connect(&uri)
             .await
-            .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Connection failed: {}", e)))?;
+            .map_err(|e| {
+                bizclaw_core::error::BizClawError::Tool(format!("Connection failed: {}", e))
+            })?;
 
         let db_type = profile.db_type.to_lowercase();
         let start = std::time::Instant::now();
@@ -155,24 +161,37 @@ impl Tool for DbSchemaTool {
             "tables" => self.list_tables(&pool, &db_type).await,
             "describe" => {
                 let table = args["table_name"].as_str().ok_or_else(|| {
-                    bizclaw_core::error::BizClawError::Tool("'table_name' is required for 'describe'".into())
+                    bizclaw_core::error::BizClawError::Tool(
+                        "'table_name' is required for 'describe'".into(),
+                    )
                 })?;
                 self.describe_table(&pool, &db_type, table).await
             }
             "sample" => {
                 let table = args["table_name"].as_str().ok_or_else(|| {
-                    bizclaw_core::error::BizClawError::Tool("'table_name' is required for 'sample'".into())
+                    bizclaw_core::error::BizClawError::Tool(
+                        "'table_name' is required for 'sample'".into(),
+                    )
                 })?;
-                self.sample_table(&pool, table, &profile).await
+                self.sample_table(&pool, table, profile).await
             }
-            "summary" => self.db_summary(&pool, &db_type, &profile).await,
-            _ => Ok(format!("❌ Unknown action '{}'. Use: tables, describe, sample, summary", action)),
+            "summary" => self.db_summary(&pool, &db_type, profile).await,
+            _ => Ok(format!(
+                "❌ Unknown action '{}'. Use: tables, describe, sample, summary",
+                action
+            )),
         }?;
 
         let elapsed = start.elapsed();
         Ok(ToolResult {
             tool_call_id: String::new(),
-            output: format!("📊 [{}] ({}) — {}ms\n\n{}", conn_id, action, elapsed.as_millis(), output),
+            output: format!(
+                "📊 [{}] ({}) — {}ms\n\n{}",
+                conn_id,
+                action,
+                elapsed.as_millis(),
+                output
+            ),
             success: true,
         })
     }
@@ -186,8 +205,12 @@ impl DbSchemaTool {
                 "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
             }
             "mysql" => "SHOW TABLES",
-            "sqlite" => "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-            _ => "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+            "sqlite" => {
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            }
+            _ => {
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+            }
         };
 
         let rows = sqlx::query(query)
@@ -207,7 +230,9 @@ impl DbSchemaTool {
         Ok(format!(
             "📋 Found {} tables:\n{}",
             tables.len(),
-            tables.iter().enumerate()
+            tables
+                .iter()
+                .enumerate()
                 .map(|(i, t)| format!("  {}. {}", i + 1, t))
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -215,7 +240,12 @@ impl DbSchemaTool {
     }
 
     /// Describe columns of a table.
-    async fn describe_table(&self, pool: &sqlx::AnyPool, db_type: &str, table: &str) -> Result<String> {
+    async fn describe_table(
+        &self,
+        pool: &sqlx::AnyPool,
+        db_type: &str,
+        table: &str,
+    ) -> Result<String> {
         let query = match db_type {
             "postgresql" | "postgres" => {
                 format!(
@@ -245,13 +275,12 @@ impl DbSchemaTool {
             for col in row.columns() {
                 let val = match row.try_get_raw(col.name()) {
                     Ok(raw) if raw.is_null() => "NULL".to_string(),
-                    Ok(_) => {
-                        row.try_get::<String, _>(col.name())
-                            .or_else(|_| row.try_get::<&str, _>(col.name()).map(|s| s.to_string()))
-                            .or_else(|_| row.try_get::<i64, _>(col.name()).map(|i| i.to_string()))
-                            .or_else(|_| row.try_get::<i32, _>(col.name()).map(|i| i.to_string()))
-                            .unwrap_or_else(|_| "?".to_string())
-                    }
+                    Ok(_) => row
+                        .try_get::<String, _>(col.name())
+                        .or_else(|_| row.try_get::<&str, _>(col.name()).map(|s| s.to_string()))
+                        .or_else(|_| row.try_get::<i64, _>(col.name()).map(|i| i.to_string()))
+                        .or_else(|_| row.try_get::<i32, _>(col.name()).map(|i| i.to_string()))
+                        .unwrap_or_else(|_| "?".to_string()),
                     Err(_) => "ERR".to_string(),
                 };
                 parts.push(format!("{}={}", col.name(), val));
@@ -289,15 +318,14 @@ impl DbSchemaTool {
                 let name = col.name();
                 let val = match row.try_get_raw(name) {
                     Ok(raw) if raw.is_null() => "NULL".to_string(),
-                    Ok(_) => {
-                        row.try_get::<String, _>(name)
-                            .or_else(|_| row.try_get::<&str, _>(name).map(|s| s.to_string()))
-                            .or_else(|_| row.try_get::<i64, _>(name).map(|i| i.to_string()))
-                            .or_else(|_| row.try_get::<i32, _>(name).map(|i| i.to_string()))
-                            .or_else(|_| row.try_get::<f64, _>(name).map(|f| f.to_string()))
-                            .or_else(|_| row.try_get::<bool, _>(name).map(|b| b.to_string()))
-                            .unwrap_or_else(|_| "[Binary]".to_string())
-                    }
+                    Ok(_) => row
+                        .try_get::<String, _>(name)
+                        .or_else(|_| row.try_get::<&str, _>(name).map(|s| s.to_string()))
+                        .or_else(|_| row.try_get::<i64, _>(name).map(|i| i.to_string()))
+                        .or_else(|_| row.try_get::<i32, _>(name).map(|i| i.to_string()))
+                        .or_else(|_| row.try_get::<f64, _>(name).map(|f| f.to_string()))
+                        .or_else(|_| row.try_get::<bool, _>(name).map(|b| b.to_string()))
+                        .unwrap_or_else(|_| "[Binary]".to_string()),
                     Err(_) => "ERR".to_string(),
                 };
                 row_map.insert(name.to_string(), serde_json::Value::String(val));
@@ -331,8 +359,12 @@ impl DbSchemaTool {
                 "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
             }
             "mysql" => "SHOW TABLES",
-            "sqlite" => "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
-            _ => "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name",
+            "sqlite" => {
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            }
+            _ => {
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+            }
         };
 
         let table_rows = sqlx::query(table_query)
@@ -351,7 +383,12 @@ impl DbSchemaTool {
 
         // Filter by allowlist if configured
         if !profile.allowed_tables.is_empty() {
-            tables.retain(|t| profile.allowed_tables.iter().any(|a| a.eq_ignore_ascii_case(t)));
+            tables.retain(|t| {
+                profile
+                    .allowed_tables
+                    .iter()
+                    .any(|a| a.eq_ignore_ascii_case(t))
+            });
         }
 
         // Get row counts for each table
@@ -373,7 +410,10 @@ impl DbSchemaTool {
                     "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = '{}'",
                     table.replace('\'', "''")
                 ),
-                _ => format!("SELECT COUNT(*) FROM pragma_table_info('{}')", table.replace('\'', "''")),
+                _ => format!(
+                    "SELECT COUNT(*) FROM pragma_table_info('{}')",
+                    table.replace('\'', "''")
+                ),
             };
 
             let col_count = match sqlx::query(&col_query).fetch_one(pool).await {
@@ -384,7 +424,11 @@ impl DbSchemaTool {
             summary_lines.push(format!(
                 "  📋 {} — {} rows, {} columns",
                 table,
-                if count >= 0 { count.to_string() } else { "?".to_string() },
+                if count >= 0 {
+                    count.to_string()
+                } else {
+                    "?".to_string()
+                },
                 col_count
             ));
         }

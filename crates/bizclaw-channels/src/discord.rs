@@ -87,13 +87,7 @@ impl DiscordChannel {
         let url = format!("https://discord.com/api/v10/channels/{channel_id}/messages");
         let body = serde_json::json!({ "content": content });
 
-        let response = match self
-            .client
-            .post(&url)
-            .json(&body)
-            .send()
-            .await
-        {
+        let response = match self.client.post(&url).json(&body).send().await {
             Ok(r) => r,
             Err(e) => {
                 self.circuit_breaker.record_failure();
