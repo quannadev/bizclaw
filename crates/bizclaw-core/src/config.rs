@@ -716,7 +716,7 @@ impl Default for ZaloChannelConfig {
 
 /// Zalo Official Account (OA) API configuration — server-side, no Android needed.
 /// Register at https://oa.zalo.me to get credentials.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ZaloOfficialConfig {
     /// Zalo App ID (from developers.zalo.me).
     #[serde(default)]
@@ -733,18 +733,6 @@ pub struct ZaloOfficialConfig {
     /// OA ID — your Official Account identifier.
     #[serde(default)]
     pub oa_id: String,
-}
-
-impl Default for ZaloOfficialConfig {
-    fn default() -> Self {
-        Self {
-            app_id: String::new(),
-            app_secret: String::new(),
-            access_token: String::new(),
-            refresh_token: String::new(),
-            oa_id: String::new(),
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

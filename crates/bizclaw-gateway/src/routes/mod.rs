@@ -4691,7 +4691,7 @@ pub async fn mcp_catalog() -> Json<serde_json::Value> {
 pub async fn sso_config_get(
     State(state): State<Arc<AppState>>,
 ) -> Json<serde_json::Value> {
-    let config = state.full_config.lock().unwrap();
+    let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
     Json(serde_json::json!({
         "enabled": config.sso.enabled,
         "provider": config.sso.provider,
@@ -4711,7 +4711,7 @@ pub async fn sso_config_post(
     body: String,
 ) -> Json<serde_json::Value> {
     if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body) {
-        let mut config = state.full_config.lock().unwrap();
+        let mut config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
         if let Some(enabled) = val.get("enabled").and_then(|v| v.as_bool()) {
             config.sso.enabled = enabled;
         }
@@ -4748,7 +4748,7 @@ pub async fn analytics_metrics(
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Json<serde_json::Value> {
     let period = params.get("period").map(|s| s.as_str()).unwrap_or("7d");
-    let config = state.full_config.lock().unwrap();
+    let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
 
     // Aggregate real metrics from state + provide structure
     Json(serde_json::json!({
@@ -4778,7 +4778,7 @@ pub async fn analytics_metrics(
 pub async fn fine_tuning_config_get(
     State(state): State<Arc<AppState>>,
 ) -> Json<serde_json::Value> {
-    let config = state.full_config.lock().unwrap();
+    let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
     Json(serde_json::json!({
         "enabled": config.fine_tuning.enabled,
         "provider": config.fine_tuning.provider,
@@ -4823,7 +4823,7 @@ pub async fn fine_tuning_datasets() -> Json<serde_json::Value> {
 pub async fn edge_gateway_status(
     State(state): State<Arc<AppState>>,
 ) -> Json<serde_json::Value> {
-    let config = state.full_config.lock().unwrap();
+    let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
     Json(serde_json::json!({
         "enabled": config.edge_gateway.enabled,
         "node_id": config.edge_gateway.node_id,
@@ -4844,7 +4844,7 @@ pub async fn edge_gateway_status(
 pub async fn plugins_list(
     State(state): State<Arc<AppState>>,
 ) -> Json<serde_json::Value> {
-    let config = state.full_config.lock().unwrap();
+    let config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
     let installed: Vec<serde_json::Value> = config.plugin_marketplace.installed.iter().map(|p| {
         serde_json::json!({
             "id": p.id,
@@ -4870,7 +4870,7 @@ pub async fn plugin_install(
         let version = val.get("version").and_then(|v| v.as_str()).unwrap_or("latest");
         tracing::info!("[plugins] Installing plugin: {} v{}", plugin_id, version);
 
-        let mut config = state.full_config.lock().unwrap();
+        let mut config = state.full_config.lock().unwrap_or_else(|e| e.into_inner());
         // Check if already installed
         if config.plugin_marketplace.installed.iter().any(|p| p.id == plugin_id) {
             return Json(serde_json::json!({"ok": false, "error": "Plugin already installed"}));
@@ -5685,7 +5685,7 @@ pub async fn tools_delete(
 
 /// Clear all traces
 pub async fn clear_traces(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
-    let mut traces = state.traces.lock().unwrap();
+    let mut traces = state.traces.lock().unwrap_or_else(|e| e.into_inner());
     let count = traces.len();
     traces.clear();
     tracing::info!("🗑️ Cleared {} LLM traces", count);
@@ -5694,7 +5694,7 @@ pub async fn clear_traces(State(state): State<Arc<AppState>>) -> Json<serde_json
 
 /// Clear activity
 pub async fn clear_activity(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
-    let mut events = state.activity_log.lock().unwrap();
+    let mut events = state.activity_log.lock().unwrap_or_else(|e| e.into_inner());
     let count = events.len();
     events.clear();
     tracing::info!("🗑️ Cleared {} activity events", count);
@@ -5835,7 +5835,7 @@ pub async fn get_system_metrics(State(state): State<Arc<AppState>>) -> Json<serd
     let api_keys = state.db.list_api_keys().map(|k| k.len()).unwrap_or(0);
     // Traces stats
     let (traces_count, total_tokens, total_cost) = {
-        let traces = state.traces.lock().unwrap();
+        let traces = state.traces.lock().unwrap_or_else(|e| e.into_inner());
         let count = traces.len();
         let tokens: i64 = traces.iter().map(|t| t.total_tokens as i64).sum();
         let cost: f64 = traces.iter().map(|t| t.cost_usd).sum();
@@ -5880,7 +5880,7 @@ pub async fn prometheus_metrics(State(state): State<Arc<AppState>>) -> axum::res
     let active_providers = state.db.list_providers("").map(|p| p.iter().filter(|x| x.is_active).count()).unwrap_or(0);
     let api_keys = state.db.list_api_keys().map(|k| k.len()).unwrap_or(0);
     let (traces_count, total_tokens, total_cost) = {
-        let traces = state.traces.lock().unwrap();
+        let traces = state.traces.lock().unwrap_or_else(|e| e.into_inner());
         let count = traces.len();
         let tokens: i64 = traces.iter().map(|t| t.total_tokens as i64).sum();
         let cost: f64 = traces.iter().map(|t| t.cost_usd).sum();
@@ -6211,7 +6211,7 @@ pub async fn zalo_oa_webhook(
     tracing::info!("[zalo-oa] Webhook received: {} bytes", body.len());
 
     // ── 1. Validate MAC signature (optional but recommended) ──
-    let cfg = state.full_config.lock().unwrap().clone();
+    let cfg = state.full_config.lock().unwrap_or_else(|e| e.into_inner()).clone();
     let zalo_configs = &cfg.channel.zalo;
     let oa_config = zalo_configs.iter().find(|z| z.mode == "official");
 

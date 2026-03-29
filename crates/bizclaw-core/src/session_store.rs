@@ -16,8 +16,8 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use tracing::{debug, error, info, warn};
+use std::path::PathBuf;
+use tracing::{debug, info, warn};
 
 use crate::types::message::{Message, Role};
 use crate::types::ToolCall;
@@ -241,7 +241,7 @@ impl SessionStore {
                     size_bytes: meta.as_ref().map(|m| m.len()).unwrap_or(0),
                     modified: meta
                         .and_then(|m| m.modified().ok())
-                        .map(|t| DateTime::<Utc>::from(t)),
+                        .map(DateTime::<Utc>::from),
                 });
             }
         }
