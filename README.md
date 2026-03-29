@@ -370,7 +370,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/debug/app-debug.apk"><b>📥 Tải xuống APK v1.0.7 (Debug Build — 44MB)</b></a><br>
+  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.0.7 (Signed Release — 33MB)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
@@ -560,7 +560,7 @@ llm:
 | **Lines of Code** | 82,141 |
 | **Tests** | 743 passing (21/21 crates ✅ Production) |
 | **Workflow Templates** | 23 |
-| **Binary Size** | bizclaw ~12MB, Android APK ~44MB |
+| **Binary Size** | bizclaw ~12MB, Android APK ~33MB |
 | **Dashboard Pages** | 20+ (27 lazy-loaded modules) |
 | **Agent Templates** | 51 |
 | **Security** | Vault, Approval Gates, Prompt Injection Scanner, RBAC, AES-256-CBC, SSRF Protection, Audit Trail, Prometheus |
