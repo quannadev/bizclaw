@@ -163,6 +163,28 @@ impl DataStore for PostgresStore {
         .await
         .map_err(|e| BizClawError::Database(format!("Migrate handoffs+traces: {e}")))?;
 
+        // SePay payment transactions — stores incoming webhook events
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS sepay_transactions (
+                sepay_id BIGINT PRIMARY KEY,
+                gateway TEXT NOT NULL DEFAULT '',
+                transfer_type TEXT NOT NULL DEFAULT 'in',
+                transfer_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+                content TEXT NOT NULL DEFAULT '',
+                reference_code TEXT,
+                account_number TEXT NOT NULL DEFAULT '',
+                transaction_date TEXT NOT NULL DEFAULT '',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_sepay_ref ON sepay_transactions(reference_code);
+            CREATE INDEX IF NOT EXISTS idx_sepay_date ON sepay_transactions(created_at DESC);
+            "#,
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| BizClawError::Database(format!("Migrate sepay_transactions: {e}")))?;
+
         tracing::info!("PostgreSQL orchestration schema migrated");
         Ok(())
     }

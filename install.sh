@@ -131,7 +131,7 @@ info "Waiting for BizClaw to start..."
 MAX_WAIT=60
 WAITED=0
 while [ $WAITED -lt $MAX_WAIT ]; do
-    if curl -s "http://localhost:9000/health" | grep -q '"status":"ok"' 2>/dev/null; then
+    if curl -s "http://localhost:3001/health" | grep -q '"status":"ok"' 2>/dev/null; then
         break
     fi
     sleep 2
@@ -152,8 +152,8 @@ echo -e "${CYAN}╔════════════════════�
 echo -e "${CYAN}║${NC}  ${BOLD}🎉 BizClaw Installed Successfully!${NC}              ${CYAN}║${NC}"
 echo -e "${CYAN}╠══════════════════════════════════════════════════╣${NC}"
 if [ "$DOMAIN" = "localhost" ]; then
-echo -e "${CYAN}║${NC}  Dashboard:  ${GREEN}http://localhost:9000${NC}               ${CYAN}║${NC}"
-echo -e "${CYAN}║${NC}  Platform:   ${GREEN}http://localhost:8888${NC}               ${CYAN}║${NC}"
+echo -e "${CYAN}║${NC}  Dashboard:  ${GREEN}http://localhost:3001${NC}               ${CYAN}║${NC}"
+echo -e "${CYAN}║${NC}  API:        ${GREEN}http://localhost:3001/api${NC}           ${CYAN}║${NC}"
 else
 echo -e "${CYAN}║${NC}  Dashboard:  ${GREEN}https://${DOMAIN}${NC}                   ${CYAN}║${NC}"
 echo -e "${CYAN}║${NC}  Platform:   ${GREEN}https://apps.${DOMAIN}${NC}              ${CYAN}║${NC}"

@@ -136,11 +136,12 @@ impl Agent {
         let brain_context = brain_ws.assemble_brain();
         let daily_log = bizclaw_memory::brain::DailyLogManager::default();
 
-        // Build system prompt: user config + brain workspace
+        // Build system prompt: user config + brain workspace + locale guidelines
+        let base_prompt = config.identity.build_system_prompt();
         let system_prompt = if brain_context.trim().is_empty() {
-            config.identity.system_prompt.clone()
+            base_prompt
         } else {
-            format!("{}\n\n{}", config.identity.system_prompt, brain_context)
+            format!("{}\n\n{}", base_prompt, brain_context)
         };
 
         let prompt_cache = PromptCache::new(&system_prompt, &tools);
@@ -233,10 +234,12 @@ impl Agent {
         let brain_context = brain_ws.assemble_brain();
         let daily_log = bizclaw_memory::brain::DailyLogManager::default();
 
+        // Build system prompt: user config + brain workspace + locale guidelines
+        let base_prompt = config.identity.build_system_prompt();
         let system_prompt = if brain_context.trim().is_empty() {
-            config.identity.system_prompt.clone()
+            base_prompt
         } else {
-            format!("{}\n\n{}", config.identity.system_prompt, brain_context)
+            format!("{}\n\n{}", base_prompt, brain_context)
         };
 
         let prompt_cache = PromptCache::new(&system_prompt, &tools);

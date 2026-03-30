@@ -11,9 +11,14 @@ pub mod config;
 pub mod db;
 pub mod db_pg;
 pub mod enterprise;
+pub mod mama;
 pub mod mission_control;
+pub mod oauth;
+pub mod routing;
 pub mod self_serve;
 pub mod server_provisioner;
+pub mod sheets;
+pub mod social_automation;
 pub mod tenant;
 
 pub use admin::AdminServer;

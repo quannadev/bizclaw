@@ -191,7 +191,7 @@ async fn main() -> Result<()> {
     let pg_db = match std::env::var("DATABASE_URL").or_else(|_| std::env::var("BIZCLAW_PG_URL")) {
         Ok(url) if !url.is_empty() => match bizclaw_platform::PgDb::connect_with_url(&url).await {
             Ok(pg) => {
-                tracing::info!("🐘 PostgreSQL connected — enterprise features enabled");
+                tracing::info!("🐘 PostgreSQL connected — enterprise features enabled (4 migrations applied)");
                 Some(pg)
             }
             Err(e) => {
@@ -218,6 +218,7 @@ async fn main() -> Result<()> {
         login_attempts: std::sync::Mutex::new(std::collections::HashMap::new()),
         register_attempts: std::sync::Mutex::new(std::collections::HashMap::new()),
         pg_db,
+        startup_time: std::time::Instant::now(),
     });
 
     // Start server

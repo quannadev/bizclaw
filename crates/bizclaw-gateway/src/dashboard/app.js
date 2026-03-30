@@ -13,6 +13,7 @@ const { h, html, render, createContext,
         useState, useEffect, useContext, useCallback, useRef, useMemo } = window;
 
 import { t, authFetch, authHeaders, Toast, StatsCard, PAGES, getToken, setToken, refreshJwtToken } from '/static/dashboard/shared.js';
+import { OnboardingWizard } from '/static/dashboard/pages/onboarding.js';
 
 // ═══ APP CONTEXT ═══
 const AppContext = createContext({});
@@ -168,6 +169,7 @@ export function App() {
   const [paired, setPaired] = useState(false);
   const [checkingPairing, setCheckingPairing] = useState(true);
   const [theme, setTheme] = useState(localStorage.getItem('bizclaw_theme') || 'dark');
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('bizclaw_onboarded'));
 
   // Apply theme
   useEffect(() => {
@@ -364,6 +366,14 @@ export function App() {
   // Early returns AFTER all hooks
   if (checkingPairing) return html`<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg);color:var(--text2)">⏳ Loading...</div>`;
   if (!paired) return html`<${AuthGate} onSuccess=${() => setPaired(true)} />`;
+
+  // ── Welcome Onboarding — first-time user experience ──
+  if (showOnboarding) {
+    return html`<${OnboardingWizard}
+      lang=${lang}
+      onComplete=${() => setShowOnboarding(false)}
+    />`;
+  }
 
   return html`
     <${AppContext.Provider} value=${{ config, lang, t: (k) => t(k, lang), showToast, navigate, wsStatus }}>

@@ -109,6 +109,10 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
             include_str!("dashboard/pages/db_assistant.js"),
         ),
         ("campaigns.js", include_str!("dashboard/pages/campaigns.js")),
+        (
+            "onboarding.js",
+            include_str!("dashboard/pages/onboarding.js"),
+        ),
     ];
 
     for (name, content) in pages {

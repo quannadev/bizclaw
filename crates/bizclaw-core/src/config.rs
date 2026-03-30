@@ -16,6 +16,8 @@ pub struct LlmConfig {
     #[serde(default = "default_model")]
     pub model: String,
     /// API key for the provider.
+    /// ⚠️ DEPRECATED for SaaS: Use environment variables instead.
+    /// Kept for backward compatibility with single-tenant config files.
     #[serde(default)]
     pub api_key: String,
     /// Custom endpoint URL. Empty = use default endpoint for the provider.
@@ -24,6 +26,70 @@ pub struct LlmConfig {
     /// Generation temperature.
     #[serde(default = "default_temperature")]
     pub temperature: f32,
+}
+
+impl LlmConfig {
+    /// Resolve API key with priority: env var → config.toml field.
+    /// Never exposes raw key to AI agents — use `key_status()` for that.
+    pub fn resolve_api_key(&self) -> String {
+        // Provider-specific env vars (industry standard names)
+        let provider_env = match self.provider.as_str() {
+            "openai" => Some("OPENAI_API_KEY"),
+            "anthropic" => Some("ANTHROPIC_API_KEY"),
+            "gemini" | "google" => Some("GOOGLE_API_KEY"),
+            "deepseek" => Some("DEEPSEEK_API_KEY"),
+            "groq" => Some("GROQ_API_KEY"),
+            "openrouter" => Some("OPENROUTER_API_KEY"),
+            _ => None,
+        };
+
+        // 1. Check BIZCLAW_LLM_API_KEY (universal override)
+        if let Ok(key) = std::env::var("BIZCLAW_LLM_API_KEY") {
+            if !key.is_empty() {
+                return key;
+            }
+        }
+        // 2. Check provider-specific env var
+        if let Some(env_name) = provider_env {
+            if let Ok(key) = std::env::var(env_name) {
+                if !key.is_empty() {
+                    return key;
+                }
+            }
+        }
+        // 3. Fall back to config.toml field
+        self.api_key.clone()
+    }
+
+    /// Get masked key status for safe display (to Agent or Dashboard).
+    /// Returns (is_configured, source, masked_value).
+    pub fn key_status(&self) -> (bool, &'static str, String) {
+        if let Ok(key) = std::env::var("BIZCLAW_LLM_API_KEY") {
+            if !key.is_empty() {
+                return (true, "env", mask_key(&key));
+            }
+        }
+        let provider_env = match self.provider.as_str() {
+            "openai" => Some("OPENAI_API_KEY"),
+            "anthropic" => Some("ANTHROPIC_API_KEY"),
+            "gemini" | "google" => Some("GOOGLE_API_KEY"),
+            "deepseek" => Some("DEEPSEEK_API_KEY"),
+            "groq" => Some("GROQ_API_KEY"),
+            "openrouter" => Some("OPENROUTER_API_KEY"),
+            _ => None,
+        };
+        if let Some(env_name) = provider_env {
+            if let Ok(key) = std::env::var(env_name) {
+                if !key.is_empty() {
+                    return (true, "env", mask_key(&key));
+                }
+            }
+        }
+        if !self.api_key.is_empty() {
+            return (true, "config", mask_key(&self.api_key));
+        }
+        (false, "none", String::new())
+    }
 }
 
 impl Default for LlmConfig {
@@ -37,6 +103,18 @@ impl Default for LlmConfig {
         }
     }
 }
+
+/// Mask a secret key for safe display: show first 3 and last 3 chars.
+/// e.g., "sk-proj-abc123xyz789" → "sk-***789"
+pub fn mask_key(key: &str) -> String {
+    if key.len() <= 6 {
+        return "***".to_string();
+    }
+    let prefix = &key[..3];
+    let suffix = &key[key.len() - 3..];
+    format!("{}***{}", prefix, suffix)
+}
+
 
 /// Root configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -832,6 +910,26 @@ pub struct TelegramChannelConfig {
     pub allowed_chat_ids: Vec<i64>,
 }
 
+impl TelegramChannelConfig {
+    /// Resolve bot token: env var → config.toml.
+    pub fn resolve_bot_token(&self) -> String {
+        std::env::var("BIZCLAW_TELEGRAM_BOT_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| self.bot_token.clone())
+    }
+
+    pub fn key_status(&self) -> (bool, &'static str, String) {
+        if let Ok(key) = std::env::var("BIZCLAW_TELEGRAM_BOT_TOKEN") {
+            if !key.is_empty() { return (true, "env", mask_key(&key)); }
+        }
+        if !self.bot_token.is_empty() {
+            return (true, "config", mask_key(&self.bot_token));
+        }
+        (false, "none", String::new())
+    }
+}
+
 fn default_telegram_name() -> String {
     "Telegram".into()
 }
@@ -848,6 +946,26 @@ pub struct DiscordChannelConfig {
     pub bot_token: String,
     #[serde(default)]
     pub allowed_channel_ids: Vec<u64>,
+}
+
+impl DiscordChannelConfig {
+    /// Resolve bot token: env var → config.toml.
+    pub fn resolve_bot_token(&self) -> String {
+        std::env::var("BIZCLAW_DISCORD_BOT_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| self.bot_token.clone())
+    }
+
+    pub fn key_status(&self) -> (bool, &'static str, String) {
+        if let Ok(key) = std::env::var("BIZCLAW_DISCORD_BOT_TOKEN") {
+            if !key.is_empty() { return (true, "env", mask_key(&key)); }
+        }
+        if !self.bot_token.is_empty() {
+            return (true, "config", mask_key(&self.bot_token));
+        }
+        (false, "none", String::new())
+    }
 }
 
 fn default_discord_name() -> String {
@@ -891,6 +1009,26 @@ pub struct WhatsAppChannelConfig {
     pub webhook_verify_token: String,
     #[serde(default)]
     pub business_id: String,
+}
+
+impl WhatsAppChannelConfig {
+    /// Resolve access token: env var → config.toml.
+    pub fn resolve_access_token(&self) -> String {
+        std::env::var("BIZCLAW_WHATSAPP_ACCESS_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| self.access_token.clone())
+    }
+
+    pub fn key_status(&self) -> (bool, &'static str, String) {
+        if let Ok(key) = std::env::var("BIZCLAW_WHATSAPP_ACCESS_TOKEN") {
+            if !key.is_empty() { return (true, "env", mask_key(&key)); }
+        }
+        if !self.access_token.is_empty() {
+            return (true, "config", mask_key(&self.access_token));
+        }
+        (false, "none", String::new())
+    }
 }
 
 /// Generic Webhook channel configuration.

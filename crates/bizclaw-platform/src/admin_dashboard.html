@@ -237,6 +237,7 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
   <a href="#/users" data-page="users"><span class="nav-icon">👥</span> <span>Users</span></a>
   <a href="#/teams" data-page="teams"><span class="nav-icon">🐜</span> <span>Agent Teams</span></a>
   <a href="#/audit" data-page="audit"><span class="nav-icon">📋</span> <span>Audit Log</span></a>
+  <a href="#/billing" data-page="billing"><span class="nav-icon">💳</span> <span>Billing</span></a>
 
   <a href="#/wiki" data-page="wiki"><span class="nav-icon">📖</span> <span>Wiki & Guide</span></a>
   <a href="#/profile" data-page="profile"><span class="nav-icon">👤</span> <span>Profile</span></a>
@@ -407,6 +408,120 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
     <div class="card">
       <h3>📊 Recent Workflow Runs <a href="#" onclick="return false">View all →</a></h3>
       <div class="team-runs" id="workflow-runs"></div>
+    </div>
+  </div>
+
+  <!-- Billing Page -->
+  <div id="page-billing" class="hidden">
+    <h1>💳 Doanh thu SaaS</h1>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Quản lý thanh toán gói dịch vụ BizClaw. Khách mua gói SaaS qua chuyển khoản → hệ thống tự kích hoạt.</p>
+    <div class="stats" id="billing-stats">
+      <div class="stat"><label>SePay</label><div class="val" id="bs-status">—</div></div>
+      <div class="stat"><label>Đơn mua gói</label><div class="val" id="bs-count">0</div></div>
+      <div class="stat"><label>Doanh thu SaaS</label><div class="val green" id="bs-total">0đ</div></div>
+    </div>
+
+    <!-- Plan Pricing -->
+    <div class="card" style="margin-bottom:18px">
+      <h3>📋 Bảng giá gói SaaS BizClaw</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Khách mua gói bằng cách chuyển khoản đúng số tiền + nội dung <code style="background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--green)">BIZCLAW-&lt;slug&gt;</code> → hệ thống tự kích hoạt plan cho tenant.</p>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border)">
+            <th style="text-align:left;padding:8px;color:var(--muted);font-size:11px">GÓI</th>
+            <th style="text-align:right;padding:8px;color:var(--muted);font-size:11px">GIÁ/THÁNG</th>
+            <th style="text-align:right;padding:8px;color:var(--muted);font-size:11px">TIN NHẮN/NGÀY</th>
+            <th style="text-align:right;padding:8px;color:var(--muted);font-size:11px">KÊNH</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px"><span style="background:rgba(63,185,80,0.15);color:var(--green);padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600">Free</span></td>
+            <td style="padding:8px;text-align:right">0đ</td>
+            <td style="padding:8px;text-align:right">100</td>
+            <td style="padding:8px;text-align:right">3</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px"><span style="background:rgba(56,139,253,0.15);color:var(--accent);padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600">Starter</span></td>
+            <td style="padding:8px;text-align:right;font-weight:600">199.000đ</td>
+            <td style="padding:8px;text-align:right">500</td>
+            <td style="padding:8px;text-align:right">5</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px"><span style="background:rgba(163,113,247,0.15);color:var(--purple);padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600">Pro</span></td>
+            <td style="padding:8px;text-align:right;font-weight:600">499.000đ</td>
+            <td style="padding:8px;text-align:right">2.000</td>
+            <td style="padding:8px;text-align:right">10</td>
+          </tr>
+          <tr>
+            <td style="padding:8px"><span style="background:rgba(246,185,30,0.15);color:var(--yellow);padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600">Business</span></td>
+            <td style="padding:8px;text-align:right;font-weight:600">999.000đ</td>
+            <td style="padding:8px;text-align:right">Unlimited</td>
+            <td style="padding:8px;text-align:right">All</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid">
+      <div class="card" style="grid-column:span 2">
+        <h3>📋 Lịch sử mua gói <a href="#" onclick="loadBilling();return false">Refresh ↻</a></h3>
+        <div id="billing-transactions" style="font-size:13px">
+          <div class="skeleton skeleton-row"></div>
+          <div class="skeleton skeleton-row"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SePay Setup -->
+    <div class="card" style="margin-top:18px">
+      <h3>⚙️ SePay — Nhận thanh toán gói SaaS</h3>
+      <div style="font-size:13px;line-height:1.8;color:var(--muted)">
+        <p style="margin-bottom:12px">SePay dùng để nhận tiền khi <strong style="color:var(--text)">khách mua gói SaaS BizClaw</strong>. Khi nhận được chuyển khoản đúng mã, hệ thống tự kích hoạt plan cho tenant tương ứng.</p>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px">
+          <strong style="color:var(--text)">1. Đăng nhập SePay Dashboard</strong> → <a href="https://my.sepay.vn" target="_blank" style="color:var(--accent)">my.sepay.vn</a><br>
+          <strong style="color:var(--text)">2. Vào Webhooks</strong> → Click "+ Add webhooks"<br>
+          <strong style="color:var(--text)">3. Cấu hình:</strong><br>
+          <div style="margin-left:16px;margin-top:4px">
+            • <strong>URL:</strong> <code style="background:var(--bg);padding:2px 8px;border-radius:4px;color:var(--cyan);font-size:12px" id="sepay-webhook-url">Loading...</code>
+            <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="copySepayUrl()">📋 Copy</button><br>
+            • <strong>Event:</strong> In_only (chỉ giao dịch nhận)<br>
+            • <strong>Auth:</strong> Api_Key<br>
+            • <strong>API Key:</strong> Đặt trong env var <code style="background:var(--bg);padding:2px 8px;border-radius:4px;color:var(--yellow);font-size:12px">BIZCLAW_SEPAY_API_KEY</code>
+          </div>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px">
+          <strong style="color:var(--text)">Ví dụ mua gói:</strong> Khách muốn mua gói <strong style="color:var(--accent)">Pro</strong> cho tenant <code style="color:var(--green)">dalat-xinh</code>:<br>
+          <div style="margin-left:16px;margin-top:4px">
+            → Chuyển khoản <strong style="color:var(--green)">499.000đ</strong> với nội dung: <code style="background:var(--bg);padding:2px 8px;border-radius:4px;color:var(--green);font-size:12px">BIZCLAW-dalat-xinh</code><br>
+            → Hệ thống tự động kích hoạt gói Pro cho tenant đó.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OAuth Social Connect -->
+    <div class="card" style="margin-top:18px">
+      <h3>🔗 Kết nối dịch vụ cho AI Agent</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+        Cho phép AI Agent truy cập dịch vụ bên ngoài thay mặt tenant. Agent sẽ dùng token để gửi email, quản lý lịch, đăng bài, trả lời tin nhắn...
+      </p>
+      <div id="oauth-connections" style="font-size:13px">
+        <div class="skeleton skeleton-row"></div>
+      </div>
+      <div style="margin-top:16px">
+        <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px">Chọn tenant để kết nối:</label>
+        <select id="oauth-tenant-select" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;color:var(--text);font-size:13px;min-width:200px" onchange="loadOAuthStatus()">
+          <option value="">-- Chọn tenant --</option>
+        </select>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--muted)">
+        <p><strong style="color:var(--text)">Env vars cần thiết:</strong></p>
+        <div style="font-family:monospace;margin-top:4px">
+          <code style="color:var(--yellow)">GOOGLE_CLIENT_ID</code> + <code style="color:var(--yellow)">GOOGLE_CLIENT_SECRET</code> → <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:var(--accent)">Google Console</a><br>
+          <code style="color:var(--yellow)">FACEBOOK_APP_ID</code> + <code style="color:var(--yellow)">FACEBOOK_APP_SECRET</code> → <a href="https://developers.facebook.com/apps" target="_blank" style="color:var(--accent)">Meta Developers</a>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -618,18 +733,61 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
   </div>
 </div>
 
-<!-- Create Tenant Modal -->
+<!-- Create Tenant Modal (Enhanced with BYO + Vertical Templates) -->
 <div id="modal-create" class="modal-overlay hidden">
-  <div class="modal">
-    <h2>Create Tenant</h2>
-    <label>Name</label><input id="f-name" placeholder="My Bot">
-    <label>Slug (subdomain)</label><input id="f-slug" placeholder="mybot">
-    <label>Provider</label>
-    <select id="f-provider"><option>openai</option><option>anthropic</option><option>ollama</option><option>gemini</option><option>deepseek</option><option>groq</option><option>brain</option></select>
-    <label>Model</label><input id="f-model" value="gpt-4o-mini">
+  <div class="modal" style="min-width:520px">
+    <h2>🏢 Tạo Tenant mới</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Mỗi tenant là một trợ lý AI độc lập với cấu hình riêng. Mô hình BYO — bạn mang API key của mình.</p>
+
+    <label>Ngành nghề (Template)</label>
+    <div id="f-templates" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+      <div class="tpl-pick" data-tpl="" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--accent);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">⚙️</div>Tùy chỉnh
+      </div>
+      <div class="tpl-pick" data-tpl="tourism" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">🏨</div>Du lịch
+      </div>
+      <div class="tpl-pick" data-tpl="fnb" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">🍜</div>F&B
+      </div>
+      <div class="tpl-pick" data-tpl="specialty" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">🍓</div>Đặc sản
+      </div>
+      <div class="tpl-pick" data-tpl="online_shop" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">🏪</div>Bán hàng
+      </div>
+      <div class="tpl-pick" data-tpl="clinic" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">🏥</div>Phòng khám
+      </div>
+      <div class="tpl-pick" data-tpl="education" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">🏫</div>Giáo dục
+      </div>
+      <div class="tpl-pick" data-tpl="office" onclick="pickTemplate(this)" style="background:var(--card);border:2px solid var(--border);border-radius:10px;padding:10px;text-align:center;cursor:pointer;font-size:12px;transition:all .2s">
+        <div style="font-size:22px;margin-bottom:4px">🏢</div>Văn phòng
+      </div>
+    </div>
+    <input type="hidden" id="f-template" value="">
+
+    <label>Tên cơ sở</label><input id="f-name" placeholder="Ví dụ: Homestay Đà Lạt Xinh">
+    <label>Slug (URL)</label><input id="f-slug" placeholder="dalat-xinh">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <label>Provider</label>
+        <select id="f-provider"><option>openai</option><option>anthropic</option><option>ollama</option><option>gemini</option><option>deepseek</option><option>groq</option><option>brain</option></select>
+      </div>
+      <div>
+        <label>Model</label><input id="f-model" value="gpt-4o-mini">
+      </div>
+    </div>
+
+    <label>🔑 API Key (BYO — Bring Your Own)</label>
+    <input id="f-apikey" type="password" placeholder="sk-... hoặc để trống nếu dùng Ollama local" style="font-family:monospace;font-size:12px">
+    <p style="font-size:11px;color:var(--muted);margin-top:4px">Key được lưu an toàn trong database, chỉ tenant này sử dụng. AI Agent không nhìn thấy key.</p>
+
     <div class="actions">
-      <button class="btn btn-outline" onclick="hideModal('modal-create')">Cancel</button>
-      <button id="btn-create-tenant" class="btn btn-primary" onclick="createTenant()">Create</button>
+      <button class="btn btn-outline" onclick="hideModal('modal-create')">Huỷ</button>
+      <button id="btn-create-tenant" class="btn btn-primary" onclick="createTenant()">🚀 Tạo Tenant</button>
     </div>
   </div>
 </div>
@@ -887,6 +1045,7 @@ const ROUTE_MAP = {
   '/users': 'users',
   '/teams': 'teams',
   '/audit': 'audit',
+  '/billing': 'billing',
 
   '/wiki': 'wiki',
   '/profile': 'profile',
@@ -950,6 +1109,7 @@ function loadPage(){
   else if(currentPage==='users')loadUsers();
   else if(currentPage==='teams')loadTeams();
   else if(currentPage==='audit')loadAudit();
+  else if(currentPage==='billing'){loadBilling();initOAuthTenantDropdown();}
 
   else if(currentPage==='wiki')loadWiki('getting-started');
 }
@@ -1342,10 +1502,19 @@ function eventTypeBadge(type){
 function showCreateModal(){document.getElementById('modal-create').classList.remove('hidden')}
 function hideModal(id){document.getElementById(id).classList.add('hidden')}
 
+// Template picker for create tenant modal
+function pickTemplate(el){
+  document.querySelectorAll('.tpl-pick').forEach(e => e.style.borderColor = 'var(--border)');
+  el.style.borderColor = 'var(--accent)';
+  document.getElementById('f-template').value = el.dataset.tpl || '';
+}
+
 async function createTenant(){
   const btn = document.getElementById('btn-create-tenant');
   btn.disabled = true;
-  btn.textContent = "Creating...";
+  btn.textContent = "Đang tạo...";
+  const apiKey = document.getElementById('f-apikey')?.value || '';
+  const template = document.getElementById('f-template')?.value || '';
   try {
     const res = await authFetch(API+'/tenants',{
       method:'POST',
@@ -1355,20 +1524,33 @@ async function createTenant(){
         slug:document.getElementById('f-slug').value,
         provider:document.getElementById('f-provider').value,
         model:document.getElementById('f-model').value,
-        plan:"free"
+        plan:"free",
+        template: template,
       })
     });
     const r = await res.json();
     if(r.ok) {
-      hideModal('modal-create');toast('✅ Tenant created!');loadPage();
+      // Save BYO API key as tenant config (if provided)
+      if(apiKey && r.tenant?.id) {
+        await authFetch(API+'/tenants/'+r.tenant.id+'/config', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ key: 'api_key', value: apiKey })
+        });
+      }
+      hideModal('modal-create');
+      toast('✅ Tenant tạo thành công!');
+      // Clear form
+      document.getElementById('f-apikey').value = '';
+      loadPage();
     } else {
-      toast('❌ ' + (r.error || 'Failed to create tenant'), 'error');
+      toast('❌ ' + (r.error || 'Không thể tạo tenant'), 'error');
     }
   } catch(e) {
     toast('❌ ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = "Create";
+    btn.textContent = "🚀 Tạo Tenant";
   }
 }
 
@@ -1969,6 +2151,157 @@ async function checkPlatformHealth(){
   }
 }
 setInterval(checkPlatformHealth, 30000); // Check every 30s
+
+// ── Billing ──────────────────────────────────
+async function loadBilling(){
+  try {
+    // Set webhook URL based on current window location
+    const webhookUrl = window.location.origin + '/api/billing/sepay-webhook';
+    const urlEl = document.getElementById('sepay-webhook-url');
+    if(urlEl) urlEl.textContent = webhookUrl;
+
+    const res = await authFetch('/api/billing/status');
+    const data = await res.json();
+
+    // Stats
+    const statusEl = document.getElementById('bs-status');
+    if(data.sepay && data.sepay.configured){
+      statusEl.textContent = '✅';
+      statusEl.style.color = 'var(--green)';
+    } else {
+      statusEl.textContent = '⚠️';
+      statusEl.style.color = 'var(--yellow)';
+    }
+
+    document.getElementById('bs-count').textContent = data.summary?.total_transactions || 0;
+    document.getElementById('bs-total').textContent = data.summary?.total_received_formatted || '0đ';
+
+    // Transactions table
+    const txEl = document.getElementById('billing-transactions');
+    const txs = data.recent_transactions || [];
+    if(txs.length === 0){
+      txEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Chưa có giao dịch nào. Cấu hình SePay webhook bên dưới để bắt đầu.</div>';
+      return;
+    }
+
+    let html = '<table style="width:100%;border-collapse:collapse">';
+    html += '<thead><tr style="border-bottom:1px solid var(--border)">';
+    html += '<th style="text-align:left;padding:8px;color:var(--muted);font-size:11px;font-weight:600">ID</th>';
+    html += '<th style="text-align:left;padding:8px;color:var(--muted);font-size:11px;font-weight:600">NGÂN HÀNG</th>';
+    html += '<th style="text-align:right;padding:8px;color:var(--muted);font-size:11px;font-weight:600">SỐ TIỀN</th>';
+    html += '<th style="text-align:left;padding:8px;color:var(--muted);font-size:11px;font-weight:600">NỘI DUNG</th>';
+    html += '<th style="text-align:left;padding:8px;color:var(--muted);font-size:11px;font-weight:600">MÃ THAM CHIẾU</th>';
+    html += '<th style="text-align:right;padding:8px;color:var(--muted);font-size:11px;font-weight:600">NGÀY</th>';
+    html += '</tr></thead><tbody>';
+
+    txs.forEach(tx => {
+      const amount = Number(tx.amount).toLocaleString('vi-VN');
+      const refBadge = tx.reference_code
+        ? `<span style="background:rgba(63,185,80,0.1);color:var(--green);padding:2px 8px;border-radius:6px;font-size:11px">${escapeHtml(tx.reference_code)}</span>`
+        : '<span style="color:var(--muted)">—</span>';
+      html += `<tr style="border-bottom:1px solid var(--border)">
+        <td style="padding:8px;font-family:monospace;font-size:12px;color:var(--accent)">${tx.id}</td>
+        <td style="padding:8px">${escapeHtml(tx.gateway)}</td>
+        <td style="padding:8px;text-align:right;font-weight:600;color:var(--green)">${amount}đ</td>
+        <td style="padding:8px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(tx.content)}">${escapeHtml(tx.content)}</td>
+        <td style="padding:8px">${refBadge}</td>
+        <td style="padding:8px;text-align:right;color:var(--muted);font-size:12px">${escapeHtml(tx.date)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    txEl.innerHTML = html;
+  } catch(e){
+    console.error('Load billing failed:', e);
+  }
+}
+
+// ── OAuth Social Connect ──────────────────────────
+async function initOAuthTenantDropdown(){
+  try {
+    const res = await authFetch('/api/admin/tenants');
+    const tenants = await res.json();
+    const sel = document.getElementById('oauth-tenant-select');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">-- Chọn tenant --</option>';
+    (tenants||[]).forEach(t => {
+      sel.innerHTML += `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name||t.slug||t.id)}</option>`;
+    });
+  } catch(e) { console.error('initOAuthTenantDropdown:', e); }
+}
+
+async function loadOAuthStatus(){
+  const tenantId = document.getElementById('oauth-tenant-select')?.value;
+  const el = document.getElementById('oauth-connections');
+  if(!tenantId || !el) {
+    if(el) el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">Chọn tenant để xem trạng thái kết nối.</div>';
+    return;
+  }
+
+  try {
+    const res = await authFetch(`/api/oauth/status/${tenantId}`);
+    const data = await res.json();
+
+    const providers = [
+      { key:'google', icon:'🔍', name:'Google', desc:'Gmail, Calendar, Sheets, Drive', color:'#4285f4' },
+      { key:'facebook', icon:'📘', name:'Facebook', desc:'Pages, Messenger', color:'#1877f2' },
+      { key:'instagram', icon:'📸', name:'Instagram', desc:'Business Messages, Posts', color:'#e1306c' },
+    ];
+
+    let html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">';
+    providers.forEach(p => {
+      const conn = (data.connections||[]).find(c => c.provider === p.key);
+      const available = data.providers_available?.[p.key];
+      const isConnected = conn?.connected;
+
+      const statusBadge = isConnected
+        ? `<span style="background:rgba(63,185,80,0.15);color:var(--green);padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600">✅ Đã kết nối</span>`
+        : `<span style="background:rgba(139,148,158,0.15);color:var(--muted);padding:2px 10px;border-radius:6px;font-size:11px">Chưa kết nối</span>`;
+
+      const userInfo = isConnected && conn.user_info
+        ? `<div style="font-size:11px;color:var(--text);margin-top:4px">${escapeHtml(conn.user_info)}</div>`
+        : '';
+
+      const actionBtn = isConnected
+        ? `<button class="btn btn-outline btn-sm" style="margin-top:8px;border-color:#e74c3c;color:#e74c3c" onclick="disconnectOAuth('${p.key}','${tenantId}')">🔌 Ngắt kết nối</button>`
+        : available
+          ? `<a class="btn btn-sm" style="margin-top:8px;background:${p.color};color:#fff;text-decoration:none;display:inline-block;padding:4px 14px;border-radius:6px;font-size:12px" href="/api/oauth/connect/${p.key}?tenant_id=${tenantId}">🔗 Kết nối ${p.name}</a>`
+          : `<div style="font-size:11px;color:var(--muted);margin-top:8px">⚠️ Chưa cấu hình env vars</div>`;
+
+      html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:20px">${p.icon}</span>
+          <strong style="color:var(--text)">${p.name}</strong>
+          ${statusBadge}
+        </div>
+        <div style="font-size:11px;color:var(--muted)">${p.desc}</div>
+        ${userInfo}
+        ${actionBtn}
+      </div>`;
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red)">Lỗi tải trạng thái OAuth.</div>';
+    console.error('loadOAuthStatus:', e);
+  }
+}
+
+async function disconnectOAuth(provider, tenantId){
+  if(!confirm(`Ngắt kết nối ${provider}?`)) return;
+  try {
+    await authFetch(`/api/oauth/disconnect/${provider}?tenant_id=${tenantId}`, { method:'DELETE' });
+    toast(`🔌 Đã ngắt kết nối ${provider}`);
+    loadOAuthStatus();
+  } catch(e) {
+    toast('❌ Lỗi ngắt kết nối');
+    console.error(e);
+  }
+}
+
+function copySepayUrl(){
+  const url = document.getElementById('sepay-webhook-url')?.textContent || '';
+  navigator.clipboard.writeText(url).then(()=> toast('✅ Copied webhook URL'));
+}
 
 // ── Wiki & Guide ──────────────────────────────
 const WIKI_ARTICLES = [

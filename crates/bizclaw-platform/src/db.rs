@@ -388,6 +388,54 @@ impl PlatformDb {
         Ok(())
     }
 
+    /// Update tenant plan and adjust limits accordingly.
+    ///
+    /// Plan tiers for Vietnamese SME BYO model:
+    /// - `free`:   100 msg/day, 3 channels, 5 members
+    /// - `starter`: 500 msg/day, 5 channels, 10 members  (199k VND/mo)
+    /// - `pro`:   2000 msg/day, 10 channels, 20 members  (499k VND/mo)
+    /// - `business`: unlimited, all channels, 50 members  (999k VND/mo)
+    pub fn update_tenant_plan(&self, id: &str, plan: &str) -> Result<()> {
+        let (max_msg, max_ch, max_mem) = match plan {
+            "starter" => (500u32, 5u32, 10u32),
+            "pro" => (2000, 10, 20),
+            "business" => (999_999, 99, 50),
+            _ => (100, 3, 5), // free
+        };
+        self.conn
+            .execute(
+                "UPDATE tenants SET plan=?1, max_messages_day=?2, max_channels=?3, max_members=?4, updated_at=datetime('now') WHERE id=?5",
+                params![plan, max_msg, max_ch, max_mem, id],
+            )
+            .map_err(|e| BizClawError::Memory(format!("Update plan: {e}")))?;
+        Ok(())
+    }
+
+    /// Find a tenant by partial match on slug or name (for SePay reference matching).
+    pub fn find_tenant_by_ref(&self, reference: &str) -> Result<Option<Tenant>> {
+        // Try exact slug match first
+        let slug_lower = reference.to_lowercase();
+        match self.conn.query_row(
+            &format!("{} WHERE LOWER(slug)=?1", TENANT_SELECT),
+            params![slug_lower],
+            row_to_tenant,
+        ) {
+            Ok(t) => return Ok(Some(t)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => {}
+            Err(e) => return Err(BizClawError::Memory(format!("Find tenant: {e}"))),
+        }
+        // Try ID match
+        match self.conn.query_row(
+            &format!("{} WHERE id=?1", TENANT_SELECT),
+            params![reference],
+            row_to_tenant,
+        ) {
+            Ok(t) => Ok(Some(t)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(BizClawError::Memory(format!("Find tenant: {e}"))),
+        }
+    }
+
     /// Regenerate pairing code.
     pub fn reset_pairing_code(&self, id: &str) -> Result<String> {
         let code = format!("{:06}", rand_code());

@@ -34,6 +34,8 @@ pub struct AdminState {
     /// PostgreSQL DB for enterprise features (optional — only when DATABASE_URL is set).
     /// Falls back gracefully: enterprise endpoints return 503 if None.
     pub pg_db: Option<crate::db_pg::PgDb>,
+    /// Startup time for uptime calculation.
+    pub startup_time: std::time::Instant,
 }
 
 /// JWT auth middleware — validates Authorization: Bearer <token>.
@@ -219,6 +221,27 @@ impl AdminServer {
             )
             // ── MISSION CONTROL: Webhooks ───────────────────────────────────
             .route("/api/admin/tenants/{id}/webhooks", get(mc_list_webhooks))
+            // ── SECRET MANAGEMENT: Key Status (masked) ──────────────────────
+            .route("/api/admin/keys/status", get(key_status_handler))
+            // ── BILLING: SePay & Payment ──────────────────────────────
+            .route("/api/billing/status", get(billing_status_handler))
+            .route("/api/billing/vietqr", get(vietqr_handler))
+            // ── SME TEMPLATES ─────────────────────────────────────────
+            .route("/api/admin/templates", get(list_templates_handler))
+            // ── OAUTH: Social Connect (protected endpoints) ──────────────
+            .route("/api/oauth/status/{tenant_id}", get(crate::oauth::oauth_status))
+            .route("/api/oauth/disconnect/{provider}", delete(crate::oauth::oauth_disconnect))
+            // ── SOCIAL AUTOMATION: Content Pipeline + Auto-Reply ───────
+            .route("/api/social/status/{tenant_id}", get(crate::social_automation::social_status))
+            .route("/api/social/pipeline/{tenant_id}", get(crate::social_automation::get_pipeline_config).post(crate::social_automation::update_pipeline_config))
+            .route("/api/social/pipeline/{tenant_id}/trigger", post(crate::social_automation::trigger_pipeline))
+            // ── MAMA AI: Orchestrator + Cost-Aware Provider Routing ───
+            .route("/api/mama/providers", get(crate::mama::list_providers))
+            .route("/api/mama/plan", post(crate::mama::create_plan))
+            .route("/api/mama/skills", get(crate::mama::search_skills_api))
+            .route("/api/mama/status", get(crate::mama::mama_status))
+            .route("/api/mama/onboard", post(crate::mama::smart_onboard))
+            .route("/api/mama/detect-key", post(crate::mama::detect_key))
             .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
         // Public routes — including invitation acceptance
@@ -246,6 +269,14 @@ impl AdminServer {
             )
             .route("/pixel-office", get(pixel_office_page))
             .route("/hub", get(hub_skills_page))
+            .route("/health", get(health_check_handler))
+            // SePay webhook — public (SePay POSTs here, no JWT)
+            .route("/api/billing/sepay-webhook", post(sepay_webhook_handler))
+            // OAuth2 callbacks — public (Google/FB redirect here)
+            .route("/api/oauth/connect/{provider}", get(crate::oauth::oauth_connect))
+            .route("/api/oauth/callback/{provider}", get(crate::oauth::oauth_callback))
+            // Facebook/Instagram webhook — public (Meta calls here)
+            .route("/api/social/fb-webhook", get(crate::social_automation::fb_webhook_verify).post(crate::social_automation::fb_webhook_handler))
             .route("/", get(admin_dashboard_page));
 
         // SPA fallback — serve dashboard HTML for all non-API paths
@@ -353,9 +384,50 @@ impl AdminServer {
             }
         });
 
-        axum::serve(listener, app).await.map_err(|e| {
-            bizclaw_core::error::BizClawError::Gateway(format!("Server error: {e}"))
-        })?;
+        // ── Graceful Shutdown ──────────────────────────────────
+        let shutdown_state = state.clone();
+        let shutdown_signal = async move {
+            let ctrl_c = async {
+                tokio::signal::ctrl_c().await.ok();
+            };
+            #[cfg(unix)]
+            let sigterm = async {
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                    .expect("SIGTERM handler")
+                    .recv()
+                    .await;
+            };
+            #[cfg(not(unix))]
+            let sigterm = std::future::pending::<()>();
+
+            tokio::select! {
+                _ = ctrl_c => {},
+                _ = sigterm => {},
+            }
+
+            tracing::info!("🛑 Shutdown signal received — stopping all tenants...");
+            // Stop all running tenants gracefully
+            let db = shutdown_state.db.lock().await;
+            if let Ok(tenants) = db.list_tenants() {
+                let mut mgr = shutdown_state.manager.lock().await;
+                for t in &tenants {
+                    if t.status == "running" {
+                        let _ = mgr.stop_tenant(&t.id);
+                        db.update_tenant_status(&t.id, "stopped", None).ok();
+                        tracing::info!("  ↳ Stopped tenant: {}", t.slug);
+                    }
+                }
+            }
+            db.log_event("platform_shutdown", "system", "platform", Some("graceful")).ok();
+            tracing::info!("✅ All tenants stopped. Platform shutting down.");
+        };
+
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal)
+            .await
+            .map_err(|e| {
+                bizclaw_core::error::BizClawError::Gateway(format!("Server error: {e}"))
+            })?;
 
         Ok(())
     }
@@ -406,6 +478,540 @@ async fn platform_security_headers(
             .expect("static header"),
     );
     response
+}
+
+// ── Health Check ────────────────────────────────────────
+
+/// Public health endpoint for Docker HEALTHCHECK, load balancers, and monitoring.
+/// Returns database connectivity, uptime, tenant counts, and version.
+async fn health_check_handler(
+    State(state): State<Arc<AdminState>>,
+) -> Json<serde_json::Value> {
+    let uptime_secs = state.startup_time.elapsed().as_secs();
+
+    // Check SQLite connectivity
+    let db_status = match state.db.lock().await.tenant_stats() {
+        Ok((total, running, stopped, error)) => {
+            serde_json::json!({
+                "connected": true,
+                "tenants_total": total,
+                "tenants_running": running,
+                "tenants_stopped": stopped,
+                "tenants_error": error,
+            })
+        }
+        Err(_) => serde_json::json!({ "connected": false }),
+    };
+
+    // Check PostgreSQL (enterprise) — optional
+    let pg_status = if let Some(pg) = &state.pg_db {
+        match pg.pool().acquire().await {
+            Ok(_) => serde_json::json!({ "connected": true }),
+            Err(_) => serde_json::json!({ "connected": false }),
+        }
+    } else {
+        serde_json::json!({ "connected": false, "reason": "not configured" })
+    };
+
+    Json(serde_json::json!({
+        "status": "ok",
+        "version": env!("CARGO_PKG_VERSION"),
+        "uptime_secs": uptime_secs,
+        "database": db_status,
+        "postgres": pg_status,
+        "domain": state.domain,
+    }))
+}
+
+// ── Key Status (Secret Management) ─────────────────────
+
+/// Protected endpoint: returns masked key status for all integrations.
+/// Agent Mama uses this to know which keys are configured WITHOUT seeing raw values.
+///
+/// GET /api/admin/keys/status
+/// Response: { "llm": { "configured": true, "source": "env", "provider": "openai", "masked": "sk-***83d" }, ... }
+async fn key_status_handler(
+    State(_state): State<Arc<AdminState>>,
+) -> Json<serde_json::Value> {
+    use bizclaw_core::config::{BizClawConfig, mask_key};
+
+    // Load current config (hot-reload aware)
+    let config = BizClawConfig::load().unwrap_or_default();
+
+    // LLM key status
+    let (llm_ok, llm_src, llm_masked) = config.llm.key_status();
+
+    // Telegram (first instance)
+    let tg_status = config.channel.telegram.first().map(|tg| {
+        let (ok, src, masked) = tg.key_status();
+        serde_json::json!({ "configured": ok, "source": src, "masked": masked, "name": tg.name })
+    }).unwrap_or(serde_json::json!({ "configured": false }));
+
+    // Discord (first instance)
+    let dc_status = config.channel.discord.first().map(|dc| {
+        let (ok, src, masked) = dc.key_status();
+        serde_json::json!({ "configured": ok, "source": src, "masked": masked, "name": dc.name })
+    }).unwrap_or(serde_json::json!({ "configured": false }));
+
+    // WhatsApp (first instance)
+    let wa_status = config.channel.whatsapp.first().map(|wa| {
+        let (ok, src, masked) = wa.key_status();
+        serde_json::json!({ "configured": ok, "source": src, "masked": masked })
+    }).unwrap_or(serde_json::json!({ "configured": false }));
+
+    // Zalo OA — check env var first
+    let zalo_status = {
+        let zalo = config.channel.zalo.first();
+        let env_token = std::env::var("BIZCLAW_ZALO_OA_ACCESS_TOKEN").ok().filter(|s| !s.is_empty());
+        if let Some(token) = env_token {
+            serde_json::json!({ "configured": true, "source": "env", "masked": mask_key(&token) })
+        } else if let Some(z) = zalo {
+            if !z.oa_access_token.is_empty() {
+                serde_json::json!({ "configured": true, "source": "config", "masked": mask_key(&z.oa_access_token) })
+            } else {
+                serde_json::json!({ "configured": false })
+            }
+        } else {
+            serde_json::json!({ "configured": false })
+        }
+    };
+
+    // Email
+    let email_status = config.channel.email.first().map(|em| {
+        if !em.password.is_empty() {
+            serde_json::json!({ "configured": true, "source": "config", "masked": mask_key(&em.password), "email": em.email })
+        } else {
+            serde_json::json!({ "configured": false })
+        }
+    }).unwrap_or(serde_json::json!({ "configured": false }));
+
+    Json(serde_json::json!({
+        "llm": {
+            "configured": llm_ok,
+            "source": llm_src,
+            "provider": config.llm.provider,
+            "model": config.llm.model,
+            "masked": llm_masked,
+        },
+        "telegram": tg_status,
+        "discord": dc_status,
+        "whatsapp": wa_status,
+        "zalo": zalo_status,
+        "email": email_status,
+        "_note": "Keys are never exposed via this API. Use environment variables for SaaS deployments.",
+    }))
+}
+
+// ── SePay Webhook & Billing ────────────────────────────
+
+/// SePay webhook payload — matches exact SePay documentation.
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+struct SepayWebhookPayload {
+    /// Unique transaction ID (use for deduplication)
+    id: i64,
+    /// Bank name (e.g., "Vietcombank")
+    #[serde(default)]
+    gateway: String,
+    /// Transaction timestamp
+    #[serde(default)]
+    transaction_date: String,
+    /// Bank account number
+    #[serde(default)]
+    account_number: String,
+    /// Payment code
+    #[serde(default)]
+    code: Option<String>,
+    /// Transfer description/content
+    #[serde(default)]
+    content: String,
+    /// "in" (incoming) or "out" (outgoing)
+    transfer_type: String,
+    /// Transaction amount in VND
+    transfer_amount: f64,
+    /// Account balance after transaction
+    #[serde(default)]
+    accumulated: f64,
+    /// Sub-account identifier
+    #[serde(default)]
+    sub_account: Option<String>,
+    /// Bank transaction reference
+    #[serde(default)]
+    reference_code: Option<String>,
+}
+
+/// POST /api/billing/sepay-webhook — receive SaaS subscription payments from SePay.
+///
+/// Public endpoint (no JWT). SePay calls this when a customer pays for a
+/// BizClaw SaaS plan via bank transfer. Matches amount to plan tier and
+/// auto-activates the tenant's plan.
+/// Security: validated via `Authorization: Apikey <KEY>` header.
+///
+/// Following SePay webhook spec: https://docs.sepay.vn/
+async fn sepay_webhook_handler(
+    State(state): State<Arc<AdminState>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<SepayWebhookPayload>,
+) -> (axum::http::StatusCode, Json<serde_json::Value>) {
+    // 1. Log incoming webhook FIRST (for debugging)
+    tracing::info!(
+        "💳 SePay webhook received: id={}, type={}, amount={}, ref={:?}",
+        payload.id,
+        payload.transfer_type,
+        payload.transfer_amount,
+        payload.reference_code,
+    );
+
+    // 2. Verify authorization (API key from env var)
+    let expected_key = std::env::var("BIZCLAW_SEPAY_API_KEY").unwrap_or_default();
+    if !expected_key.is_empty() {
+        let auth_header = headers
+            .get("Authorization")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+
+        let valid = auth_header == format!("Apikey {}", expected_key)
+            || auth_header == format!("Bearer {}", expected_key);
+
+        if !valid {
+            tracing::warn!("🚫 SePay webhook auth failed: {:?}", auth_header);
+            return (
+                axum::http::StatusCode::FORBIDDEN,
+                Json(serde_json::json!({ "error": "Unauthorized" })),
+            );
+        }
+    }
+
+    // 3. Only process incoming transfers
+    if payload.transfer_type != "in" {
+        tracing::debug!("SePay: ignoring outgoing transfer id={}", payload.id);
+        return (
+            axum::http::StatusCode::OK,
+            Json(serde_json::json!({ "success": true, "message": "ignored_outgoing" })),
+        );
+    }
+
+    // 4. Idempotency: check if already processed (by sepay transaction ID)
+    if let Some(pg) = &state.pg_db {
+        let already = sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM sepay_transactions WHERE sepay_id = $1)",
+        )
+        .bind(payload.id)
+        .fetch_one(pg.pool())
+        .await
+        .unwrap_or(false);
+
+        if already {
+            tracing::info!("SePay: duplicate webhook id={}, returning success", payload.id);
+            return (
+                axum::http::StatusCode::OK,
+                Json(serde_json::json!({ "success": true, "message": "already_processed" })),
+            );
+        }
+
+        // 5. Record transaction
+        let _ = sqlx::query(
+            "INSERT INTO sepay_transactions (sepay_id, gateway, transfer_type, transfer_amount, content, reference_code, account_number, transaction_date, created_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) \
+             ON CONFLICT (sepay_id) DO NOTHING"
+        )
+        .bind(payload.id)
+        .bind(&payload.gateway)
+        .bind(&payload.transfer_type)
+        .bind(payload.transfer_amount)
+        .bind(&payload.content)
+        .bind(&payload.reference_code)
+        .bind(&payload.account_number)
+        .bind(&payload.transaction_date)
+        .execute(pg.pool())
+        .await;
+
+        // 6. Auto plan activation — match SaaS subscription payment to plan tier
+        //    Customer pays for BizClaw plan via bank transfer
+        //    Content pattern: BIZCLAW-<slug> or BIZCLAW-<tenant_id>
+        //    Plan tiers: 199k=starter, 499k=pro, 999k=business
+        let content_upper = payload.content.to_uppercase();
+        let ref_upper = payload.reference_code.as_deref().unwrap_or("").to_uppercase();
+        let match_str = if content_upper.contains("BIZCLAW") {
+            &content_upper
+        } else if ref_upper.contains("BIZCLAW") {
+            &ref_upper
+        } else {
+            ""
+        };
+
+        if !match_str.is_empty() {
+            // Extract tenant reference: BIZCLAW-<ref> or BIZCLAW <ref>
+            let tenant_ref = match_str
+                .replace("BIZCLAW-", "")
+                .replace("BIZCLAW ", "")
+                .replace("BC-", "")
+                .trim()
+                .to_string();
+
+            if !tenant_ref.is_empty() && tenant_ref != "TEST" {
+                // Match amount to plan
+                let amount = payload.transfer_amount as u64;
+                let new_plan = if amount >= 999_000 {
+                    "business"
+                } else if amount >= 499_000 {
+                    "pro"
+                } else if amount >= 199_000 {
+                    "starter"
+                } else {
+                    "" // Amount too low for plan upgrade
+                };
+
+                if !new_plan.is_empty() {
+                    // Look up tenant in SQLite
+                    let db = state.db.lock().await;
+                    if let Ok(Some(tenant)) = db.find_tenant_by_ref(&tenant_ref) {
+                        if let Ok(()) = db.update_tenant_plan(&tenant.id, new_plan) {
+                            tracing::info!(
+                                "✅ Auto plan activated: tenant={} ({}), plan={}, amount={}đ",
+                                tenant.slug, tenant.id, new_plan, amount
+                            );
+                            db.log_event(
+                                "plan_activated",
+                                "sepay",
+                                &tenant.id,
+                                Some(&format!(
+                                    "Auto-activated plan '{}' via SePay payment {}đ (ref: {})",
+                                    new_plan, amount, tenant_ref
+                                )),
+                            ).ok();
+                        }
+                    } else {
+                        tracing::warn!(
+                            "⚠️ SePay payment ref '{}' did not match any tenant",
+                            tenant_ref
+                        );
+                    }
+                } else {
+                    tracing::info!(
+                        "💰 SePay payment {}đ received (ref: {}) — below plan threshold",
+                        amount, tenant_ref
+                    );
+                }
+            }
+        }
+    } else {
+        tracing::warn!("SePay webhook received but PostgreSQL not configured — payment not recorded");
+    }
+
+    // Billing ghi thẳng vào PostgreSQL — Google Sheets dùng cho AI Agent làm việc
+
+    tracing::info!(
+        "✅ SePay webhook processed: id={}, amount={} VND, gateway={}",
+        payload.id,
+        payload.transfer_amount,
+        payload.gateway,
+    );
+
+    (
+        axum::http::StatusCode::OK,
+        Json(serde_json::json!({ "success": true })),
+    )
+}
+
+/// GET /api/billing/status — billing overview for dashboard.
+async fn billing_status_handler(
+    State(state): State<Arc<AdminState>>,
+) -> Json<serde_json::Value> {
+    let sepay_configured = !std::env::var("BIZCLAW_SEPAY_API_KEY")
+        .unwrap_or_default()
+        .is_empty();
+
+    let mut recent_transactions = serde_json::json!([]);
+    let mut total_received: f64 = 0.0;
+    let mut transaction_count: i64 = 0;
+
+    if let Some(pg) = &state.pg_db {
+        // Get total received amount
+        if let Ok(row) = sqlx::query_as::<_, (i64, f64)>(
+            "SELECT COUNT(*), COALESCE(SUM(transfer_amount), 0) FROM sepay_transactions WHERE transfer_type = 'in'"
+        )
+        .fetch_one(pg.pool())
+        .await
+        {
+            transaction_count = row.0;
+            total_received = row.1;
+        }
+
+        // Get last 10 transactions
+        if let Ok(rows) = sqlx::query_as::<_, (i64, String, f64, String, Option<String>, String)>(
+            "SELECT sepay_id, gateway, transfer_amount, content, reference_code, transaction_date \
+             FROM sepay_transactions \
+             WHERE transfer_type = 'in' \
+             ORDER BY sepay_id DESC LIMIT 10"
+        )
+        .fetch_all(pg.pool())
+        .await
+        {
+            recent_transactions = serde_json::json!(
+                rows.iter().map(|r| serde_json::json!({
+                    "id": r.0,
+                    "gateway": r.1,
+                    "amount": r.2,
+                    "content": r.3,
+                    "reference_code": r.4,
+                    "date": r.5,
+                })).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    Json(serde_json::json!({
+        "sepay": {
+            "configured": sepay_configured,
+            "webhook_url": "/api/billing/sepay-webhook",
+        },
+        "summary": {
+            "total_transactions": transaction_count,
+            "total_received_vnd": total_received,
+            "total_received_formatted": format!("{:.0}đ", total_received),
+        },
+        "recent_transactions": recent_transactions,
+        "plans": {
+            "starter": { "price": 199000, "msg_per_day": 500, "channels": 5 },
+            "pro": { "price": 499000, "msg_per_day": 2000, "channels": 10 },
+            "business": { "price": 999000, "msg_per_day": 999999, "channels": 99 },
+        }
+    }))
+}
+
+// ── VietQR Payment Generation ────────────────────────────
+
+/// Query params for VietQR generation.
+#[derive(serde::Deserialize)]
+struct VietQrParams {
+    /// Bank BIN code (e.g., 970436 for Vietcombank, 970418 for BIDV)
+    bank: String,
+    /// Account number
+    account: String,
+    /// Amount in VND
+    #[serde(default)]
+    amount: u64,
+    /// Transfer content (auto-prefixed with BIZCLAW- for tracking)
+    #[serde(default)]
+    content: String,
+    /// Account holder name
+    #[serde(default)]
+    name: String,
+}
+
+/// GET /api/billing/vietqr — generate VietQR payment link.
+///
+/// Returns a VietQR image URL that can be displayed in the dashboard or
+/// sent to customers via chat channels for easy bank transfer payment.
+async fn vietqr_handler(
+    axum::extract::Query(params): axum::extract::Query<VietQrParams>,
+) -> Json<serde_json::Value> {
+    // VietQR standard URL format
+    let content = if params.content.is_empty() {
+        "BIZCLAW".to_string()
+    } else {
+        params.content.clone()
+    };
+
+    let qr_url = format!(
+        "https://img.vietqr.io/image/{}-{}-compact2.jpg?amount={}&addInfo={}&accountName={}",
+        params.bank,
+        params.account,
+        params.amount,
+        urlencoding::encode(&content),
+        urlencoding::encode(&params.name),
+    );
+
+    // Also provide the deep link for mobile banking apps
+    let napas_url = format!(
+        "https://api.vietqr.io/v2/generate?bank={}&account={}&amount={}&description={}&accountName={}",
+        params.bank,
+        params.account,
+        params.amount,
+        urlencoding::encode(&content),
+        urlencoding::encode(&params.name),
+    );
+
+    Json(serde_json::json!({
+        "qr_image_url": qr_url,
+        "napas_url": napas_url,
+        "bank": params.bank,
+        "account": params.account,
+        "amount": params.amount,
+        "amount_formatted": format!("{}đ", params.amount.to_string()
+            .as_bytes().rchunks(3).rev()
+            .map(|c| std::str::from_utf8(c).unwrap_or(""))
+            .collect::<Vec<_>>().join(".")),
+        "content": content,
+    }))
+}
+
+// ── SME Vertical Templates ────────────────────────────
+
+/// GET /api/admin/templates — list available vertical templates for setup wizard.
+async fn list_templates_handler() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "templates": [
+            {
+                "id": "online_shop",
+                "icon": "🏪",
+                "name": "Bán hàng Online",
+                "description": "Zalo/Facebook shop, tư vấn + chốt đơn tự động",
+                "tags": ["ecommerce", "zalo", "facebook"],
+                "locale": "vi"
+            },
+            {
+                "id": "tourism",
+                "icon": "🏨",
+                "name": "Du lịch & Lưu trú",
+                "description": "Homestay, khách sạn, tour — auto booking, quét giá đối thủ",
+                "tags": ["tourism", "hotel", "booking", "dalat"],
+                "locale": "vi"
+            },
+            {
+                "id": "fnb",
+                "icon": "🍜",
+                "name": "F&B & Dịch vụ",
+                "description": "Quán ăn, café — auto đặt bàn, gửi menu, tổng hợp đơn",
+                "tags": ["fnb", "restaurant", "cafe", "dalat"],
+                "locale": "vi"
+            },
+            {
+                "id": "specialty",
+                "icon": "🍓",
+                "name": "Đặc sản & Nông sản",
+                "description": "Mứt, trà, cà phê — auto nhận đơn, xuất vận đơn, chăm sóc khách",
+                "tags": ["specialty", "agriculture", "dalat", "products"],
+                "locale": "vi"
+            },
+            {
+                "id": "clinic",
+                "icon": "🏥",
+                "name": "Phòng khám",
+                "description": "Đặt lịch hẹn, tư vấn giờ khám, nhắc nhở lịch",
+                "tags": ["clinic", "healthcare"],
+                "locale": "vi"
+            },
+            {
+                "id": "education",
+                "icon": "🏫",
+                "name": "Giáo dục & Đào tạo",
+                "description": "Tư vấn khóa học, đăng ký học, lịch học",
+                "tags": ["education", "training"],
+                "locale": "vi"
+            },
+            {
+                "id": "office",
+                "icon": "🏢",
+                "name": "Văn phòng",
+                "description": "Tóm tắt email, soạn báo cáo, quản lý lịch trình",
+                "tags": ["office", "internal"],
+                "locale": "vi"
+            }
+        ]
+    }))
 }
 
 // ── Error Sanitization (H2 FIX) ────────────────────────

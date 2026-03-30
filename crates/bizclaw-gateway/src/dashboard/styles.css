@@ -280,3 +280,229 @@ html.light .ch-card { box-shadow: 0 1px 3px rgba(0,0,0,.06); }
 }
 .theme-toggle:hover { border-color: var(--accent); color: var(--accent2); transform: translateY(-1px); }
 
+/* ═══ WELCOME ONBOARDING WIZARD ═══ */
+
+.onboarding-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn .5s;
+}
+.onboarding-container {
+  width: 100%; max-width: 640px; padding: 24px;
+  display: flex; flex-direction: column; gap: 16px;
+  max-height: 100vh; overflow-y: auto;
+}
+
+/* Progress */
+.onboarding-progress {
+  width: 100%; height: 4px; background: var(--border); border-radius: 4px; overflow: hidden;
+}
+.onboarding-progress-bar {
+  height: 100%; background: var(--grad1); border-radius: 4px;
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+}
+.onboarding-progress-text {
+  text-align: center; font-size: 11px; color: var(--text2); font-weight: 600; letter-spacing: .5px;
+}
+
+/* Welcome Step */
+.onboarding-welcome {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 40px 20px; animation: fadeIn .6s;
+}
+.onboarding-logo {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 32px;
+}
+.onboarding-logo-icon {
+  font-size: 40px; animation: glow 3s infinite;
+}
+.onboarding-logo-text {
+  font-size: 36px; font-weight: 800;
+  background: var(--grad1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.onboarding-title {
+  font-size: 28px; font-weight: 700; margin-bottom: 8px; color: var(--text);
+}
+.onboarding-subtitle {
+  font-size: 15px; color: var(--text2); margin-bottom: 32px; line-height: 1.6;
+}
+
+/* Features */
+.onboarding-features {
+  display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 400px; margin-bottom: 36px;
+}
+.onboarding-feature {
+  display: flex; align-items: flex-start; gap: 14px; text-align: left;
+  padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+}
+.onboarding-feature:hover { border-color: var(--accent); transform: translateX(4px); }
+.feature-icon { font-size: 28px; flex-shrink: 0; }
+.onboarding-feature strong { font-size: 14px; color: var(--text); display: block; margin-bottom: 2px; }
+.onboarding-feature p { font-size: 12px; color: var(--text2); margin: 0; line-height: 1.4; }
+
+/* Buttons */
+.onboarding-btn-primary {
+  width: 100%; max-width: 320px; padding: 16px 32px;
+  background: var(--grad1); color: #fff; border: none; border-radius: 12px;
+  font-size: 16px; font-weight: 700; cursor: pointer; font-family: var(--font);
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 4px 20px rgba(99,102,241,.3);
+}
+.onboarding-btn-primary:hover {
+  transform: translateY(-3px); box-shadow: 0 8px 32px rgba(99,102,241,.5);
+}
+.onboarding-btn-primary:active { transform: translateY(0) scale(.98); }
+.onboarding-btn-skip {
+  background: none; border: none; color: var(--text2); font-size: 13px; cursor: pointer;
+  font-family: var(--font); margin-top: 12px; padding: 8px;
+  transition: color .2s;
+}
+.onboarding-btn-skip:hover { color: var(--accent2); }
+
+/* Chat Interface */
+.onboarding-chat {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  display: flex; flex-direction: column; height: 70vh; min-height: 400px;
+  overflow: hidden; animation: fadeIn .4s;
+  box-shadow: 0 8px 40px rgba(0,0,0,.2);
+}
+.onboarding-chat-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.onboarding-chat-avatar {
+  font-size: 28px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  background: var(--accent-glow); border-radius: 50%; flex-shrink: 0;
+}
+.onboarding-chat-status {
+  display: block; font-size: 11px; color: var(--green); font-weight: 500;
+}
+.onboarding-step-badge {
+  margin-left: auto; padding: 4px 12px; background: var(--accent-glow); color: var(--accent2);
+  border-radius: 8px; font-size: 12px; font-weight: 600;
+}
+
+/* Messages */
+.onboarding-chat-messages {
+  flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px;
+}
+.onboarding-msg { display: flex; gap: 10px; align-items: flex-end; animation: slideIn .3s cubic-bezier(.16,1,.3,1); }
+.onboarding-msg-ai { justify-content: flex-start; }
+.onboarding-msg-user { justify-content: flex-end; }
+.onboarding-msg-avatar {
+  font-size: 20px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); border-radius: 50%; flex-shrink: 0;
+}
+.onboarding-msg-bubble {
+  padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; max-width: 80%;
+}
+.onboarding-msg-ai .onboarding-msg-bubble {
+  background: var(--surface2); border: 1px solid var(--border); border-bottom-left-radius: 4px;
+  color: var(--text);
+}
+.onboarding-msg-user .onboarding-msg-bubble {
+  background: var(--accent); color: #fff; border-bottom-right-radius: 4px;
+  box-shadow: 0 2px 8px rgba(99,102,241,.3);
+}
+
+/* Typing indicator */
+.onboarding-typing {
+  display: flex; gap: 4px; padding: 14px 20px !important;
+}
+.onboarding-typing span {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--text2);
+  animation: typingDot 1.2s infinite;
+}
+.onboarding-typing span:nth-child(2) { animation-delay: .2s; }
+.onboarding-typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes typingDot { 0%,60%,100%{transform:translateY(0);opacity:.4} 30%{transform:translateY(-6px);opacity:1} }
+
+/* Input area */
+.onboarding-chat-input {
+  display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+.onboarding-textarea {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 16px; color: var(--text); font-size: 14px; font-family: var(--font);
+  resize: none; outline: none; transition: all .25s;
+}
+.onboarding-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.onboarding-textarea::placeholder { color: var(--text2); }
+.onboarding-send-btn {
+  width: 48px; height: 48px; border: none; border-radius: 12px; background: var(--grad1);
+  color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all .25s; flex-shrink: 0;
+}
+.onboarding-send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(99,102,241,.4); }
+.onboarding-send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* Generation progress */
+.onboarding-gen-progress {
+  padding: 16px 20px; border-top: 1px solid var(--border); background: var(--surface);
+}
+.onboarding-gen-bar {
+  height: 6px; background: var(--grad1); border-radius: 6px;
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+}
+.onboarding-gen-files {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px;
+}
+.onboarding-gen-file {
+  padding: 4px 10px; background: rgba(52,211,153,.1); color: var(--green);
+  border-radius: 6px; font-size: 11px; font-weight: 600;
+  animation: fadeIn .3s cubic-bezier(.16,1,.3,1);
+}
+
+/* Complete step */
+.onboarding-complete {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 40px 20px; animation: fadeIn .6s;
+}
+.onboarding-complete-icon {
+  font-size: 64px; margin-bottom: 20px; animation: pulse 2s infinite;
+}
+.onboarding-files-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+  width: 100%; max-width: 480px; margin: 24px 0;
+}
+.onboarding-file-card {
+  display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  font-size: 12px; animation: slideIn .3s cubic-bezier(.16,1,.3,1);
+}
+.file-icon { font-size: 18px; }
+.file-name { flex: 1; font-weight: 600; color: var(--text); }
+.file-check { color: var(--green); }
+.onboarding-summary {
+  max-width: 480px; padding: 16px 20px; background: var(--accent-glow);
+  border: 1px solid rgba(99,102,241,.2); border-radius: 12px; margin-bottom: 24px;
+}
+.onboarding-summary p { font-size: 13px; color: var(--text); line-height: 1.6; margin: 0; }
+
+/* Error */
+.onboarding-error {
+  padding: 12px 16px; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3);
+  border-radius: 10px; color: var(--red); font-size: 13px; display: flex; align-items: center; gap: 10px;
+}
+.onboarding-error button {
+  background: none; border: 1px solid var(--red); color: var(--red); border-radius: 6px;
+  padding: 4px 12px; font-size: 12px; cursor: pointer; margin-left: auto;
+}
+
+/* Light theme overrides */
+html.light .onboarding-overlay { background: var(--bg); }
+html.light .onboarding-chat { box-shadow: 0 8px 40px rgba(0,0,0,.06); }
+html.light .onboarding-msg-ai .onboarding-msg-bubble { background: var(--surface2); }
+html.light .onboarding-btn-primary { box-shadow: 0 4px 20px rgba(91,91,214,.2); }
+
+/* Mobile responsive */
+@media(max-width:768px) {
+  .onboarding-container { padding: 16px; }
+  .onboarding-title { font-size: 22px; }
+  .onboarding-chat { height: 80vh; }
+  .onboarding-files-grid { grid-template-columns: 1fr 1fr; }
+}

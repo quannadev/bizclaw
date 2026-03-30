@@ -154,6 +154,52 @@ pub struct Usage {
     pub thinking_tokens: u32,
 }
 
+impl Usage {
+    /// Estimate cost in USD based on provider pricing (per 1M tokens).
+    /// Returns (input_cost, output_cost, total_cost).
+    pub fn estimate_cost_usd(&self, provider: &str, model: &str) -> (f64, f64, f64) {
+        // Pricing per 1M tokens (input, output) — updated 2026-Q1
+        let (input_rate, output_rate) = match (provider, model) {
+            // Local — FREE
+            ("ollama", _) | ("llamacpp", _) | ("brain", _) => (0.0, 0.0),
+            // DeepSeek — cheapest cloud
+            ("deepseek", "deepseek-chat") => (0.27, 1.10),
+            ("deepseek", "deepseek-reasoner") => (0.55, 2.19),
+            // Groq — free tier available
+            ("groq", _) => (0.05, 0.08),
+            // OpenAI
+            ("openai", "gpt-4o-mini") => (0.15, 0.60),
+            ("openai", "gpt-4o") => (2.50, 10.00),
+            // Anthropic
+            ("anthropic", m) if m.contains("haiku") => (0.80, 4.00),
+            ("anthropic", _) => (3.00, 15.00),
+            // Gemini
+            ("gemini", m) if m.contains("flash") => (0.075, 0.30),
+            ("gemini", _) => (1.25, 5.00),
+            // DashScope (Qwen)
+            ("dashscope", _) => (0.20, 0.60),
+            // Default conservative estimate
+            _ => (1.00, 3.00),
+        };
+
+        let input_cost = self.prompt_tokens as f64 / 1_000_000.0 * input_rate;
+        let output_cost = self.completion_tokens as f64 / 1_000_000.0 * output_rate;
+        (input_cost, output_cost, input_cost + output_cost)
+    }
+
+    /// Estimate cost in VND (Vietnamese Dong).
+    /// Exchange rate: ~25,500 VND/USD (configurable via env var BIZCLAW_USD_VND_RATE).
+    pub fn estimate_cost_vnd(&self, provider: &str, model: &str) -> f64 {
+        let rate: f64 = std::env::var("BIZCLAW_USD_VND_RATE")
+            .ok()
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(25_500.0);
+        let (_, _, total_usd) = self.estimate_cost_usd(provider, model);
+        total_usd * rate
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

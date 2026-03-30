@@ -29,11 +29,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy binary
 COPY --from=builder /build/target/release/bizclaw /usr/local/bin/bizclaw
 
-# Create data directory
-RUN mkdir -p /root/.bizclaw
+# ── Security: Non-root user ──────────────────────────────────
+RUN groupadd -r bizclaw && useradd -r -g bizclaw -m -s /bin/false bizclaw
+
+# Create data directory with proper ownership
+RUN mkdir -p /home/bizclaw/.bizclaw && chown -R bizclaw:bizclaw /home/bizclaw/.bizclaw
 
 # Environment
-ENV BIZCLAW_CONFIG=/root/.bizclaw/config.toml
+ENV BIZCLAW_CONFIG=/home/bizclaw/.bizclaw/config.toml
+ENV BIZCLAW_DATA_DIR=/home/bizclaw/.bizclaw
+ENV HOME=/home/bizclaw
 ENV RUST_LOG=info
 ENV TZ=Asia/Ho_Chi_Minh
 
@@ -43,6 +48,14 @@ EXPOSE 3000
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD curl -f http://localhost:3000/api/v1/info || exit 1
+
+# OCI Labels
+LABEL org.opencontainers.image.title="BizClaw AI Agent (Standalone)"
+LABEL org.opencontainers.image.description="Single-tenant AI Agent for SME businesses"
+LABEL org.opencontainers.image.version="1.0.7"
+
+# ── Switch to non-root user ──────────────────────────────────
+USER bizclaw
 
 # Run standalone mode
 ENTRYPOINT ["bizclaw"]

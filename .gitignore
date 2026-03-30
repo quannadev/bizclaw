@@ -42,3 +42,4 @@ dist/
 Bizino-Dev_Kit-main/
 *.apk
 dashboard/
+.env.local
