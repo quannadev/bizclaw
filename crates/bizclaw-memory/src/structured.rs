@@ -708,7 +708,7 @@ mod tests {
         mem.save().unwrap();
 
         // Reload
-        let mut mem2 = StructuredMemory::new(config);
+        let mem2 = StructuredMemory::new(config);
         assert_eq!(mem2.facts().len(), 1);
         assert_eq!(mem2.profile().work_context, "Test work context");
 

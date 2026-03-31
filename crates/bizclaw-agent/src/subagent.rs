@@ -173,6 +173,7 @@ struct RunningTask {
 /// Uses dual Semaphore pools (matching DeerFlow's dual thread pool):
 /// - `scheduler_semaphore`: limits scheduling (3 workers)
 /// - `execution_semaphore`: limits actual execution (3 workers)
+#[allow(dead_code)]
 pub struct SubAgentExecutor {
     /// Limits concurrent scheduling.
     scheduler_semaphore: Arc<Semaphore>,

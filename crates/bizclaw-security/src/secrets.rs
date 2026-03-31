@@ -48,10 +48,10 @@ impl SecretStore {
         let json_str = if self.encrypt {
             let raw = content.trim();
             // Detect format: CBC starts with "CBC:" prefix
-            if raw.starts_with("CBC:") {
+            if let Some(stripped) = raw.strip_prefix("CBC:") {
                 // New CBC format: CBC:<base64(iv + ciphertext)>
                 let encrypted = BASE64
-                    .decode(&raw[4..])
+                    .decode(stripped)
                     .map_err(|e| BizClawError::Security(format!("Base64 decode failed: {e}")))?;
                 decrypt_aes256_cbc(&encrypted, &self.key)?
             } else {

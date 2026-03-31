@@ -451,7 +451,7 @@ mod tests {
         LambdaEntry::new(
             text,
             &format!("Summary of: {text}"),
-            &format!("{}", &text[..text.len().min(20)]),
+            &text[..text.len().min(20)],
             importance,
         )
     }

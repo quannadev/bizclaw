@@ -318,7 +318,7 @@ impl Tool for SocialPostTool {
                 }
             }
             "schedule_suggest" => self.suggest_schedule(&req.content),
-            "list_platforms" | _ => "📱 Nền tảng hỗ trợ đăng bài:\n\n\
+            _ => "📱 Nền tảng hỗ trợ đăng bài:\n\n\
                  1. 📘 **Facebook Page** — Cần: page_id + access_token\n\
                     • Đăng bài text, link, ảnh lên Page\n\
                     • Lấy access_token tại: developers.facebook.com\n\n\

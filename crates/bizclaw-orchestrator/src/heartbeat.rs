@@ -111,6 +111,7 @@ pub struct HeartbeatMonitor {
     entries: Arc<RwLock<HashMap<String, HeartbeatEntry>>>,
     config: HeartbeatConfig,
     /// Callback for status changes (agent_id, old_status, new_status)
+    #[allow(clippy::type_complexity)]
     on_status_change:
         Arc<RwLock<Option<Box<dyn Fn(&str, HealthStatus, HealthStatus) + Send + Sync>>>>,
 }

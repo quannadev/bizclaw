@@ -221,6 +221,7 @@ impl PgDb {
     }
 
     /// Update server status after health check.
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_server_health(
         &self,
         server_id: &str,

@@ -202,6 +202,7 @@ impl PgDb {
     }
 
     /// Update task fields (move columns, change priority, reassign).
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_task(
         &self,
         id: &str,
@@ -486,6 +487,7 @@ pub struct AgentSession {
 
 impl PgDb {
     /// Register or update an agent session heartbeat.
+    #[allow(clippy::too_many_arguments)]
     pub async fn upsert_agent_session(
         &self,
         tenant_id: Option<&str>,

@@ -222,7 +222,7 @@ mod tests {
     fn test_chunk_paragraphs() {
         let text = "Paragraph one line one.\nParagraph one line two.\n\nParagraph two line one.\nParagraph two line two.";
         let chunks = chunk_text(text, 100);
-        assert!(chunks.len() >= 1);
+        assert!(!chunks.is_empty());
     }
 
     #[test]
@@ -241,7 +241,7 @@ mod tests {
         let text = "Some intro text here.\nMore content.\n\n# New Section\nSection content here.";
         let chunks = chunk_text(text, 500);
         // Heading should trigger a chunk boundary
-        assert!(chunks.len() >= 1);
+        assert!(!chunks.is_empty());
         // At least one chunk should start with or contain the heading
         let has_heading_chunk = chunks.iter().any(|c| c.contains("# New Section"));
         assert!(has_heading_chunk, "Heading should be preserved in a chunk");

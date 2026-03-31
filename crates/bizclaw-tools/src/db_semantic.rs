@@ -54,6 +54,7 @@ impl SchemaLayerStore {
         Self { data_dir: dir }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Path::new("data"))
     }

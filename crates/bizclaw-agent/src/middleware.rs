@@ -618,8 +618,8 @@ mod tests {
     fn make_state(msg_count: usize) -> AgentState {
         let mut messages = vec![Message::system("System prompt")];
         for i in 0..msg_count {
-            messages.push(Message::user(&format!("User message {}", i)));
-            messages.push(Message::assistant(&format!("Response {}", i)));
+            messages.push(Message::user(format!("User message {}", i)));
+            messages.push(Message::assistant(format!("Response {}", i)));
         }
         AgentState {
             estimated_tokens: msg_count * 100,

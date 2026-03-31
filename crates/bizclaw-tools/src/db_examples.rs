@@ -42,6 +42,7 @@ impl SqlExampleStore {
     }
 
     /// Default path: data/db-examples.sqlite
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Path::new("data"))
     }
@@ -251,6 +252,7 @@ impl BusinessRuleStore {
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Self::new(Path::new("data"))
     }

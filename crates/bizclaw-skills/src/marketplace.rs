@@ -56,12 +56,7 @@ struct ClawHubSkillsResponse {
     skills: Vec<SkillListing>,
 }
 
-/// ClawHub API response for a single skill.
-#[derive(Debug, Deserialize)]
-struct ClawHubSkillResponse {
-    #[serde(flatten)]
-    skill: SkillListing,
-}
+
 
 /// Registry source configuration.
 #[derive(Debug, Clone)]

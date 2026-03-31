@@ -173,6 +173,7 @@ impl DbConnectionManager {
     }
 
     /// Redact sensitive columns from query results.
+    #[allow(clippy::ptr_arg)]
     pub fn redact_sensitive(results: &mut Vec<serde_json::Value>, sensitive_columns: &[String]) {
         if sensitive_columns.is_empty() {
             return;
@@ -289,7 +290,7 @@ mod tests {
         assert_eq!(config.connections[0].id, "test_pg");
         assert_eq!(config.connections[0].max_rows, 200);
         assert_eq!(config.connections[0].sensitive_columns.len(), 2);
-        assert_eq!(config.connections[1].enabled, false);
+        assert!(!config.connections[1].enabled);
     }
 
     #[test]

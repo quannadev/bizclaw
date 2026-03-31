@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn test_feature_check() {
-        let mut checker = GatingChecker::with_features(vec!["gpu".into(), "docker".into()]);
+        let checker = GatingChecker::with_features(vec!["gpu".into(), "docker".into()]);
         assert!(checker.has_feature("gpu"));
         assert!(checker.has_feature("docker"));
         assert!(!checker.has_feature("kubernetes"));

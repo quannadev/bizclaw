@@ -41,6 +41,7 @@ const SUPPORTED_EXTENSIONS: &[&str] = &[
 ];
 
 /// File Upload Middleware — detects file paths, converts to markdown, injects context.
+#[allow(dead_code)]
 pub struct FileUploadMiddleware {
     enabled: bool,
     max_file_size: u64,
@@ -634,7 +635,7 @@ mod tests {
         let mut state = crate::middleware::AgentState {
             messages: vec![
                 Message::system("System prompt"),
-                Message::user(&format!("Đọc file {tmp} giúp tôi")),
+                Message::user(format!("Đọc file {tmp} giúp tôi")),
             ],
             estimated_tokens: 100,
             max_context_tokens: 4000,

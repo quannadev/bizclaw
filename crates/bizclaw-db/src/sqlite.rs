@@ -956,7 +956,7 @@ mod tests {
         let unread = store.unread_messages(&team.id, "lead").await.unwrap();
         assert_eq!(unread.len(), 1);
 
-        store.mark_read(&[msg.id.clone()]).await.unwrap();
+        store.mark_read(std::slice::from_ref(&msg.id)).await.unwrap();
         let unread = store.unread_messages(&team.id, "lead").await.unwrap();
         assert!(unread.is_empty());
     }

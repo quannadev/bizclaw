@@ -984,9 +984,11 @@ pub async fn execute_plan(
             let mut last_error = String::new();
 
             for provider_info in &fallback_chain {
-                let mut config = bizclaw_core::BizClawConfig::default();
-                config.default_provider = provider_info.provider.clone();
-                config.default_model = provider_info.model.clone();
+                let config = bizclaw_core::BizClawConfig {
+                    default_provider: provider_info.provider.clone(),
+                    default_model: provider_info.model.clone(),
+                    ..Default::default()
+                };
 
                 let exec_provider = match bizclaw_providers::create_provider(&config) {
                     Ok(p) => p,
@@ -1480,6 +1482,7 @@ pub async fn detect_key(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bizclaw_orchestrator::heartbeat::HealthStatus;
 
     #[test]
     fn test_classify_simple() {

@@ -253,7 +253,7 @@ impl ResearchTool {
                 .min()
                 .unwrap_or(0);
 
-            report.push_str(&"| Metric | Value |\n|--------|-------|\n".to_string());
+            report.push_str("| Metric | Value |\n|--------|-------|\n");
             report.push_str(&format!("| Total papers | {} |\n", papers.len()));
             report.push_str(&format!("| Total citations | {} |\n", total_citations));
             report.push_str(&format!("| Average year | {:.0} |\n", avg_year));

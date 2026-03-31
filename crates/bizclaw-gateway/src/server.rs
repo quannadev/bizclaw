@@ -391,9 +391,7 @@ pub struct AuthUser {
     pub role_str: String,
 }
 
-/// Constant-time string comparison to prevent timing attacks (M3).
-/// Does NOT short-circuit on length mismatch to avoid leaking length info.
-// constant_time_eq removed — was only used for legacy pairing code comparison
+
 
 /// RBAC middleware — require Admin role for sensitive operations.
 /// Apply this to routes that manage system config, API keys, providers, plan limits.

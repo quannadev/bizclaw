@@ -378,7 +378,7 @@ mod tests {
 
     #[test]
     fn test_default_impl() {
-        let tool = HttpRequestTool::default();
+        let tool = HttpRequestTool;
         assert_eq!(tool.name(), "http_request");
     }
 

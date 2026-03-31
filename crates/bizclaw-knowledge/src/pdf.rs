@@ -154,6 +154,6 @@ pub struct PdfInfo {
 mod tests {
     #[test]
     fn test_pdf_module_compiles() {
-        assert!(true);
+
     }
 }

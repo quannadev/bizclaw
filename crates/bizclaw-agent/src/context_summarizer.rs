@@ -476,10 +476,10 @@ mod tests {
     fn make_conversation(turns: usize) -> Vec<Message> {
         let mut msgs = vec![Message::system("You are a helpful assistant.")];
         for i in 0..turns {
-            msgs.push(Message::user(&format!(
+            msgs.push(Message::user(format!(
                 "Question {i}: Tell me about topic {i}"
             )));
-            msgs.push(Message::assistant(&format!("Answer {i}: Here is information about topic {i}. It includes details about file /Users/test/project/{i}.rs and I decided to use approach {i}.")));
+            msgs.push(Message::assistant(format!("Answer {i}: Here is information about topic {i}. It includes details about file /Users/test/project/{i}.rs and I decided to use approach {i}.")));
         }
         msgs
     }

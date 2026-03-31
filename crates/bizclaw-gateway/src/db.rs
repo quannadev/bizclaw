@@ -1120,217 +1120,6 @@ impl GatewayDb {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::path::PathBuf;
-
-    fn temp_db() -> GatewayDb {
-        GatewayDb::open(&PathBuf::from(":memory:")).unwrap()
-    }
-
-    #[test]
-    fn test_default_providers_seeded() {
-        let db = temp_db();
-        let providers = db.list_providers("").unwrap();
-        assert!(
-            providers.len() >= 15,
-            "Should have at least 15 default providers, got {}",
-            providers.len()
-        );
-
-        let openai = providers.iter().find(|p| p.name == "openai").unwrap();
-        assert_eq!(openai.provider_type, "cloud");
-        assert_eq!(openai.label, "OpenAI");
-        assert_eq!(openai.icon, "🤖");
-        assert_eq!(openai.auth_style, "bearer");
-        assert_eq!(openai.base_url, "https://api.openai.com/v1");
-        assert!(openai.models.contains(&"gpt-4o".to_string()));
-    }
-
-    #[test]
-    fn test_provider_crud() {
-        let db = temp_db();
-
-        // Create custom provider
-        let p = db
-            .upsert_provider(
-                "my-local",
-                "My Local LLM",
-                "🏠",
-                "local",
-                "",
-                "http://localhost:11434/v1",
-                "/chat/completions",
-                "/models",
-                "none",
-                &[],
-                &["my-model".to_string()],
-            )
-            .unwrap();
-        assert_eq!(p.name, "my-local");
-        assert_eq!(p.label, "My Local LLM");
-        assert_eq!(p.provider_type, "local");
-
-        // Update
-        db.update_provider_config("my-local", Some("sk-1234"), None)
-            .unwrap();
-        let updated = db.get_provider("my-local").unwrap();
-        assert_eq!(updated.api_key, "sk-1234");
-
-        // Delete
-        db.delete_provider("my-local").unwrap();
-        assert!(db.get_provider("my-local").is_err());
-    }
-
-    #[test]
-    fn test_provider_extended_fields() {
-        let db = temp_db();
-        let openai = db.get_provider("openai").unwrap();
-        assert_eq!(openai.chat_path, "/chat/completions");
-        assert_eq!(openai.models_path, "/models");
-        assert_eq!(openai.auth_style, "bearer");
-        assert!(openai.env_keys.contains(&"OPENAI_API_KEY".to_string()));
-    }
-
-    #[test]
-    fn test_update_models_cache() {
-        let db = temp_db();
-        db.update_provider_models(
-            "openai",
-            &[
-                "gpt-4o".to_string(),
-                "gpt-4o-mini".to_string(),
-                "o1-preview".to_string(),
-            ],
-        )
-        .unwrap();
-        let p = db.get_provider("openai").unwrap();
-        assert_eq!(p.models.len(), 3);
-        assert!(p.models.contains(&"o1-preview".to_string()));
-    }
-
-    #[test]
-    fn test_active_provider() {
-        let db = temp_db();
-        let providers = db.list_providers("ollama").unwrap();
-        let ollama = providers.iter().find(|p| p.name == "ollama").unwrap();
-        assert!(ollama.is_active);
-        let openai = providers.iter().find(|p| p.name == "openai").unwrap();
-        assert!(!openai.is_active);
-    }
-
-    #[test]
-    fn test_agent_crud() {
-        let db = temp_db();
-
-        // Create
-        let a = db
-            .upsert_agent(
-                "hr-bot",
-                "assistant",
-                "HR support",
-                "ollama",
-                "llama3.2",
-                "You are HR",
-            )
-            .unwrap();
-        assert_eq!(a.name, "hr-bot");
-        assert_eq!(a.provider, "ollama");
-
-        // Update
-        let a2 = db
-            .upsert_agent(
-                "hr-bot",
-                "assistant",
-                "HR support v2",
-                "deepseek",
-                "deepseek-chat",
-                "You are HR v2",
-            )
-            .unwrap();
-        assert_eq!(a2.description, "HR support v2");
-        assert_eq!(a2.provider, "deepseek");
-
-        // List
-        let agents = db.list_agents().unwrap();
-        assert_eq!(agents.len(), 1);
-
-        // Delete
-        db.delete_agent("hr-bot").unwrap();
-        assert!(db.get_agent("hr-bot").is_err());
-    }
-
-    #[test]
-    fn test_agent_channels() {
-        let db = temp_db();
-        db.upsert_agent("test", "assistant", "", "", "", "")
-            .unwrap();
-
-        // Set channels
-        db.set_agent_channels("test", &["telegram".to_string(), "zalo".to_string()])
-            .unwrap();
-        let ch = db.get_agent_channels("test").unwrap();
-        assert_eq!(ch.len(), 2);
-        assert!(ch.contains(&"telegram".to_string()));
-
-        // Replace channels
-        db.set_agent_channels("test", &["discord".to_string()])
-            .unwrap();
-        let ch2 = db.get_agent_channels("test").unwrap();
-        assert_eq!(ch2, vec!["discord"]);
-
-        // Delete agent cascades
-        db.delete_agent("test").unwrap();
-        let ch3 = db.get_agent_channels("test").unwrap();
-        assert!(ch3.is_empty());
-    }
-
-    #[test]
-    fn test_settings() {
-        let db = temp_db();
-
-        assert!(db.get_setting("theme").unwrap().is_none());
-
-        db.set_setting("theme", "dark").unwrap();
-        assert_eq!(db.get_setting("theme").unwrap(), Some("dark".to_string()));
-
-        db.set_setting("theme", "light").unwrap();
-        assert_eq!(db.get_setting("theme").unwrap(), Some("light".to_string()));
-    }
-
-    #[test]
-    fn test_migrate_from_json() {
-        let db = temp_db();
-        let json_data = vec![
-            serde_json::json!({"name": "sales-bot", "role": "assistant", "provider": "openai", "model": "gpt-4o-mini"}),
-            serde_json::json!({"name": "hr-bot", "role": "researcher", "system_prompt": "You are HR"}),
-        ];
-        let count = db.migrate_from_agents_json(&json_data).unwrap();
-        assert_eq!(count, 2);
-
-        let agents = db.list_agents().unwrap();
-        assert_eq!(agents.len(), 2);
-    }
-
-    #[test]
-    fn test_all_agent_channels() {
-        let db = temp_db();
-        db.upsert_agent("a1", "assistant", "", "", "", "").unwrap();
-        db.upsert_agent("a2", "assistant", "", "", "", "").unwrap();
-
-        db.set_agent_channels("a1", &["telegram".to_string(), "zalo".to_string()])
-            .unwrap();
-        db.set_agent_channels("a2", &["discord".to_string()])
-            .unwrap();
-
-        let all = db.all_agent_channels().unwrap();
-        assert_eq!(all.len(), 2);
-        assert_eq!(all["a1"].len(), 2);
-        assert_eq!(all["a2"].len(), 1);
-    }
-}
-
 // ═══ PaaS: API Key Management ═══
 impl GatewayDb {
     /// Create a new API key. Returns the raw key (only shown once).
@@ -1550,5 +1339,216 @@ impl GatewayDb {
         )
         .map_err(|e| format!("Set limit: {e}"))?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn temp_db() -> GatewayDb {
+        GatewayDb::open(&PathBuf::from(":memory:")).unwrap()
+    }
+
+    #[test]
+    fn test_default_providers_seeded() {
+        let db = temp_db();
+        let providers = db.list_providers("").unwrap();
+        assert!(
+            providers.len() >= 15,
+            "Should have at least 15 default providers, got {}",
+            providers.len()
+        );
+
+        let openai = providers.iter().find(|p| p.name == "openai").unwrap();
+        assert_eq!(openai.provider_type, "cloud");
+        assert_eq!(openai.label, "OpenAI");
+        assert_eq!(openai.icon, "🤖");
+        assert_eq!(openai.auth_style, "bearer");
+        assert_eq!(openai.base_url, "https://api.openai.com/v1");
+        assert!(openai.models.contains(&"gpt-4o".to_string()));
+    }
+
+    #[test]
+    fn test_provider_crud() {
+        let db = temp_db();
+
+        // Create custom provider
+        let p = db
+            .upsert_provider(
+                "my-local",
+                "My Local LLM",
+                "🏠",
+                "local",
+                "",
+                "http://localhost:11434/v1",
+                "/chat/completions",
+                "/models",
+                "none",
+                &[],
+                &["my-model".to_string()],
+            )
+            .unwrap();
+        assert_eq!(p.name, "my-local");
+        assert_eq!(p.label, "My Local LLM");
+        assert_eq!(p.provider_type, "local");
+
+        // Update
+        db.update_provider_config("my-local", Some("sk-1234"), None)
+            .unwrap();
+        let updated = db.get_provider("my-local").unwrap();
+        assert_eq!(updated.api_key, "sk-1234");
+
+        // Delete
+        db.delete_provider("my-local").unwrap();
+        assert!(db.get_provider("my-local").is_err());
+    }
+
+    #[test]
+    fn test_provider_extended_fields() {
+        let db = temp_db();
+        let openai = db.get_provider("openai").unwrap();
+        assert_eq!(openai.chat_path, "/chat/completions");
+        assert_eq!(openai.models_path, "/models");
+        assert_eq!(openai.auth_style, "bearer");
+        assert!(openai.env_keys.contains(&"OPENAI_API_KEY".to_string()));
+    }
+
+    #[test]
+    fn test_update_models_cache() {
+        let db = temp_db();
+        db.update_provider_models(
+            "openai",
+            &[
+                "gpt-4o".to_string(),
+                "gpt-4o-mini".to_string(),
+                "o1-preview".to_string(),
+            ],
+        )
+        .unwrap();
+        let p = db.get_provider("openai").unwrap();
+        assert_eq!(p.models.len(), 3);
+        assert!(p.models.contains(&"o1-preview".to_string()));
+    }
+
+    #[test]
+    fn test_active_provider() {
+        let db = temp_db();
+        let providers = db.list_providers("ollama").unwrap();
+        let ollama = providers.iter().find(|p| p.name == "ollama").unwrap();
+        assert!(ollama.is_active);
+        let openai = providers.iter().find(|p| p.name == "openai").unwrap();
+        assert!(!openai.is_active);
+    }
+
+    #[test]
+    fn test_agent_crud() {
+        let db = temp_db();
+
+        // Create
+        let a = db
+            .upsert_agent(
+                "hr-bot",
+                "assistant",
+                "HR support",
+                "ollama",
+                "llama3.2",
+                "You are HR",
+            )
+            .unwrap();
+        assert_eq!(a.name, "hr-bot");
+        assert_eq!(a.provider, "ollama");
+
+        // Update
+        let a2 = db
+            .upsert_agent(
+                "hr-bot",
+                "assistant",
+                "HR support v2",
+                "deepseek",
+                "deepseek-chat",
+                "You are HR v2",
+            )
+            .unwrap();
+        assert_eq!(a2.description, "HR support v2");
+        assert_eq!(a2.provider, "deepseek");
+
+        // List
+        let agents = db.list_agents().unwrap();
+        assert_eq!(agents.len(), 1);
+
+        // Delete
+        db.delete_agent("hr-bot").unwrap();
+        assert!(db.get_agent("hr-bot").is_err());
+    }
+
+    #[test]
+    fn test_agent_channels() {
+        let db = temp_db();
+        db.upsert_agent("test", "assistant", "", "", "", "")
+            .unwrap();
+
+        // Set channels
+        db.set_agent_channels("test", &["telegram".to_string(), "zalo".to_string()])
+            .unwrap();
+        let ch = db.get_agent_channels("test").unwrap();
+        assert_eq!(ch.len(), 2);
+        assert!(ch.contains(&"telegram".to_string()));
+
+        // Replace channels
+        db.set_agent_channels("test", &["discord".to_string()])
+            .unwrap();
+        let ch2 = db.get_agent_channels("test").unwrap();
+        assert_eq!(ch2, vec!["discord"]);
+
+        // Delete agent cascades
+        db.delete_agent("test").unwrap();
+        let ch3 = db.get_agent_channels("test").unwrap();
+        assert!(ch3.is_empty());
+    }
+
+    #[test]
+    fn test_settings() {
+        let db = temp_db();
+
+        assert!(db.get_setting("theme").unwrap().is_none());
+
+        db.set_setting("theme", "dark").unwrap();
+        assert_eq!(db.get_setting("theme").unwrap(), Some("dark".to_string()));
+
+        db.set_setting("theme", "light").unwrap();
+        assert_eq!(db.get_setting("theme").unwrap(), Some("light".to_string()));
+    }
+
+    #[test]
+    fn test_migrate_from_json() {
+        let db = temp_db();
+        let json_data = vec![
+            serde_json::json!({"name": "sales-bot", "role": "assistant", "provider": "openai", "model": "gpt-4o-mini"}),
+            serde_json::json!({"name": "hr-bot", "role": "researcher", "system_prompt": "You are HR"}),
+        ];
+        let count = db.migrate_from_agents_json(&json_data).unwrap();
+        assert_eq!(count, 2);
+
+        let agents = db.list_agents().unwrap();
+        assert_eq!(agents.len(), 2);
+    }
+
+    #[test]
+    fn test_all_agent_channels() {
+        let db = temp_db();
+        db.upsert_agent("a1", "assistant", "", "", "", "").unwrap();
+        db.upsert_agent("a2", "assistant", "", "", "", "").unwrap();
+
+        db.set_agent_channels("a1", &["telegram".to_string(), "zalo".to_string()])
+            .unwrap();
+        db.set_agent_channels("a2", &["discord".to_string()])
+            .unwrap();
+
+        let all = db.all_agent_channels().unwrap();
+        assert_eq!(all.len(), 2);
+        assert_eq!(all["a1"].len(), 2);
+        assert_eq!(all["a2"].len(), 1);
     }
 }
