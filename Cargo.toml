@@ -26,7 +26,7 @@ members = [
 ]
 
 [workspace.package]
-version = "1.0.8"
+version = "1.0.9"
 edition = "2024"
 authors = ["BizClaw Team"]
 license = "MIT OR Apache-2.0"
@@ -115,6 +115,9 @@ bizclaw-scheduler = { path = "crates/bizclaw-scheduler" }
 bizclaw-knowledge = { path = "crates/bizclaw-knowledge" }
 bizclaw-db = { path = "crates/bizclaw-db" }
 bizclaw-orchestrator = { path = "crates/bizclaw-orchestrator" }
+bizclaw-workflows = { path = "crates/bizclaw-workflows" }
+bizclaw-hands = { path = "crates/bizclaw-hands" }
+bizclaw-ffi = { path = "crates/bizclaw-ffi" }
 bizclaw-platform = { path = "crates/bizclaw-platform" }
 bizclaw-skills = { path = "crates/bizclaw-skills" }
 bizclaw-webauth = { path = "crates/bizclaw-webauth" }

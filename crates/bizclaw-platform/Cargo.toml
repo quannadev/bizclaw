@@ -8,6 +8,10 @@ description = "Multi-tenant platform for BizClaw — manage multiple AI agents o
 [dependencies]
 bizclaw-core.workspace = true
 bizclaw-channels.workspace = true
+bizclaw-orchestrator.workspace = true
+bizclaw-providers.workspace = true
+bizclaw-skills.workspace = true
+bizclaw-workflows.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
@@ -28,3 +32,4 @@ rand.workspace = true
 tower.workspace = true
 tower-http.workspace = true
 urlencoding.workspace = true
+

@@ -242,6 +242,16 @@ impl AdminServer {
             .route("/api/mama/status", get(crate::mama::mama_status))
             .route("/api/mama/onboard", post(crate::mama::smart_onboard))
             .route("/api/mama/detect-key", post(crate::mama::detect_key))
+            // ── MAMA AI: Workflows + Teams (Phase 1 Integration) ─────
+            .route("/api/mama/workflows", get(crate::mama::list_workflows))
+            .route("/api/mama/workflows/run", post(crate::mama::run_workflow))
+            .route("/api/mama/teams", get(crate::mama::list_teams))
+            .route("/api/mama/team/{channel}", get(crate::mama::team_for_channel))
+            // ── MAMA AI: Execute + Budget + Health + Dashboard (Phase 2+3) ──
+            .route("/api/mama/execute", post(crate::mama::execute_plan))
+            .route("/api/mama/budget", get(crate::mama::budget_summary))
+            .route("/api/mama/health", get(crate::mama::health_status))
+            .route("/api/mama/dashboard", get(crate::mama::mama_dashboard))
             .route_layer(middleware::from_fn_with_state(state.clone(), require_auth));
 
         // Public routes — including invitation acceptance
