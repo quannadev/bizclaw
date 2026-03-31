@@ -147,6 +147,7 @@ bizclaw-knowledge.workspace = true
 bizclaw-gateway.workspace = true
 bizclaw-db.workspace = true
 bizclaw-platform.workspace = true
+bizclaw-hands.workspace = true
 
 tokio.workspace = true
 clap.workspace = true
