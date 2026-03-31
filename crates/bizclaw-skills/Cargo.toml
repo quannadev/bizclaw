@@ -19,6 +19,7 @@ thiserror.workspace = true
 toml.workspace = true
 shellexpand.workspace = true
 urlencoding.workspace = true
+webclaw-core = { git = "https://github.com/0xMassi/webclaw" }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

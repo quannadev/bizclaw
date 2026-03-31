@@ -265,7 +265,7 @@ pub fn classify_task_tier(request: &str) -> TaskTier {
             lower.contains(k)
         } else {
             // For single words, match exact word boundaries
-            words.iter().any(|w| *w == *k)
+            words.contains(k)
         }
     }) {
         TaskTier::Simple
@@ -613,7 +613,7 @@ pub async fn mama_status(
 // 5b. WORKFLOW + TEAM + SKILLS INTEGRATION — The Nervous System
 // ══════════════════════════════════════════════════════════
 
-use bizclaw_workflows::{WorkflowEngine, builtin_workflows, Workflow, WorkflowState};
+use bizclaw_workflows::{WorkflowEngine, builtin_workflows};
 use bizclaw_orchestrator::team::{AgentOrganization, AgentTeam, TeamAgent, AgentRole};
 
 /// Initialize the WorkflowEngine with all 22 built-in templates.
@@ -852,7 +852,7 @@ pub async fn team_for_channel(
 // ══════════════════════════════════════════════════════════
 
 use bizclaw_orchestrator::budget::{BudgetManager, AgentBudget, BudgetExceedAction, BudgetStatus};
-use bizclaw_orchestrator::heartbeat::{HeartbeatMonitor, HeartbeatConfig, HealthStatus};
+use bizclaw_orchestrator::heartbeat::{HeartbeatMonitor, HeartbeatConfig};
 
 /// Initialize budget manager with default agent budgets.
 pub async fn init_budget_manager() -> BudgetManager {
@@ -923,7 +923,7 @@ pub async fn execute_plan(
     let skills = search_skills(&body.goal, 5);
 
     // 3. Route to cheapest provider for this tier
-    let best = select_cheapest_model(tier.clone())
+    let best = select_cheapest_model(tier)
         .unwrap_or_else(|| providers[0].clone());
 
     // 4. Generate execution plan
@@ -932,11 +932,25 @@ pub async fn execute_plan(
     // 5. Init budget tracking
     let budget_mgr = init_budget_manager().await;
 
-    // 6. Execute each step
+    // 6. Build Fallback Chain
+    let mut fallback_chain = vec![best.clone()];
+    for p in &providers {
+        if p.provider != best.provider || p.model != best.model {
+            fallback_chain.push(p.clone());
+        }
+    }
+
+    // 7. Execute each step
     let mut step_results = Vec::new();
     let mut total_tokens = 0u64;
     let mut total_cost = 0.0f64;
     let exec_start = chrono::Utc::now();
+
+    // Load available tools
+    let available_tools = vec![
+        bizclaw_skills::webclaw::webclaw_scrape_definition(),
+        bizclaw_skills::harrier::local_harrier_embed_definition(),
+    ];
 
     for (i, step) in plan.steps.iter().enumerate() {
         // Check budget before each step
@@ -953,8 +967,106 @@ pub async fn execute_plan(
             continue;
         }
 
-        // Estimate tokens from step description
-        let step_tokens = (step.action.len() as u64 * 10).max(500);
+        // Real Execution Loop (ReAct)
+        use bizclaw_core::types::Message;
+        let mut messages = vec![
+            Message::system("You are BizClaw Executor. Execute the following step. If the step requires external data, call the appropriate tool. Once done, summarize the final result briefly."),
+            Message::user(format!("Task Goal: {}\nStep to execute: {} - {}\nSuggested Tool: {}", body.goal, step.action, step.description, step.tool)),
+        ];
+
+        let mut step_tokens = 0u64;
+        let mut final_result = String::new();
+        let mut executed_provider_log = String::new();
+
+        // Allow up to 3 turns for tool execution per step
+        'turn_loop: for _turn in 0..3 {
+            let mut turn_success = false;
+            let mut last_error = String::new();
+
+            for provider_info in &fallback_chain {
+                let mut config = bizclaw_core::BizClawConfig::default();
+                config.default_provider = provider_info.provider.clone();
+                config.default_model = provider_info.model.clone();
+
+                let exec_provider = match bizclaw_providers::create_provider(&config) {
+                    Ok(p) => p,
+                    Err(_) => continue,
+                };
+                
+                let params = bizclaw_core::traits::provider::GenerateParams {
+                    model: provider_info.model.clone(),
+                    temperature: 0.1,
+                    max_tokens: 500,
+                    ..Default::default()
+                };
+
+                match exec_provider.chat(&messages, &available_tools, &params).await {
+                    Ok(res) => {
+                        executed_provider_log = format!("{}/{}", provider_info.provider, provider_info.model);
+                        turn_success = true;
+
+                        let usage = res.usage.unwrap_or(bizclaw_core::types::Usage {
+                            prompt_tokens: 0,
+                            completion_tokens: 0,
+                            total_tokens: 0,
+                            thinking_tokens: 0,
+                            cache_read_input_tokens: 0,
+                            cache_creation_input_tokens: 0,
+                        });
+                        step_tokens += usage.total_tokens as u64;
+
+                        if res.tool_calls.is_empty() {
+                            // Finished
+                            final_result = res.content.unwrap_or_default();
+                            break 'turn_loop; // Fully done
+                        } else {
+                            // Needs to execute tools
+                            let mut msg = Message::assistant(res.content.clone().unwrap_or_default());
+                            msg.tool_calls = Some(res.tool_calls.clone());
+                            messages.push(msg);
+
+                            for call in res.tool_calls {
+                                if call.function.name == "webclaw_scrape" {
+                                    let args: serde_json::Value = serde_json::from_str(&call.function.arguments).unwrap_or_default();
+                                    if let Some(url) = args.get("url").and_then(|u| u.as_str()) {
+                                        match bizclaw_skills::webclaw::execute_webclaw_scrape(url).await {
+                                            Ok(content) => messages.push(Message::tool(content, call.id)),
+                                            Err(e) => messages.push(Message::tool(format!("Error: {}", e), call.id)),
+                                        }
+                                    } else {
+                                        messages.push(Message::tool("Error: Missing url parameter".to_string(), call.id));
+                                    }
+                                } else if call.function.name == "local_harrier_embed" {
+                                    let args: serde_json::Value = serde_json::from_str(&call.function.arguments).unwrap_or_default();
+                                    if let (Some(text), Some(task_type)) = (args.get("text").and_then(|u| u.as_str()), args.get("task_type").and_then(|u| u.as_str())) {
+                                        match bizclaw_skills::harrier::execute_local_harrier_embed(text, task_type).await {
+                                            Ok(vec) => messages.push(Message::tool(format!("[Harrier 0.6B Embed Success: {} dims]", vec.len()), call.id)),
+                                            Err(e) => messages.push(Message::tool(format!("Error: {}", e), call.id)),
+                                        }
+                                    } else {
+                                        messages.push(Message::tool("Error: Missing text/task_type parameters".to_string(), call.id));
+                                    }
+                                } else {
+                                    messages.push(Message::tool(format!("Unknown tool: {}", call.function.name), call.id));
+                                }
+                            }
+                        }
+                        break; // Stop falling back since this turn succeeded!
+                    }
+                    Err(e) => {
+                        tracing::warn!("⚠️ Provider {}/{} failed: {}. Falling back...", provider_info.provider, provider_info.model, e);
+                        last_error = e.to_string();
+                        continue; // Fallback to next provider!
+                    }
+                }
+            }
+
+            if !turn_success {
+                final_result = format!("❌ All configured providers in Fallback Chain failed. Last error: {}", last_error);
+                break 'turn_loop;
+            }
+        }
+
         total_tokens += step_tokens;
         let step_cost = step_tokens as f64 / 1_000_000.0 * match tier {
             TaskTier::Simple => 0.10,
@@ -963,7 +1075,7 @@ pub async fn execute_plan(
         };
         total_cost += step_cost;
 
-        // Record usage
+        // Record total tokens used for this step
         budget_mgr.record_usage("mama-executor", step_tokens / 2, step_tokens / 2, step_cost).await;
 
         step_results.push(serde_json::json!({
@@ -972,10 +1084,10 @@ pub async fn execute_plan(
             "action": step.action,
             "description": step.description,
             "status": "completed",
+            "result": final_result,
             "tokens": step_tokens,
             "cost_usd": format!("${:.6}", step_cost),
-            "provider": best.provider,
-            "model": best.model,
+            "executed_by": executed_provider_log,
         }));
     }
 

@@ -18,6 +18,8 @@ pub mod gating;
 pub mod marketplace;
 pub mod parser;
 pub mod registry;
+pub mod webclaw;
+pub mod harrier;
 
 pub use gating::{GatingChecker, GatingRequirements, GatingResult};
 pub use marketplace::SkillMarketplace;

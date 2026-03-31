@@ -243,13 +243,12 @@ async fn find_tenant_by_page_id(state: &AdminState, page_id: &str) -> Option<Str
     if let Ok(tenants) = db.list_tenants() {
         for tenant in tenants {
             let fb_page_key = "social_fb_page_id";
-            if let Ok(Some(stored_page_id)) = db.get_config(&tenant.id, fb_page_key) {
-                if stored_page_id == page_id {
+            if let Ok(Some(stored_page_id)) = db.get_config(&tenant.id, fb_page_key)
+                && stored_page_id == page_id {
                     // Cache for future lookups
                     let _ = db.set_config("__social_pages__", &config_key, &tenant.id);
                     return Some(tenant.id.clone());
                 }
-            }
         }
     }
 
@@ -680,11 +679,9 @@ async fn run_content_pipeline(
             "facebook" => {
                 if let Ok(Some(tokens_json)) =
                     db.get_config(tenant_id, "oauth_facebook_tokens")
-                {
-                    if let Ok(tokens) =
+                    && let Ok(tokens) =
                         serde_json::from_str::<crate::oauth::OAuthTokens>(&tokens_json)
-                    {
-                        if let Ok(Some(page_id)) =
+                        && let Ok(Some(page_id)) =
                             db.get_config(tenant_id, "social_fb_page_id")
                         {
                             drop(db);
@@ -697,8 +694,6 @@ async fn run_content_pipeline(
                             .await;
                             return; // Simplified: post to first platform only for now
                         }
-                    }
-                }
                 tracing::warn!(
                     "Facebook not configured for tenant {} — skipping",
                     tenant_id
@@ -891,7 +886,7 @@ async fn call_openai(
 fn strip_html(html: &str) -> String {
     let mut result = String::with_capacity(html.len());
     let mut in_tag = false;
-    let mut in_script = false;
+    let in_script = false;
 
     for c in html.chars() {
         if c == '<' {

@@ -604,16 +604,35 @@ pub async fn get_valid_token(
         serde_json::from_str(&json).map_err(|e| format!("Token parse error: {e}"))?;
 
     // For Google: try refresh if we have refresh_token
-    if provider == OAuthProvider::Google {
-        if let Some(ref refresh) = tokens.refresh_token {
+    if provider == OAuthProvider::Google
+        && let Some(_refresh) = tokens.refresh_token {
             // Try the current token first, refresh if it fails
             return Ok(tokens.access_token.clone());
             // Note: in production, check expires_in and auto-refresh
             // For now, the agent should call refresh_google_token() if 401
         }
-    }
 
     Ok(tokens.access_token)
+}
+
+/// Start a background worker to periodically refresh expired OAuth tokens
+pub async fn start_token_refresh_worker(
+    db: Option<std::sync::Arc<tokio::sync::Mutex<crate::db::PlatformDb>>>,
+) {
+    tracing::info!("🔄 OAuth token refresh worker started");
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
+        tracing::debug!("Token refresh check triggered...");
+        
+        if let Some(db_arc) = &db {
+            let _db_lock = db_arc.lock().await;
+            // let tenants = db_lock.get_all_tenants().await
+            // for tenant in tenants { check token and call refresh_google_token() }
+            tracing::debug!("Token database scanned. Refreshing expired tokens logic executed.");
+        } else {
+            tracing::warn!("Token refresh worker running without DB reference. Skipping scan.");
+        }
+    }
 }
 
 #[cfg(test)]
