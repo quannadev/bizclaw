@@ -7,6 +7,7 @@ description = "Multi-tenant platform for BizClaw — manage multiple AI agents o
 
 [dependencies]
 bizclaw-core.workspace = true
+bizclaw-agent.workspace = true
 bizclaw-channels.workspace = true
 bizclaw-orchestrator.workspace = true
 bizclaw-providers.workspace = true

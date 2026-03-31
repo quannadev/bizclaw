@@ -952,6 +952,8 @@ pub async fn execute_plan(
         bizclaw_skills::harrier::local_harrier_embed_definition(),
     ];
 
+    let mut current_input = String::new();
+
     for (i, step) in plan.steps.iter().enumerate() {
         // Check budget before each step
         let budget_status = budget_mgr.check_budget("mama-executor").await;
@@ -967,107 +969,41 @@ pub async fn execute_plan(
             continue;
         }
 
-        // Real Execution Loop (ReAct)
-        use bizclaw_core::types::Message;
-        let mut messages = vec![
-            Message::system("You are BizClaw Executor. Execute the following step. If the step requires external data, call the appropriate tool. Once done, summarize the final result briefly."),
-            Message::user(format!("Task Goal: {}\nStep to execute: {} - {}\nSuggested Tool: {}", body.goal, step.action, step.description, step.tool)),
-        ];
+        // Real Execution Loop (via Agent)
+        let mut config = bizclaw_core::config::BizClawConfig::default();
+        config.identity.name = format!("Mama Executor [{}]", step.action);
+        config.identity.persona = format!(
+            "You are executing a step in a larger plan.\nStep Action: {}\nDescription: {}\nSuggested Tool: {}",
+            step.action, step.description, step.tool
+        );
+        config.default_provider = best.provider.clone();
+        config.default_model = best.model.clone();
 
-        let mut step_tokens = 0u64;
-        let mut final_result = String::new();
-        let mut executed_provider_log = String::new();
+        // ** Mama -> Execute Plan (Agent Spawning) **
+        let mut agent = bizclaw_agent::Agent::new(config).unwrap();
+        
+        let prompt = if current_input.is_empty() {
+            format!("Task Goal: {}\n\nPlease execute your step.", body.goal)
+        } else {
+            // ** Agent-to-Agent Handoff **
+            format!("Task Goal: {}\n\n--- Handoff Context from Previous Agent ---\n{}\n--- End Context ---\n\nPlease execute your assigned step based on the previous agent's results.", body.goal, current_input)
+        };
 
-        // Allow up to 3 turns for tool execution per step
-        'turn_loop: for _turn in 0..3 {
-            let mut turn_success = false;
-            let mut last_error = String::new();
-
-            for provider_info in &fallback_chain {
-                let config = bizclaw_core::BizClawConfig {
-                    default_provider: provider_info.provider.clone(),
-                    default_model: provider_info.model.clone(),
-                    ..Default::default()
-                };
-
-                let exec_provider = match bizclaw_providers::create_provider(&config) {
-                    Ok(p) => p,
-                    Err(_) => continue,
-                };
-                
-                let params = bizclaw_core::traits::provider::GenerateParams {
-                    model: provider_info.model.clone(),
-                    temperature: 0.1,
-                    max_tokens: 500,
-                    ..Default::default()
-                };
-
-                match exec_provider.chat(&messages, &available_tools, &params).await {
-                    Ok(res) => {
-                        executed_provider_log = format!("{}/{}", provider_info.provider, provider_info.model);
-                        turn_success = true;
-
-                        let usage = res.usage.unwrap_or(bizclaw_core::types::Usage {
-                            prompt_tokens: 0,
-                            completion_tokens: 0,
-                            total_tokens: 0,
-                            thinking_tokens: 0,
-                            cache_read_input_tokens: 0,
-                            cache_creation_input_tokens: 0,
-                        });
-                        step_tokens += usage.total_tokens as u64;
-
-                        if res.tool_calls.is_empty() {
-                            // Finished
-                            final_result = res.content.unwrap_or_default();
-                            break 'turn_loop; // Fully done
-                        } else {
-                            // Needs to execute tools
-                            let mut msg = Message::assistant(res.content.clone().unwrap_or_default());
-                            msg.tool_calls = Some(res.tool_calls.clone());
-                            messages.push(msg);
-
-                            for call in res.tool_calls {
-                                if call.function.name == "webclaw_scrape" {
-                                    let args: serde_json::Value = serde_json::from_str(&call.function.arguments).unwrap_or_default();
-                                    if let Some(url) = args.get("url").and_then(|u| u.as_str()) {
-                                        match bizclaw_skills::webclaw::execute_webclaw_scrape(url).await {
-                                            Ok(content) => messages.push(Message::tool(content, call.id)),
-                                            Err(e) => messages.push(Message::tool(format!("Error: {}", e), call.id)),
-                                        }
-                                    } else {
-                                        messages.push(Message::tool("Error: Missing url parameter".to_string(), call.id));
-                                    }
-                                } else if call.function.name == "local_harrier_embed" {
-                                    let args: serde_json::Value = serde_json::from_str(&call.function.arguments).unwrap_or_default();
-                                    if let (Some(text), Some(task_type)) = (args.get("text").and_then(|u| u.as_str()), args.get("task_type").and_then(|u| u.as_str())) {
-                                        match bizclaw_skills::harrier::execute_local_harrier_embed(text, task_type).await {
-                                            Ok(vec) => messages.push(Message::tool(format!("[Harrier 0.6B Embed Success: {} dims]", vec.len()), call.id)),
-                                            Err(e) => messages.push(Message::tool(format!("Error: {}", e), call.id)),
-                                        }
-                                    } else {
-                                        messages.push(Message::tool("Error: Missing text/task_type parameters".to_string(), call.id));
-                                    }
-                                } else {
-                                    messages.push(Message::tool(format!("Unknown tool: {}", call.function.name), call.id));
-                                }
-                            }
-                        }
-                        break; // Stop falling back since this turn succeeded!
-                    }
-                    Err(e) => {
-                        tracing::warn!("⚠️ Provider {}/{} failed: {}. Falling back...", provider_info.provider, provider_info.model, e);
-                        last_error = e.to_string();
-                        continue; // Fallback to next provider!
-                    }
-                }
+        let mut step_tokens = (prompt.len() as u64) / 4;
+        let final_result = match agent.process(&prompt).await {
+            Ok(res) => {
+                step_tokens += (res.len() as u64) / 4;
+                res
             }
-
-            if !turn_success {
-                final_result = format!("❌ All configured providers in Fallback Chain failed. Last error: {}", last_error);
-                break 'turn_loop;
+            Err(e) => {
+                format!("❌ Agent execution failed: {}", e)
             }
-        }
+        };
+
+        let executed_provider_log = format!("{}/{}", best.provider, best.model);
+        
+        // Save result for the Next Agent
+        current_input = final_result.clone();
 
         total_tokens += step_tokens;
         let step_cost = step_tokens as f64 / 1_000_000.0 * match tier {

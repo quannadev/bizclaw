@@ -19,10 +19,11 @@ members = [
     "crates/bizclaw-hands",
     "crates/bizclaw-ffi",
     "crates/bizclaw-workflows",
+    "crates/bizclaw-updater",
     "crates/bizclaw-orchestrator",
     "crates/bizclaw-platform",
     "crates/bizclaw-skills",
-    "crates/bizclaw-webauth",
+    "crates/bizclaw-webauth", "crates/bizclaw-updater",
 ]
 
 [workspace.package]

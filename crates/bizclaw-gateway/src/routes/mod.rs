@@ -4896,14 +4896,23 @@ pub async fn workflows_run(
         );
 
         let response = {
-            let mut agent = state.agent.lock().await;
-            if let Some(agent) = agent.as_mut() {
-                match agent.process(&prompt).await {
-                    Ok(r) => r,
-                    Err(e) => format!("Error in step '{}': {}", step_name, e),
+            let mut orch = state.orchestrator.lock().await;
+            let target = agent_role.to_lowercase().replace(" ", "_");
+            
+            // Try explicit routing, fallback to default agent
+            let res = orch.send_to(&target, &prompt).await;
+            let res = match res {
+                Ok(r) => Ok(r),
+                Err(bizclaw_core::error::BizClawError::AgentNotFound(_)) => {
+                    tracing::warn!("Agent '{}' not found, falling back to default orchestration", target);
+                    orch.send(&prompt).await
                 }
-            } else {
-                "Agent not available".to_string()
+                Err(e) => Err(e),
+            };
+
+            match res {
+                Ok(r) => r,
+                Err(e) => format!("Error in step '{}': {}", step_name, e),
             }
         };
 
