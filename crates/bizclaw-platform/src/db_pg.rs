@@ -247,7 +247,7 @@ impl PgDb {
 
     pub async fn get_tenant(&self, id: &str) -> Result<Tenant> {
         let row = sqlx::query(
-            "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,created_at FROM tenants WHERE id=$1"
+            "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,expires_at::text,created_at::text FROM tenants WHERE id=$1"
         )
         .bind(id)
         .fetch_one(&self.pool)
@@ -259,7 +259,7 @@ impl PgDb {
 
     pub async fn list_tenants(&self) -> Result<Vec<Tenant>> {
         let rows = sqlx::query(
-            "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,created_at FROM tenants ORDER BY created_at DESC"
+            "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,expires_at::text,created_at::text FROM tenants ORDER BY created_at DESC"
         )
         .fetch_all(&self.pool)
         .await
@@ -270,7 +270,7 @@ impl PgDb {
 
     pub async fn list_tenants_by_owner(&self, owner_id: &str) -> Result<Vec<Tenant>> {
         let rows = sqlx::query(
-            "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,created_at FROM tenants WHERE owner_id=$1 ORDER BY created_at DESC"
+            "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,expires_at::text,created_at::text FROM tenants WHERE owner_id=$1 ORDER BY created_at DESC"
         )
         .bind(owner_id)
         .fetch_all(&self.pool)
@@ -1242,7 +1242,8 @@ fn pg_row_to_tenant(row: &sqlx::postgres::PgRow) -> Tenant {
         memory_bytes: row.get::<i64, _>(14) as u64,
         disk_bytes: row.get::<i64, _>(15) as u64,
         owner_id: row.try_get(16).ok().flatten(),
-        created_at: row.get::<String, _>(17),
+        expires_at: row.try_get(17).ok().flatten(),
+        created_at: row.try_get(18).unwrap_or_default(),
     }
 }
 

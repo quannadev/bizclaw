@@ -29,6 +29,7 @@ pub struct Tenant {
     pub memory_bytes: u64,
     pub disk_bytes: u64,
     pub owner_id: Option<String>,
+    pub expires_at: Option<String>,
     pub created_at: String,
 }
 
@@ -95,7 +96,7 @@ pub struct TenantAgent {
 }
 
 /// Shared SELECT column list for tenant queries — single source of truth.
-const TENANT_SELECT: &str = "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,created_at FROM tenants";
+const TENANT_SELECT: &str = "SELECT id,name,slug,status,port,plan,provider,model,max_messages_day,max_channels,max_members,pairing_code,pid,cpu_percent,memory_bytes,disk_bytes,owner_id,expires_at,created_at FROM tenants";
 
 /// Map a database row to a Tenant struct (eliminates 3x copy-paste).
 fn row_to_tenant(row: &rusqlite::Row) -> rusqlite::Result<Tenant> {
@@ -117,7 +118,8 @@ fn row_to_tenant(row: &rusqlite::Row) -> rusqlite::Result<Tenant> {
         memory_bytes: row.get(14)?,
         disk_bytes: row.get(15)?,
         owner_id: row.get(16)?,
-        created_at: row.get(17)?,
+        expires_at: row.get(17)?,
+        created_at: row.get(18)?,
     })
 }
 
@@ -163,10 +165,12 @@ impl PlatformDb {
                 memory_bytes INTEGER DEFAULT 0,
                 disk_bytes INTEGER DEFAULT 0,
                 owner_id TEXT,
+                expires_at TEXT,
                 created_at TEXT DEFAULT (datetime('now', '+7 hours')),
                 updated_at TEXT DEFAULT (datetime('now', '+7 hours'))
             );
 
+            -- Additional migrations handled via rust
             CREATE TABLE IF NOT EXISTS users (
                 id TEXT PRIMARY KEY,
                 email TEXT UNIQUE NOT NULL,
@@ -242,6 +246,27 @@ impl PlatformDb {
                 value TEXT NOT NULL DEFAULT '',
                 updated_at TEXT DEFAULT (datetime('now'))
             );
+
+            CREATE TABLE IF NOT EXISTS usage_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id TEXT NOT NULL,
+                event_type TEXT NOT NULL DEFAULT 'message',
+                tokens_used INTEGER DEFAULT 0,
+                model TEXT DEFAULT '',
+                created_at TEXT DEFAULT (datetime('now', '+7 hours'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_usage_tenant_date ON usage_logs(tenant_id, created_at);
+
+            CREATE TABLE IF NOT EXISTS payment_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                gateway TEXT NOT NULL,
+                transaction_ref TEXT UNIQUE NOT NULL,
+                tenant_id TEXT,
+                amount INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'processing',
+                created_at TEXT DEFAULT (datetime('now', '+7 hours'))
+            );
         ",
             )
             .map_err(|e| BizClawError::Memory(format!("Migration error: {e}")))?;
@@ -250,6 +275,7 @@ impl PlatformDb {
         let alter_stmts = [
             "ALTER TABLE tenants ADD COLUMN owner_id TEXT",
             "ALTER TABLE users ADD COLUMN status TEXT DEFAULT 'active'",
+            "ALTER TABLE tenants ADD COLUMN expires_at TEXT",
         ];
         for stmt in &alter_stmts {
             let _ = self.conn.execute(stmt, []);
@@ -390,11 +416,11 @@ impl PlatformDb {
 
     /// Update tenant plan and adjust limits accordingly.
     ///
-    /// Plan tiers for Vietnamese SME BYO model:
+    /// Plan tiers for Enterprise/SME Dedicated PaaS model:
     /// - `free`:   100 msg/day, 3 channels, 5 members
-    /// - `starter`: 500 msg/day, 5 channels, 10 members  (199k VND/mo)
-    /// - `pro`:   2000 msg/day, 10 channels, 20 members  (499k VND/mo)
-    /// - `business`: unlimited, all channels, 50 members  (999k VND/mo)
+    /// - `starter`: 500 msg/day, 5 channels, 10 members  ($200/mo)
+    /// - `pro`:   2000 msg/day, 10 channels, 20 members  ($320/mo)
+    /// - `business`: unlimited, all channels, 50 members  (GPU/Dedicated)
     pub fn update_tenant_plan(&self, id: &str, plan: &str) -> Result<()> {
         let (max_msg, max_ch, max_mem) = match plan {
             "starter" => (500u32, 5u32, 10u32),
@@ -402,12 +428,56 @@ impl PlatformDb {
             "business" => (999_999, 99, 50),
             _ => (100, 3, 5), // free
         };
+
+        // If paying, grant exactly 31 days from today. Otherwise NULL.
+        let expires_stmt = if plan == "free" {
+            "NULL"
+        } else {
+            "datetime('now', '+31 days', '+7 hours')"
+        };
+
+        let sql = format!("UPDATE tenants SET plan=?1, max_messages_day=?2, max_channels=?3, max_members=?4, updated_at=datetime('now', '+7 hours'), expires_at={} WHERE id=?5", expires_stmt);
+
         self.conn
-            .execute(
-                "UPDATE tenants SET plan=?1, max_messages_day=?2, max_channels=?3, max_members=?4, updated_at=datetime('now') WHERE id=?5",
-                params![plan, max_msg, max_ch, max_mem, id],
-            )
+            .execute(&sql, params![plan, max_msg, max_ch, max_mem, id])
             .map_err(|e| BizClawError::Memory(format!("Update plan: {e}")))?;
+        Ok(())
+    }
+
+    // ── Payment Logging & Idempotency ─────────────────────
+
+    /// Record a new payment using its idempotent transaction ref.
+    /// Returns Ok(true) if inserted, Ok(false) if it already exists.
+    pub fn record_payment(
+        &self,
+        gateway: &str,
+        transaction_ref: &str,
+        amount: u64,
+        content: &str,
+    ) -> Result<bool> {
+        let result = self.conn.execute(
+            "INSERT OR IGNORE INTO payment_logs (gateway, transaction_ref, amount, content, status) VALUES (?1, ?2, ?3, ?4, 'processing')",
+            params![gateway, transaction_ref, amount, content],
+        ).map_err(|e| BizClawError::Memory(format!("Record payment: {e}")))?;
+
+        Ok(result > 0)
+    }
+
+    /// Link payment to a tenant and mark as success.
+    pub fn complete_payment(&self, transaction_ref: &str, tenant_id: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE payment_logs SET status='success', tenant_id=?1 WHERE transaction_ref=?2",
+            params![tenant_id, transaction_ref],
+        ).map_err(|e| BizClawError::Memory(format!("Complete payment: {e}")))?;
+        Ok(())
+    }
+
+    /// Mark payment as failed or unmatched.
+    pub fn fail_payment(&self, transaction_ref: &str, status: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE payment_logs SET status=?1 WHERE transaction_ref=?2",
+            params![status, transaction_ref],
+        ).map_err(|e| BizClawError::Memory(format!("Fail payment: {e}")))?;
         Ok(())
     }
 
@@ -1011,6 +1081,111 @@ impl PlatformDb {
             .map_err(|e| BizClawError::Memory(format!("Delete agent: {e}")))?;
         Ok(())
     }
+
+    // ── Usage Metering & Rate Limiting ────────────────────────────────
+
+    /// Record a usage event for a tenant (message sent, API call, etc.).
+    pub fn record_usage(
+        &self,
+        tenant_id: &str,
+        event_type: &str,
+        tokens_used: u32,
+        model: &str,
+    ) -> Result<()> {
+        self.conn
+            .execute(
+                "INSERT INTO usage_logs (tenant_id, event_type, tokens_used, model) VALUES (?1, ?2, ?3, ?4)",
+                params![tenant_id, event_type, tokens_used, model],
+            )
+            .map_err(|e| BizClawError::Memory(format!("Record usage: {e}")))?;
+        Ok(())
+    }
+
+    /// Get today's usage count for a tenant.
+    pub fn get_daily_usage(&self, tenant_id: &str) -> Result<u32> {
+        let count: u32 = self
+            .conn
+            .query_row(
+                "SELECT COUNT(*) FROM usage_logs WHERE tenant_id=?1 AND created_at >= date('now', '+7 hours')",
+                params![tenant_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+        Ok(count)
+    }
+
+    /// Get today's total tokens used by a tenant.
+    pub fn get_daily_tokens(&self, tenant_id: &str) -> Result<u64> {
+        let total: u64 = self
+            .conn
+            .query_row(
+                "SELECT COALESCE(SUM(tokens_used), 0) FROM usage_logs WHERE tenant_id=?1 AND created_at >= date('now', '+7 hours')",
+                params![tenant_id],
+                |row| row.get(0),
+            )
+            .unwrap_or(0);
+        Ok(total)
+    }
+
+    /// Check if a tenant has exceeded their daily message limit.
+    /// Returns Ok(remaining) if allowed, Err with message if rate-limited.
+    pub fn check_rate_limit(&self, tenant_id: &str) -> Result<u32> {
+        // Get tenant's plan limit
+        let tenant = self.get_tenant(tenant_id)?;
+        let daily_limit = tenant.max_messages_day;
+
+        // Get today's usage
+        let used = self.get_daily_usage(tenant_id)?;
+
+        if used >= daily_limit {
+            Err(BizClawError::provider(format!(
+                "Rate limit exceeded: {used}/{daily_limit} messages today. Upgrade plan for higher limits."
+            )))
+        } else {
+            Ok(daily_limit - used)
+        }
+    }
+
+    /// Get usage summary for a tenant (for billing/dashboard).
+    pub fn usage_summary(&self, tenant_id: &str, days: u32) -> Result<Vec<(String, u32, u64)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT date(created_at) as day, COUNT(*) as msg_count, COALESCE(SUM(tokens_used), 0) as total_tokens
+             FROM usage_logs WHERE tenant_id=?1 AND created_at >= date('now', '+7 hours', ?2)
+             GROUP BY day ORDER BY day DESC",
+        ).map_err(|e| BizClawError::Memory(format!("Prepare usage summary: {e}")))?;
+
+        let offset = format!("-{} days", days);
+        let rows = stmt
+            .query_map(params![tenant_id, offset], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, u32>(1)?,
+                    row.get::<_, u64>(2)?,
+                ))
+            })
+            .map_err(|e| BizClawError::Memory(format!("Query usage: {e}")))?;
+
+        let mut summary = Vec::new();
+        for row in rows {
+            if let Ok(r) = row {
+                summary.push(r);
+            }
+        }
+        Ok(summary)
+    }
+
+    /// Cleanup old usage logs (keep last N days).
+    pub fn cleanup_usage_logs(&self, keep_days: u32) -> Result<usize> {
+        let offset = format!("-{} days", keep_days);
+        let deleted = self
+            .conn
+            .execute(
+                "DELETE FROM usage_logs WHERE created_at < date('now', '+7 hours', ?1)",
+                params![offset],
+            )
+            .map_err(|e| BizClawError::Memory(format!("Cleanup usage: {e}")))?;
+        Ok(deleted)
+    }
 }
 
 fn rand_code() -> u32 {
@@ -1246,4 +1421,79 @@ mod tests {
         assert_eq!(updated.provider, "ollama");
         assert_eq!(updated.model, "llama3.2");
     }
+
+    #[test]
+    fn test_usage_metering_and_rate_limit() {
+        let db = temp_db();
+        let t = db
+            .create_tenant("Bot", "bot", 10001, "openai", "gpt-4o-mini", "free", None)
+            .unwrap();
+        // Free plan = 100 messages/day
+
+        // Record some usage
+        for i in 0..5 {
+            db.record_usage(&t.id, "message", 150, "gpt-4o-mini")
+                .unwrap();
+        }
+
+        // Check daily usage
+        let usage = db.get_daily_usage(&t.id).unwrap();
+        assert_eq!(usage, 5);
+
+        // Check daily tokens
+        let tokens = db.get_daily_tokens(&t.id).unwrap();
+        assert_eq!(tokens, 750); // 5 * 150
+
+        // Rate limit should pass (5/100)
+        let remaining = db.check_rate_limit(&t.id).unwrap();
+        assert_eq!(remaining, 95);
+
+        // Usage summary
+        let summary = db.usage_summary(&t.id, 7).unwrap();
+        assert!(!summary.is_empty());
+    }
+
+    #[test]
+    fn test_rate_limit_exceeded() {
+        let db = temp_db();
+        // Create tenant with minimal plan for easy testing
+        let t = db
+            .create_tenant("Bot", "bot", 10001, "openai", "gpt-4o-mini", "free", None)
+            .unwrap();
+
+        // Fill up the quota (100 messages for free plan)
+        for _ in 0..100 {
+            db.record_usage(&t.id, "message", 10, "gpt-4o-mini")
+                .unwrap();
+        }
+
+        // Should be rate-limited now
+        let result = db.check_rate_limit(&t.id);
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("Rate limit exceeded"));
+    }
+
+    #[test]
+    fn test_cleanup_usage_logs() {
+        let db = temp_db();
+        let t = db
+            .create_tenant("Bot", "bot", 10001, "openai", "gpt-4o-mini", "free", None)
+            .unwrap();
+
+        // Record some usage
+        db.record_usage(&t.id, "message", 100, "gpt-4o-mini")
+            .unwrap();
+
+        // Cleanup with 0 days should delete everything
+        // (today's records have date = today, so keeping 0 days means delete all before today)
+        let deleted = db.cleanup_usage_logs(0).unwrap();
+        // Should be 0 because today's records are still "today"
+        assert_eq!(deleted, 0);
+
+        // Cleanup with 999 days should delete nothing
+        let deleted = db.cleanup_usage_logs(999).unwrap();
+        assert_eq!(deleted, 0);
+    }
 }
+

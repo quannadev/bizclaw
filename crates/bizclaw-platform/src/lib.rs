@@ -11,6 +11,7 @@ pub mod config;
 pub mod db;
 pub mod db_pg;
 pub mod enterprise;
+pub mod health;
 pub mod mama;
 pub mod mission_control;
 pub mod oauth;
@@ -33,3 +34,4 @@ pub use mission_control::{
 };
 pub use server_provisioner::{ProvisionRequest, RemoteServer};
 pub use tenant::TenantManager;
+pub use health::{HealthMonitorConfig, spawn_health_monitor};

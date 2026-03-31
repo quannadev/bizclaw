@@ -340,13 +340,11 @@ impl Agent {
 
         self.conversation.push(Message::user(user_message));
 
-        // Trim conversation
+        // Trim conversation — keep system prompt + last 40 messages
         if self.conversation.len() > 41 {
-            let system = self.conversation[0].clone();
-            let keep = self.conversation.len() - 40;
-            let tail: Vec<_> = self.conversation.drain(keep..).collect();
-            self.conversation.clear();
-            self.conversation.push(system);
+            let keep_from = self.conversation.len() - 40;
+            let tail: Vec<_> = self.conversation.split_off(keep_from);
+            self.conversation.truncate(1); // keep only system prompt
             self.conversation.extend(tail);
         }
 
@@ -504,13 +502,13 @@ impl Agent {
                 }
             }
 
-            // OBSERVE
+            // OBSERVE — move resp fields to avoid cloning
             self.conversation.push(Message {
                 role: bizclaw_core::types::Role::Assistant,
-                content: resp.content.clone().unwrap_or_default(),
+                content: resp.content.unwrap_or_default(),
                 name: None,
                 tool_call_id: None,
-                tool_calls: Some(resp.tool_calls.clone()),
+                tool_calls: Some(resp.tool_calls),
             });
             for r in results {
                 self.conversation.push(r);
@@ -786,41 +784,23 @@ impl Agent {
             return;
         }
 
-        let system = self.conversation[0].clone();
-
-        // Summarize old messages (keep last 10)
+        // Split: keep system prompt, separate old from recent (last 10)
         let old_count = self.conversation.len() - 10;
-        let old_messages: Vec<_> = self.conversation[1..=old_count].to_vec();
-        let recent: Vec<_> = self.conversation[old_count + 1..].to_vec();
+        let recent: Vec<_> = self.conversation.split_off(old_count + 1);
+        // self.conversation now has [system, ...old_messages]
 
-        // Create a summary of old messages
-        let mut summary_parts = Vec::new();
-        for msg in &old_messages {
-            let prefix = match msg.role {
-                bizclaw_core::types::Role::User => "User",
-                bizclaw_core::types::Role::Assistant => "AI",
-                bizclaw_core::types::Role::System => continue, // skip system messages
-                bizclaw_core::types::Role::Tool => "Tool",
-            };
-            // Take first 100 chars of each message
-            let content = if msg.content.chars().count() > 100 {
-                let truncated: String = msg.content.chars().take(100).collect();
-                format!("{}...", truncated)
-            } else {
-                msg.content.clone()
-            };
-            summary_parts.push(format!("{prefix}: {content}"));
-        }
+        // Summarize old messages (skip system at [0])
+        let old_messages = &self.conversation[1..];
+        let summary_text = crate::context_summarizer::rule_based_summarize(old_messages);
 
         let summary = format!(
             "[Compacted: {} earlier messages]\n{}\n[End of compacted context]",
             old_count,
-            summary_parts.join("\n")
+            summary_text
         );
 
-        // Rebuild conversation: system + summary + recent
-        self.conversation.clear();
-        self.conversation.push(system);
+        // Rebuild: system (already at [0]) + summary + recent
+        self.conversation.truncate(1); // keep only system prompt
         self.conversation.push(Message::system(&summary));
         self.conversation.extend(recent);
 

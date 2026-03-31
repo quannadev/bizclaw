@@ -28,3 +28,7 @@ rusqlite.workspace = true
 dirs.workspace = true
 bizclaw-db.workspace = true
 bizclaw-security.workspace = true
+bizclaw-memory = { version = "1.0.10", path = "../bizclaw-memory" }
+bizclaw-catchme = { version = "1.0.10", path = "../bizclaw-catchme" }
+shellexpand.workspace = true
+headless_chrome = { version = "1.0.21", features = ["fetch"] }

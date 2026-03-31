@@ -30,6 +30,7 @@ pub mod api_connector;
 pub mod browser;
 pub mod bundle_provisioner;
 pub mod calendar;
+pub mod catchme_search;
 pub mod config_manager;
 pub mod custom_tool;
 pub mod db_connection;
@@ -45,6 +46,7 @@ pub mod glob_find;
 pub mod grep_search;
 pub mod group_summarizer;
 pub mod http_request;
+pub mod insight_extraction;
 pub mod memory_search;
 pub mod nl_query;
 pub mod orchestration;
@@ -55,6 +57,7 @@ pub mod research;
 pub mod session_context;
 pub mod shell;
 pub mod social_post;
+pub mod stealth_browser;
 pub mod voice_transcribe;
 pub mod web_search;
 pub mod zalo_tool;
@@ -99,11 +102,16 @@ impl ToolRegistry {
         reg.register(Box::new(edit_file::EditFileTool::new()));
         reg.register(Box::new(glob_find::GlobTool::new()));
         reg.register(Box::new(grep_search::GrepTool::new()));
+
+        // Memory + Insight Tools
+        reg.register(Box::new(insight_extraction::ExtractInsightTool::new()));
         // Search & network tools
         reg.register(Box::new(web_search::WebSearchTool::new()));
         reg.register(Box::new(http_request::HttpRequestTool::new()));
         // Browser automation (PinchTab)
         reg.register(Box::new(browser::BrowserTool::new()));
+        // Stealth Browser (Crawbot Node.js)
+        reg.register(Box::new(stealth_browser::StealthBrowserTool::new()));
         // Bundle Provisioner (SME App Templates)
         reg.register(Box::new(bundle_provisioner::BundleProvisionerTool::new()));
         // Config tools
@@ -131,6 +139,10 @@ impl ToolRegistry {
         reg.register(Box::new(voice_transcribe::VoiceTranscribeTool::new()));
         // Research Tool (academic paper search)
         reg.register(Box::new(research::ResearchTool::new()));
+        // CatchMe Digital Footprint Search
+        reg.register(Box::new(catchme_search::CatchMeSearchTool::new(
+            shellexpand::tilde("~/.gemini/antigravity/catchme.db").to_string(),
+        )));
         reg
     }
 
@@ -205,6 +217,7 @@ mod tests {
         assert!(reg.get("web_search").is_some());
         assert!(reg.get("http_request").is_some());
         assert!(reg.get("browser").is_some());
+        assert!(reg.get("stealth_browser").is_some());
         assert!(reg.get("config_manager").is_some());
         assert!(reg.get("plan").is_some());
         assert!(reg.get("group_summarizer").is_some());

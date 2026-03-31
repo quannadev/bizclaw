@@ -23,11 +23,21 @@ members = [
     "crates/bizclaw-orchestrator",
     "crates/bizclaw-platform",
     "crates/bizclaw-skills",
-    "crates/bizclaw-webauth", "crates/bizclaw-updater",
+    "crates/bizclaw-webauth",
+    "crates/bizclaw-catchme",
 ]
 
+# ── Workspace-wide lint policy ──────────────────────────
+[workspace.lints.clippy]
+unwrap_used = "warn"         # Prefer ? or .expect("reason") over bare .unwrap()
+large_futures = "warn"       # Catch oversized futures that bloat async stacks
+manual_let_else = "warn"     # Use let-else for cleaner early returns
+
+[workspace.lints.rust]
+# unsafe_code = "deny"       # Uncomment when SIMD module is gated behind feature flag
+
 [workspace.package]
-version = "1.0.10"
+version = "1.1.0"
 edition = "2024"
 authors = ["BizClaw Team"]
 license = "MIT OR Apache-2.0"

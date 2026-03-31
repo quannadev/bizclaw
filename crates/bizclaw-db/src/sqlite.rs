@@ -37,8 +37,10 @@ impl SqliteStore {
         })
     }
 
-    fn db(&self) -> std::sync::MutexGuard<'_, Connection> {
-        self.conn.lock().unwrap()
+    fn db(&self) -> std::result::Result<std::sync::MutexGuard<'_, Connection>, BizClawError> {
+        self.conn.lock().map_err(|e| {
+            BizClawError::Database(format!("SQLite mutex poisoned: {e}"))
+        })
     }
 }
 
@@ -51,7 +53,7 @@ impl DataStore for SqliteStore {
     // ── Migrate ────────────────────────────────────────────
 
     async fn migrate(&self) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         conn.execute_batch(
             "
             CREATE TABLE IF NOT EXISTS agent_links (
@@ -159,7 +161,7 @@ impl DataStore for SqliteStore {
     // ── Agent Links ────────────────────────────────────────
 
     async fn create_link(&self, link: &AgentLink) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         let settings = serde_json::to_string(&link.settings).unwrap_or_default();
         conn.execute(
             "INSERT INTO agent_links (id, source_agent, target_agent, direction, max_concurrent, settings, created_at)
@@ -179,14 +181,14 @@ impl DataStore for SqliteStore {
     }
 
     async fn delete_link(&self, id: &str) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         conn.execute("DELETE FROM agent_links WHERE id = ?1", params![id])
             .map_err(|e| BizClawError::Database(format!("Delete link: {e}")))?;
         Ok(())
     }
 
     async fn list_links(&self, agent_name: &str) -> Result<Vec<AgentLink>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, source_agent, target_agent, direction, max_concurrent, settings, created_at
@@ -216,7 +218,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn all_links(&self) -> Result<Vec<AgentLink>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, source_agent, target_agent, direction, max_concurrent, settings, created_at
@@ -247,7 +249,7 @@ impl DataStore for SqliteStore {
     // ── Delegations ────────────────────────────────────────
 
     async fn create_delegation(&self, d: &Delegation) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         conn.execute(
             "INSERT INTO delegations (id, from_agent, to_agent, task, mode, status, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -276,7 +278,7 @@ impl DataStore for SqliteStore {
         result: Option<&str>,
         error: Option<&str>,
     ) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         let status_str = serde_json::to_string(&status)
             .unwrap_or_default()
             .trim_matches('"')
@@ -296,7 +298,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn get_delegation(&self, id: &str) -> Result<Option<Delegation>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, from_agent, to_agent, task, mode, status, result, error, created_at, completed_at
@@ -323,7 +325,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn list_delegations(&self, agent_name: &str, limit: usize) -> Result<Vec<Delegation>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, from_agent, to_agent, task, mode, status, result, error, created_at, completed_at
@@ -355,7 +357,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn active_delegation_count(&self, to_agent: &str) -> Result<u32> {
-        let conn = self.db();
+        let conn = self.db()?;
         let count: u32 = conn
             .query_row(
                 "SELECT COUNT(*) FROM delegations WHERE to_agent = ?1 AND status IN ('pending', 'running')",
@@ -369,7 +371,7 @@ impl DataStore for SqliteStore {
     // ── Teams ──────────────────────────────────────────────
 
     async fn create_team(&self, team: &AgentTeam) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         let members = serde_json::to_string(&team.members).unwrap_or_default();
         conn.execute(
             "INSERT INTO teams (id, name, description, members, created_at)
@@ -387,7 +389,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn get_team(&self, id: &str) -> Result<Option<AgentTeam>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let result = conn
             .query_row(
                 "SELECT id, name, description, members, created_at FROM teams WHERE id = ?1",
@@ -408,7 +410,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn get_team_by_name(&self, name: &str) -> Result<Option<AgentTeam>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let result = conn
             .query_row(
                 "SELECT id, name, description, members, created_at FROM teams WHERE name = ?1",
@@ -429,7 +431,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn list_teams(&self) -> Result<Vec<AgentTeam>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare("SELECT id, name, description, members, created_at FROM teams ORDER BY created_at DESC")
             .map_err(|e| BizClawError::Database(format!("List teams: {e}")))?;
@@ -453,7 +455,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn delete_team(&self, id: &str) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         conn.execute("DELETE FROM teams WHERE id = ?1", params![id])
             .map_err(|e| BizClawError::Database(format!("Delete team: {e}")))?;
         Ok(())
@@ -462,7 +464,7 @@ impl DataStore for SqliteStore {
     // ── Team Tasks ─────────────────────────────────────────
 
     async fn create_task(&self, task: &TeamTask) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         let blocked_by = serde_json::to_string(&task.blocked_by).unwrap_or_default();
         conn.execute(
             "INSERT INTO team_tasks (id, team_id, title, description, status, created_by, assigned_to, blocked_by, created_at, updated_at)
@@ -491,7 +493,7 @@ impl DataStore for SqliteStore {
         assigned_to: Option<&str>,
         result: Option<&str>,
     ) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         let status_str = serde_json::to_string(&status)
             .unwrap_or_default()
             .trim_matches('"')
@@ -505,7 +507,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn get_task(&self, id: &str) -> Result<Option<TeamTask>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let result = conn
             .query_row(
                 "SELECT id, team_id, title, description, status, created_by, assigned_to, blocked_by, result, created_at, updated_at
@@ -533,7 +535,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn list_tasks(&self, team_id: &str) -> Result<Vec<TeamTask>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, team_id, title, description, status, created_by, assigned_to, blocked_by, result, created_at, updated_at
@@ -566,7 +568,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn list_agent_tasks(&self, agent_name: &str) -> Result<Vec<TeamTask>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, team_id, title, description, status, created_by, assigned_to, blocked_by, result, created_at, updated_at
@@ -601,7 +603,7 @@ impl DataStore for SqliteStore {
     // ── Team Messages ──────────────────────────────────────
 
     async fn send_team_message(&self, msg: &TeamMessage) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         conn.execute(
             "INSERT INTO team_messages (id, team_id, from_agent, to_agent, content, read, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -620,7 +622,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn unread_messages(&self, team_id: &str, agent_name: &str) -> Result<Vec<TeamMessage>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, team_id, from_agent, to_agent, content, read, created_at
@@ -651,7 +653,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn mark_read(&self, message_ids: &[String]) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         for id in message_ids {
             conn.execute(
                 "UPDATE team_messages SET read = 1 WHERE id = ?1",
@@ -665,7 +667,7 @@ impl DataStore for SqliteStore {
     // ── Handoffs ───────────────────────────────────────────
 
     async fn create_handoff(&self, h: &Handoff) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         // Deactivate any existing handoff for this session first
         conn.execute(
             "UPDATE handoffs SET active = 0 WHERE session_id = ?1 AND active = 1",
@@ -691,7 +693,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn active_handoff(&self, session_id: &str) -> Result<Option<Handoff>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let result = conn
             .query_row(
                 "SELECT id, from_agent, to_agent, session_id, reason, context_summary, active, created_at
@@ -716,7 +718,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn clear_handoff(&self, session_id: &str) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         conn.execute(
             "UPDATE handoffs SET active = 0 WHERE session_id = ?1 AND active = 1",
             params![session_id],
@@ -728,7 +730,7 @@ impl DataStore for SqliteStore {
     // ── LLM Traces ─────────────────────────────────────────
 
     async fn record_trace(&self, t: &LlmTrace) -> Result<()> {
-        let conn = self.db();
+        let conn = self.db()?;
         let metadata = serde_json::to_string(&t.metadata).unwrap_or_default();
         conn.execute(
             "INSERT INTO llm_traces (id, agent_name, provider, model, prompt_tokens, completion_tokens, total_tokens, latency_ms, cache_hit, cache_read_tokens, cache_write_tokens, status, error, metadata, created_at)
@@ -756,7 +758,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn list_traces(&self, limit: usize) -> Result<Vec<LlmTrace>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, agent_name, provider, model, prompt_tokens, completion_tokens, total_tokens,
@@ -794,7 +796,7 @@ impl DataStore for SqliteStore {
     }
 
     async fn list_agent_traces(&self, agent_name: &str, limit: usize) -> Result<Vec<LlmTrace>> {
-        let conn = self.db();
+        let conn = self.db()?;
         let mut stmt = conn
             .prepare(
                 "SELECT id, agent_name, provider, model, prompt_tokens, completion_tokens, total_tokens,

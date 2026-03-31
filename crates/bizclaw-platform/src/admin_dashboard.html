@@ -487,7 +487,25 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg)
             <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="copySepayUrl()">📋 Copy</button><br>
             • <strong>Event:</strong> In_only (chỉ giao dịch nhận)<br>
             • <strong>Auth:</strong> Api_Key<br>
-            • <strong>API Key:</strong> Đặt trong env var <code style="background:var(--bg);padding:2px 8px;border-radius:4px;color:var(--yellow);font-size:12px">BIZCLAW_SEPAY_API_KEY</code>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+              <input type="password" id="cfg-sepay-key" placeholder="Nhập SePay API Key để cấu hình" style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+              <button class="btn btn-primary btn-sm" onclick="saveBillingConfig('sepay')">Lưu cấu hình</button>
+            </div>
+            <p style="font-size:11px;color:var(--muted);margin-top:6px"><i>Hoặc đăt qua env var BIZCLAW_SEPAY_API_KEY</i></p>
+          </div>
+        </div>
+        
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px">
+          <strong style="color:var(--text)">1. Pay2S (Tuỳ chọn)</strong> → Tích hợp thêm kênh Pay2S (Cấu hình tương tự SePay)<br>
+          <div style="margin-left:16px;margin-top:4px">
+            • <strong>URL:</strong> <code style="background:var(--bg);padding:2px 8px;border-radius:4px;color:var(--cyan);font-size:12px" id="pay2s-webhook-url">Loading...</code>
+            <button class="btn btn-outline btn-sm" style="margin-left:6px" onclick="copyPay2sUrl()">📋 Copy</button><br>
+            • <strong>Auth:</strong> Bearer Token / Api Key<br>
+            <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+              <input type="password" id="cfg-pay2s-key" placeholder="Nhập Pay2S API Key để cấu hình" style="flex:1;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px">
+              <button class="btn btn-primary btn-sm" onclick="saveBillingConfig('pay2s')">Lưu cấu hình</button>
+            </div>
+            <p style="font-size:11px;color:var(--muted);margin-top:6px"><i>Hoặc đăt qua env var BIZCLAW_PAY2S_API_KEY</i></p>
           </div>
         </div>
         <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px">
@@ -2157,11 +2175,22 @@ async function loadBilling(){
   try {
     // Set webhook URL based on current window location
     const webhookUrl = window.location.origin + '/api/billing/sepay-webhook';
+    const pay2sWebhookUrl = window.location.origin + '/api/billing/pay2s-webhook';
     const urlEl = document.getElementById('sepay-webhook-url');
     if(urlEl) urlEl.textContent = webhookUrl;
+    const pay2sUrlEl = document.getElementById('pay2s-webhook-url');
+    if(pay2sUrlEl) pay2sUrlEl.textContent = pay2sWebhookUrl;
 
     const res = await authFetch('/api/billing/status');
     const data = await res.json();
+    
+    // Set API keys in inputs if configured
+    if(data.sepay && data.sepay.configured) {
+        document.getElementById('cfg-sepay-key').placeholder = "Đã cấu hình (ẩn)";
+    }
+    if(data.pay2s && data.pay2s.configured) {
+        document.getElementById('cfg-pay2s-key').placeholder = "Đã cấu hình (ẩn)";
+    }
 
     // Stats
     const statusEl = document.getElementById('bs-status');
@@ -2300,7 +2329,48 @@ async function disconnectOAuth(provider, tenantId){
 
 function copySepayUrl(){
   const url = document.getElementById('sepay-webhook-url')?.textContent || '';
-  navigator.clipboard.writeText(url).then(()=> toast('✅ Copied webhook URL'));
+  navigator.clipboard.writeText(url).then(()=> toast('✅ Copied SePay webhook URL'));
+}
+
+function copyPay2sUrl(){
+  const url = document.getElementById('pay2s-webhook-url')?.textContent || '';
+  navigator.clipboard.writeText(url).then(()=> toast('✅ Copied Pay2S webhook URL'));
+}
+
+async function saveBillingConfig(gateway) {
+  const inputEl = document.getElementById(`cfg-${gateway}-key`);
+  if (!inputEl) return;
+  const key = inputEl.value.trim();
+  if (!key) {
+    toast(`⚠️ Vui lòng nhập API Key cho ${gateway}`);
+    return;
+  }
+  
+  const payload = {};
+  if (gateway === 'sepay') {
+    payload.sepay_api_key = key;
+  } else if (gateway === 'pay2s') {
+    payload.pay2s_api_key = key;
+  }
+  
+  try {
+    const res = await authFetch('/api/billing/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.ok) {
+      toast(`✅ Đã lưu cấu hình ${gateway.toUpperCase()} thành công!`);
+      inputEl.value = '';
+      loadBilling();
+    } else {
+      toast(`❌ Lỗi: ${data.error}`);
+    }
+  } catch(e) {
+    toast('❌ Lỗi kết nối máy chủ');
+    console.error(e);
+  }
 }
 
 // ── Wiki & Guide ──────────────────────────────

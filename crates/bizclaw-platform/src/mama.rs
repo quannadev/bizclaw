@@ -947,7 +947,7 @@ pub async fn execute_plan(
     let exec_start = chrono::Utc::now();
 
     // Load available tools
-    let available_tools = vec![
+    let _available_tools = vec![
         bizclaw_skills::webclaw::webclaw_scrape_definition(),
         bizclaw_skills::harrier::local_harrier_embed_definition(),
     ];
