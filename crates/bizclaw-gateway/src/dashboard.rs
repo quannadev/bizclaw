@@ -113,6 +113,12 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
             "onboarding.js",
             include_str!("dashboard/pages/onboarding.js"),
         ),
+        (
+            "payment_links.js",
+            include_str!("dashboard/pages/payment_links.js"),
+        ),
+        ("products.js", include_str!("dashboard/pages/products.js")),
+        ("handoff.js", include_str!("dashboard/pages/handoff.js")),
     ];
 
     for (name, content) in pages {
