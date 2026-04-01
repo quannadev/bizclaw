@@ -51,6 +51,8 @@ pub struct AppState {
     /// Rate limiter — IP → (count, window_start) for public endpoints.
     pub rate_limiter:
         Arc<tokio::sync::Mutex<std::collections::HashMap<String, (u32, std::time::Instant)>>>,
+    /// Handoff tracking — threads that humans have taken over (AI ignores them).
+    pub paused_threads: Arc<tokio::sync::RwLock<std::collections::HashSet<String>>>,
 }
 
 /// State for an active Telegram bot connected to an agent.
@@ -606,6 +608,8 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         )
         // Tools write
         .route("/api/v1/tools", post(super::routes::tools_create))
+        .route("/api/v1/handoff/pause", post(super::routes::handoff_pause))
+        .route("/api/v1/handoff/resume", post(super::routes::handoff_resume))
         .route(
             "/api/v1/tools/{name}/toggle",
             post(super::routes::tools_toggle),
@@ -697,6 +701,28 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route(
             "/api/v1/activity",
             axum::routing::delete(super::routes::clear_activity),
+        )
+        // Product Catalog write
+        .route(
+            "/api/v1/products",
+            post(super::routes::products_upsert),
+        )
+        .route(
+            "/api/v1/products/{id}",
+            axum::routing::delete(super::routes::products_delete),
+        )
+        .route(
+            "/api/v1/products/sync-rag",
+            post(super::routes::products_sync_rag),
+        )
+        // Social Automation Pipeline
+        .route(
+            "/api/v1/social/pipeline",
+            post(super::routes::api_social::update_pipeline_config),
+        )
+        .route(
+            "/api/v1/social/pipeline/trigger",
+            post(super::routes::api_social::trigger_pipeline),
         )
         .route_layer(axum::middleware::from_fn(require_role_manager));
 
@@ -823,6 +849,8 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route("/api/v1/activity", get(super::openai_compat::list_activity))
         // Tools read
         .route("/api/v1/tools", get(super::routes::tools_list))
+        // Products read
+        .route("/api/v1/products", get(super::routes::products_list))
         // MCP read
         .route("/api/v1/mcp/servers", get(super::routes::mcp_list_servers))
         .route("/api/v1/mcp/catalog", get(super::routes::mcp_catalog))
@@ -894,6 +922,15 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             "/api/v1/nl-query/examples/{conn_id}",
             get(super::routes::nl_query_examples_get),
         )
+        // Social Automation Pipeline (Read)
+        .route(
+            "/api/v1/social/status",
+            get(super::routes::api_social::social_status),
+        )
+        .route(
+            "/api/v1/social/pipeline",
+            get(super::routes::api_social::get_pipeline_config),
+        )
         // WebSocket (chat)
         .route("/ws", get(super::ws::ws_handler));
 
@@ -935,6 +972,11 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route(
             "/api/v1/webhook/zalo-oa",
             post(super::routes::zalo_oa_webhook),
+        )
+        // Facebook Messenger webhook — public, auth via HMAC + verify token
+        .route(
+            "/api/v1/webhook/messenger",
+            get(super::routes::messenger_webhook_verify).post(super::routes::messenger_webhook),
         )
         // OpenAI-Compatible API — public with own auth (Bearer token)
         .route(
@@ -1365,6 +1407,7 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
         activity_tx: activity_tx.clone(),
         activity_log: Arc::new(Mutex::new(Vec::new())),
         rate_limiter: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+        paused_threads: Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new())),
     };
 
     let state_arc = Arc::new(state);

@@ -4,6 +4,7 @@ pub mod admin;
 pub mod agents;
 pub mod api_rag;
 pub mod api_scheduler;
+pub mod api_social;
 pub mod api_systems;
 pub mod api_webhooks;
 pub mod brain;

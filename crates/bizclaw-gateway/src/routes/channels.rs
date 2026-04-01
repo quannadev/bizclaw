@@ -384,6 +384,9 @@ pub async fn list_channel_instances(State(state): State<Arc<AppState>>) -> Json<
                     "webhook_secret",
                     "smtp_pass",
                     "app_token",
+                    "app_secret",
+                    "page_access_token",
+                    "refresh_token",
                 ];
                 for key in &sensitive_keys {
                     if let Some(val) = cfg.get(*key).and_then(|v| v.as_str())

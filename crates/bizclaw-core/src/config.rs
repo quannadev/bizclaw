@@ -576,6 +576,12 @@ pub struct AutonomyConfig {
     /// Auto-deny approval after this many seconds (0 = never, default 300).
     #[serde(default = "default_approval_timeout")]
     pub auto_approve_timeout_secs: u64,
+    /// explicitly allowed tool names. If empty, all tools are allowed except those in forbidden.
+    #[serde(default)]
+    pub allowed_tools: Vec<String>,
+    /// explicitly forbidden tool names. Overrides allowed_tools.
+    #[serde(default = "default_forbidden_tools")]
+    pub forbidden_tools: Vec<String>,
 }
 
 fn default_autonomy_level() -> String {
@@ -598,6 +604,9 @@ fn default_forbidden_paths() -> Vec<String> {
     .map(String::from)
     .collect()
 }
+fn default_forbidden_tools() -> Vec<String> {
+    vec![]
+}
 
 impl Default for AutonomyConfig {
     fn default() -> Self {
@@ -608,6 +617,8 @@ impl Default for AutonomyConfig {
             forbidden_paths: default_forbidden_paths(),
             approval_required_tools: vec![],
             auto_approve_timeout_secs: default_approval_timeout(),
+            allowed_tools: vec![],
+            forbidden_tools: default_forbidden_tools(),
         }
     }
 }

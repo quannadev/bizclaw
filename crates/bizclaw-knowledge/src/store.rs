@@ -392,6 +392,19 @@ impl KnowledgeStore {
         Ok(())
     }
 
+    /// Remove a document by its name.
+    pub fn remove_document_by_name(&self, name: &str) -> Result<(), String> {
+        let doc_id: i64 = match self.conn.query_row(
+            "SELECT id FROM documents WHERE name = ?1 LIMIT 1",
+            params![name],
+            |r| r.get(0),
+        ) {
+            Ok(id) => id,
+            Err(_) => return Ok(()), // Not found is fine
+        };
+        self.remove_document(doc_id)
+    }
+
     /// Get total stats.
     pub fn stats(&self) -> (usize, usize) {
         let doc_count: i64 = self

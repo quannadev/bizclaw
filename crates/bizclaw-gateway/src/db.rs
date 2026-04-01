@@ -343,6 +343,37 @@ impl GatewayDb {
         )
         .map_err(|e| format!("Migration audit_log: {e}"))?;
 
+        // ── Product Catalog table ──
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS group_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                group_id TEXT NOT NULL,
+                sender_id TEXT NOT NULL,
+                sender_name TEXT,
+                content TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            )",
+        ).map_err(|e| format!("Migration group messages: {e}"))?;
+        
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS products (
+                id TEXT PRIMARY KEY,
+                sku TEXT NOT NULL DEFAULT '',
+                name TEXT NOT NULL,
+                price REAL NOT NULL DEFAULT 0,
+                stock INTEGER NOT NULL DEFAULT 0,
+                category TEXT NOT NULL DEFAULT '',
+                description TEXT NOT NULL DEFAULT '',
+                image_url TEXT NOT NULL DEFAULT '',
+                active INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT DEFAULT (datetime('now')),
+                updated_at TEXT DEFAULT (datetime('now'))
+            );
+            CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+            CREATE INDEX IF NOT EXISTS idx_products_category ON products(category);",
+        )
+        .map_err(|e| format!("Migration products: {e}"))?;
+
         Ok(())
     }
 
@@ -1339,6 +1370,154 @@ impl GatewayDb {
         )
         .map_err(|e| format!("Set limit: {e}"))?;
         Ok(())
+    }
+
+    // ── Zalo Group Messages ──────────────────────────────────
+    
+    pub fn insert_group_message(
+        &self,
+        group_id: &str,
+        sender_id: &str,
+        sender_name: Option<&str>,
+        content: &str,
+    ) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
+        conn.execute(
+            "INSERT INTO group_messages (group_id, sender_id, sender_name, content, timestamp) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+            params![group_id, sender_id, sender_name, content],
+        ).map_err(|e| format!("Insert error: {e}"))?;
+        Ok(())
+    }
+
+    pub fn get_group_messages(
+        &self,
+        group_id: &str,
+        limit: usize,
+    ) -> Result<Vec<serde_json::Value>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
+        let mut stmt = conn.prepare(
+            "SELECT sender_id, sender_name, content, timestamp FROM (
+                SELECT sender_id, sender_name, content, timestamp 
+                FROM group_messages 
+                WHERE group_id = ?1 
+                ORDER BY timestamp DESC LIMIT ?2
+            ) ORDER BY timestamp ASC"
+        ).map_err(|e| format!("Prepare: {e}"))?;
+        
+        let msgs = stmt.query_map(params![group_id, limit as i64], |row| {
+            Ok(serde_json::json!({
+                "sender_id": row.get::<_, String>(0)?,
+                "sender_name": row.get::<_, Option<String>>(1)?,
+                "content": row.get::<_, String>(2)?,
+                "timestamp": row.get::<_, String>(3)?,
+            }))
+        }).map_err(|e| format!("Query: {e}"))?
+        .filter_map(|r| r.ok())
+        .collect();
+        Ok(msgs)
+    }
+
+    // ── Product Catalog CRUD ──────────────────────────────────
+
+    /// List all products.
+    pub fn list_products(&self) -> Result<Vec<serde_json::Value>, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
+        let mut stmt = conn.prepare(
+            "SELECT id, sku, name, price, stock, category, description, image_url, active, created_at, updated_at FROM products ORDER BY name"
+        ).map_err(|e| format!("Prepare: {e}"))?;
+        let products = stmt.query_map([], |row| {
+            Ok(serde_json::json!({
+                "id": row.get::<_, String>(0)?,
+                "sku": row.get::<_, String>(1)?,
+                "name": row.get::<_, String>(2)?,
+                "price": row.get::<_, f64>(3)?,
+                "stock": row.get::<_, i64>(4)?,
+                "category": row.get::<_, String>(5)?,
+                "description": row.get::<_, String>(6)?,
+                "image_url": row.get::<_, String>(7)?,
+                "active": row.get::<_, i32>(8)? != 0,
+                "created_at": row.get::<_, String>(9)?,
+                "updated_at": row.get::<_, String>(10)?,
+            }))
+        }).map_err(|e| format!("Query: {e}"))?
+        .filter_map(|r| r.ok())
+        .collect();
+        Ok(products)
+    }
+
+    /// Create or update a product.
+    #[allow(clippy::too_many_arguments)]
+    pub fn upsert_product(
+        &self,
+        id: &str,
+        sku: &str,
+        name: &str,
+        price: f64,
+        stock: i64,
+        category: &str,
+        description: &str,
+        image_url: &str,
+        active: bool,
+    ) -> Result<(), String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
+        conn.execute(
+            "INSERT INTO products (id, sku, name, price, stock, category, description, image_url, active, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'))
+             ON CONFLICT(id) DO UPDATE SET
+               sku=?2, name=?3, price=?4, stock=?5, category=?6, description=?7, image_url=?8, active=?9, updated_at=datetime('now')",
+            params![id, sku, name, price, stock, category, description, image_url, active as i32],
+        ).map_err(|e| format!("Upsert product: {e}"))?;
+        Ok(())
+    }
+
+    /// Delete a product.
+    pub fn delete_product(&self, id: &str) -> Result<bool, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
+        let rows = conn.execute("DELETE FROM products WHERE id=?1", params![id])
+            .map_err(|e| format!("Delete product: {e}"))?;
+        Ok(rows > 0)
+    }
+
+    /// Product stats (count, total stock value).
+    pub fn product_stats(&self) -> Result<serde_json::Value, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
+        let (total, active, total_value): (i64, i64, f64) = conn.query_row(
+            "SELECT COUNT(*), COALESCE(SUM(CASE WHEN active=1 THEN 1 ELSE 0 END),0), COALESCE(SUM(price * stock),0) FROM products",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
+        ).map_err(|e| format!("Stats: {e}"))?;
+        Ok(serde_json::json!({
+            "total": total,
+            "active": active,
+            "total_stock_value": total_value,
+        }))
+    }
+
+    /// Export all active products as text for RAG ingestion.
+    pub fn products_as_rag_text(&self) -> Result<String, String> {
+        let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
+        let mut stmt = conn.prepare(
+            "SELECT name, sku, price, stock, category, description FROM products WHERE active=1 ORDER BY category, name"
+        ).map_err(|e| format!("Prepare: {e}"))?;
+        let mut text = String::from("# Bảng Giá Sản Phẩm\n\n");
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, f64>(2)?,
+                row.get::<_, i64>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        }).map_err(|e| format!("Query: {e}"))?;
+        for row in rows.flatten() {
+            let (name, sku, price, stock, cat, desc) = row;
+            text.push_str(&format!(
+                "- **{}** (SKU: {}) — Giá: {}đ | Tồn kho: {} | Danh mục: {} | {}\n",
+                name, sku, price, stock, cat, desc
+            ));
+        }
+        Ok(text)
     }
 }
 

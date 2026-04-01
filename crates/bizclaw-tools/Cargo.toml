@@ -32,3 +32,7 @@ bizclaw-memory = { version = "1.0.10", path = "../bizclaw-memory" }
 bizclaw-catchme = { version = "1.0.10", path = "../bizclaw-catchme" }
 shellexpand.workspace = true
 headless_chrome = { version = "1.0.21", features = ["fetch"] }
+reqwest-oauth1 = "0.3.0"
+imap = "2.4.1"
+native-tls.workspace = true
+mailparse = "0.16.1"

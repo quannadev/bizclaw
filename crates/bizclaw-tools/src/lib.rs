@@ -44,12 +44,14 @@ pub mod edit_file;
 pub mod file;
 pub mod glob_find;
 pub mod grep_search;
+pub mod gmail;
 pub mod group_summarizer;
 pub mod http_request;
 pub mod insight_extraction;
 pub mod memory_search;
 pub mod nl_query;
 pub mod orchestration;
+pub mod persistent_bash;
 pub mod plan_store;
 pub mod plan_tool;
 pub mod registry;
@@ -57,10 +59,10 @@ pub mod research;
 pub mod session_context;
 pub mod shell;
 pub mod social_post;
+pub mod media_extractor;
 pub mod stealth_browser;
 pub mod voice_transcribe;
 pub mod web_search;
-pub mod zalo_tool;
 
 use bizclaw_core::traits::Tool;
 
@@ -98,6 +100,7 @@ impl ToolRegistry {
         let mut reg = Self::new();
         // Core file/shell tools
         reg.register(Box::new(shell::ShellTool::new()));
+        reg.register(Box::new(persistent_bash::PersistentBashTool::new()));
         reg.register(Box::new(file::FileTool::new()));
         reg.register(Box::new(edit_file::EditFileTool::new()));
         reg.register(Box::new(glob_find::GlobTool::new()));
@@ -129,10 +132,10 @@ impl ToolRegistry {
         reg.register(Box::new(db_schema::DbSchemaTool::new()));
         reg.register(Box::new(api_connector::ApiConnectorTool::new()));
         reg.register(Box::new(document_reader::DocumentReaderTool::new()));
-        // Zalo Power Tool
-        reg.register(Box::new(zalo_tool::ZaloTool::new()));
         // Social Posting (Facebook, Telegram Channel, Webhook)
         reg.register(Box::new(social_post::SocialPostTool::new()));
+        // Media Extractor (TikTok, IG, YT, X)
+        reg.register(Box::new(media_extractor::MediaExtractorTool::new()));
         // NL Query (Text2SQL RAG pipeline)
         reg.register(Box::new(nl_query::NlQueryTool::new()));
         // Voice Transcription + Recap (VivaDicta-inspired)
@@ -143,6 +146,8 @@ impl ToolRegistry {
         reg.register(Box::new(catchme_search::CatchMeSearchTool::new(
             shellexpand::tilde("~/.gemini/antigravity/catchme.db").to_string(),
         )));
+        // Gmail IMAP Reader
+        reg.register(Box::new(gmail::GmailTool::new()));
         reg
     }
 

@@ -96,6 +96,9 @@ export const PAGES = [
   { id: 'tools', icon: '🛠️', label: 'nav.tools' },
   { id: 'mcp', icon: '🔗', label: 'nav.mcp' },
   { id: 'wiki', icon: '📖', label: 'Wiki & Guide' },
+  { id: 'products', icon: '🛍️', label: 'Sản Phẩm' },
+  { id: 'handoff', icon: '🤝', label: 'Human Handoff' },
+  { id: 'paymentlinks', icon: '💳', label: 'Thanh Toán QR' },
   { id: 'sep2', sep: true },
   // Automation
   { id: 'hands', icon: '🤚', label: 'Autonomous Hands' },

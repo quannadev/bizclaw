@@ -297,22 +297,7 @@ impl Agent {
     /// Uses Think-Act-Observe loop with Quality Gate evaluation.
     pub async fn process(&mut self, user_message: &str) -> Result<String> {
         let mut compacted = false;
-        let estimated_tokens = self.estimate_tokens();
         let max_context = self.config.brain.context_length as usize;
-        let utilization = if max_context > 0 {
-            estimated_tokens as f32 / max_context as f32
-        } else {
-            0.0
-        };
-
-        if utilization > 0.70 && self.conversation.len() > 10 {
-            tracing::info!(
-                "📦 Auto-compaction triggered ({}% used)",
-                (utilization * 100.0) as u32
-            );
-            self.compact_conversation().await;
-            compacted = true;
-        }
 
         // Knowledge RAG
         if let Some(kb_ctx) = self.search_knowledge(user_message).await {
@@ -340,12 +325,22 @@ impl Agent {
 
         self.conversation.push(Message::user(user_message));
 
-        // Trim conversation — keep system prompt + last 40 messages
-        if self.conversation.len() > 41 {
-            let keep_from = self.conversation.len() - 40;
-            let tail: Vec<_> = self.conversation.split_off(keep_from);
-            self.conversation.truncate(1); // keep only system prompt
-            self.conversation.extend(tail);
+        // Auto-compaction (claw-code pattern): when token utilization > 70%, 
+        // summarize old messages to prevent overflowing the context window
+        // while preserving critical conversational memory.
+        let utilization = if max_context > 0 {
+            self.estimate_tokens() as f32 / max_context as f32
+        } else {
+            0.0
+        };
+
+        if utilization > 0.70 && self.conversation.len() > 10 {
+            tracing::info!(
+                "📦 Context threshold reached ({}% used) — Triggering Auto-compaction",
+                (utilization * 100.0) as u32
+            );
+            self.compact_conversation().await;
+            compacted = true;
         }
 
         let tool_defs = self.prompt_cache.tool_defs(&self.tools).to_vec();
@@ -447,9 +442,18 @@ impl Agent {
                     ));
                     continue;
                 }
-                // Security check for shell and file tools
+                // Granular tool permission check
+                if !self.security.check_tool(&tc.function.name).await.unwrap_or(false) {
+                    results.push(Message::tool(
+                        format!("Permission denied: tool '{}' disabled by policy", tc.function.name),
+                        &tc.id,
+                    ));
+                    continue;
+                }
+
+                // Security check for shell and file tools (parameter-level validation)
                 let is_tool_blocked = match tc.function.name.as_str() {
-                    "shell" => {
+                    "shell" | "bash" => {
                         if let Ok(args) =
                             serde_json::from_str::<serde_json::Value>(&tc.function.arguments)
                         {

@@ -64,4 +64,19 @@ impl SecurityPolicy for DefaultSecurityPolicy {
     fn autonomy_level(&self) -> &str {
         &self.config.level
     }
+
+    async fn check_tool(&self, tool_name: &str) -> Result<bool> {
+        if self.config.forbidden_tools.iter().any(|t| t == tool_name) {
+            tracing::warn!("Security: tool '{}' is explicitly forbidden by policy", tool_name);
+            return Ok(false);
+        }
+        if !self.config.allowed_tools.is_empty() {
+            let allowed = self.config.allowed_tools.iter().any(|t| t == tool_name);
+            if !allowed {
+                tracing::warn!("Security: tool '{}' is not in allowed list", tool_name);
+            }
+            return Ok(allowed);
+        }
+        Ok(true)
+    }
 }

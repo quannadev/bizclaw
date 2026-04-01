@@ -64,6 +64,9 @@ async function loadPage(pageId) {
     edgegateway:   { file: 'edge_gateway.js',  export: 'EdgeGatewayPage' },
     dbassistant:   { file: 'db_assistant.js',  export: 'DbAssistantPage' },
     campaigns:     { file: 'campaigns.js',     export: 'CampaignsPage' },
+    products:      { file: 'products.js',      export: 'ProductsPage' },
+    handoff:       { file: 'handoff.js',        export: 'HandoffPage' },
+    paymentlinks:  { file: 'payment_links.js',  export: 'PaymentLinksPage' },
   };
 
   const mapping = PAGE_MAP[pageId];

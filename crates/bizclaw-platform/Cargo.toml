@@ -13,6 +13,7 @@ bizclaw-orchestrator.workspace = true
 bizclaw-providers.workspace = true
 bizclaw-skills.workspace = true
 bizclaw-workflows.workspace = true
+bizclaw-tools.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

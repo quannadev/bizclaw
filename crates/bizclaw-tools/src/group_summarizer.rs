@@ -10,7 +10,7 @@ use bizclaw_core::types::{ToolDefinition, ToolResult};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use rusqlite::Connection;
 
 /// A single buffered message from a Zalo group.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -63,84 +63,15 @@ impl Default for SummarizerConfig {
     }
 }
 
-/// Message buffer — stores messages per group.
-#[derive(Debug, Clone, Default)]
-pub struct MessageBuffer {
-    /// group_id -> Vec<BufferedMessage>
-    groups: Arc<Mutex<HashMap<String, Vec<BufferedMessage>>>>,
-}
-
-impl MessageBuffer {
-    pub fn new() -> Self {
-        Self {
-            groups: Arc::new(Mutex::new(HashMap::new())),
-        }
-    }
-
-    /// Add a message to the buffer.
-    pub fn push(&self, msg: BufferedMessage) {
-        let mut groups = self.groups.lock().unwrap();
-        groups.entry(msg.group_id.clone()).or_default().push(msg);
-    }
-
-    /// Get and clear messages for a specific group.
-    pub fn drain_group(&self, group_id: &str) -> Vec<BufferedMessage> {
-        let mut groups = self.groups.lock().unwrap();
-        groups.remove(group_id).unwrap_or_default()
-    }
-
-    /// Get all group IDs with buffered messages.
-    pub fn group_ids(&self) -> Vec<String> {
-        self.groups.lock().unwrap().keys().cloned().collect()
-    }
-
-    /// Get message count for a group.
-    pub fn count(&self, group_id: &str) -> usize {
-        self.groups
-            .lock()
-            .unwrap()
-            .get(group_id)
-            .map(|v| v.len())
-            .unwrap_or(0)
-    }
-
-    /// Get total message count across all groups.
-    pub fn total_count(&self) -> usize {
-        self.groups.lock().unwrap().values().map(|v| v.len()).sum()
-    }
-
-    /// Prune old messages beyond the buffer window.
-    pub fn prune(&self, max_age_secs: u64) {
-        let cutoff = Utc::now() - chrono::Duration::seconds(max_age_secs as i64);
-        let mut groups = self.groups.lock().unwrap();
-        for messages in groups.values_mut() {
-            messages.retain(|m| m.timestamp > cutoff);
-        }
-        groups.retain(|_, v| !v.is_empty());
-    }
-}
-
-/// Zalo Group Summarizer tool — generates summaries from buffered messages.
 pub struct GroupSummarizerTool {
-    buffer: MessageBuffer,
     config: SummarizerConfig,
+    db_path: String,
 }
 
 impl GroupSummarizerTool {
     pub fn new(config: SummarizerConfig) -> Self {
-        Self {
-            buffer: MessageBuffer::new(),
-            config,
-        }
-    }
-
-    pub fn with_buffer(buffer: MessageBuffer, config: SummarizerConfig) -> Self {
-        Self { buffer, config }
-    }
-
-    /// Get the shared message buffer.
-    pub fn buffer(&self) -> &MessageBuffer {
-        &self.buffer
+        let db_path = shellexpand::tilde("~/.gemini/antigravity/gateway.db").to_string();
+        Self { config, db_path }
     }
 
     /// Format messages into a prompt for the LLM.
@@ -208,39 +139,67 @@ impl Tool for GroupSummarizerTool {
 
     async fn execute(&self, arguments: &str) -> Result<ToolResult> {
         let args: serde_json::Value = serde_json::from_str(arguments)
-            .unwrap_or_else(|_| serde_json::json!({"action": "buffer_status"}));
+            .unwrap_or_else(|_| serde_json::json!({"action": "summarize", "group_id": ""}));
 
-        let action = args["action"].as_str().unwrap_or("buffer_status");
+        let action = args["action"].as_str().unwrap_or("summarize");
 
         let output = match action {
-            "list_groups" => {
-                let group_ids = self.buffer.group_ids();
-                if group_ids.is_empty() {
-                    "Không có nhóm nào có tin nhắn đang buffer.".into()
-                } else {
-                    let mut out =
-                        format!("📋 {} nhóm có tin nhắn đang buffer:\n\n", group_ids.len());
-                    for gid in &group_ids {
-                        let count = self.buffer.count(gid);
-                        out.push_str(&format!("  • {gid}: {count} tin nhắn\n"));
-                    }
-                    out
-                }
-            }
             "summarize" => {
-                let group_id = args["group_id"]
-                    .as_str()
-                    .ok_or_else(|| BizClawError::Tool("Missing group_id".into()))?;
-
-                let messages = self.buffer.drain_group(group_id);
-                if messages.is_empty() {
-                    format!("Nhóm {group_id} không có tin nhắn nào trong buffer.")
+                let group_id = args["group_id"].as_str().unwrap_or("");
+                
+                let conn = Connection::open(&self.db_path)
+                    .map_err(|e| BizClawError::Tool(format!("DB error: {e}")))?;
+                    
+                let mut query = String::from("SELECT sender_name, sender_id, content, timestamp FROM group_messages");
+                let time_limit = chrono::Utc::now() - chrono::Duration::seconds(self.config.buffer_window_secs as i64);
+                let time_str = time_limit.format("%Y-%m-%d %H:%M:%S").to_string();
+                
+                if !group_id.is_empty() {
+                    query.push_str(" WHERE group_id = ?1 AND timestamp > ?2");
                 } else {
-                    let group_name = messages
-                        .first()
-                        .map(|m| m.group_name.as_str())
-                        .unwrap_or(group_id);
+                    query.push_str(" WHERE timestamp > ?1");
+                }
+                query.push_str(" ORDER BY timestamp ASC LIMIT 500");
+                
+                let mut stmt = conn.prepare(&query).map_err(|e| BizClawError::Tool(e.to_string()))?;
+                
+                let mut messages: Vec<BufferedMessage> = Vec::new();
+                if !group_id.is_empty() {
+                    let mut rows = stmt.query_map(rusqlite::params![group_id, time_str], |row| {
+                        Ok(BufferedMessage {
+                            sender_name: row.get::<_, Option<String>>(0)?.unwrap_or_else(|| row.get::<_, String>(1).unwrap_or_default()),
+                            content: row.get(2)?,
+                            timestamp: chrono::Utc::now(), // mock timestamp for now, exact parsing skipped for simplicity
+                            group_id: group_id.to_string(),
+                            group_name: group_id.to_string(),
+                        })
+                    }).map_err(|e| BizClawError::Tool(e.to_string()))?;
+                    for r in rows {
+                        if let Ok(m) = r { messages.push(m); }
+                    }
+                } else {
+                    let mut rows = stmt.query_map(rusqlite::params![time_str], |row| {
+                        Ok(BufferedMessage {
+                            sender_name: row.get::<_, Option<String>>(0)?.unwrap_or_else(|| row.get::<_, String>(1).unwrap_or_default()),
+                            content: row.get(2)?,
+                            timestamp: chrono::Utc::now(),
+                            group_id: "all".to_string(),
+                            group_name: "all".to_string(),
+                        })
+                    }).map_err(|e| BizClawError::Tool(e.to_string()))?;
+                    for r in rows {
+                        if let Ok(m) = r { messages.push(m); }
+                    }
+                };
 
+                if messages.is_empty() {
+                    if group_id.is_empty() {
+                        "Không có tin nhắn nào trong buffer.".into()
+                    } else {
+                        format!("Nhóm {group_id} không có tin nhắn nào trong buffer.")
+                    }
+                } else {
+                    let group_name = if group_id.is_empty() { "Tất cả nhóm" } else { group_id };
                     let prompt = self.format_messages_for_llm(&messages, group_name);
 
                     // Return the formatted prompt — the AI agent will process it
@@ -253,17 +212,7 @@ impl Tool for GroupSummarizerTool {
                     )
                 }
             }
-            "buffer_status" => {
-                let total = self.buffer.total_count();
-                let groups = self.buffer.group_ids().len();
-                format!(
-                    "📊 Buffer: {total} tin nhắn từ {groups} nhóm\n\
-                     ⏰ Window: {}s\n\
-                     📝 Style: {}",
-                    self.config.buffer_window_secs, self.config.summary_style
-                )
-            }
-            _ => format!("Unknown action: {action}"),
+            _ => format!("Unknown action: {action}. Please use 'summarize'."),
         };
 
         Ok(ToolResult {

@@ -12,6 +12,9 @@ pub trait SecurityPolicy: Send + Sync {
     /// Check if a file path is accessible.
     async fn check_path(&self, path: &str) -> Result<bool>;
 
+    /// Check if a specific tool is allowed to execute based on granular permissions.
+    async fn check_tool(&self, tool_name: &str) -> Result<bool>;
+
     /// Get the autonomy level.
     fn autonomy_level(&self) -> &str;
 }

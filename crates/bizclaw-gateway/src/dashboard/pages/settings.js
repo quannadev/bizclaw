@@ -18,6 +18,12 @@ function SettingsPage({ config, lang }) {
   const [providersList, setProvidersList] = useState([]);
   const [customProvider, setCustomProvider] = useState(false);
   const [customModel, setCustomModel] = useState(false);
+  // Compliance state (Easy AI Model)
+  const [compliance, setCompliance] = useState({
+    pdpa: false, data_residency: 'vietnam', audit_log: true,
+    retention_days: 90, anonymize_pii: false, encrypt_at_rest: true,
+    consent_tracking: false, dpo_email: ''
+  });
   const inp = 'width:100%;padding:8px;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px';
 
   useEffect(() => {
@@ -121,6 +127,7 @@ function SettingsPage({ config, lang }) {
     {id:'identity',icon:'🪪',label:'Danh tính'},
     {id:'brain',icon:'🧠',label:'Brain Engine'},
     {id:'prompt',icon:'📝',label:'System Prompt'},
+    {id:'compliance',icon:'🛡️',label:'Compliance'},
   ];
 
   const brainChecks = [
@@ -303,6 +310,95 @@ function SettingsPage({ config, lang }) {
       <div class="card"><div class="card-label">📝 System Prompt</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Hướng dẫn chung cho AI Agent — prompt này sẽ được gửi trước mỗi cuộc hội thoại.</div>
         <textarea style="width:100%;min-height:250px;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono);font-size:13px;resize:vertical;line-height:1.6" value=${form.sysprompt} onInput=${e=>setForm(f=>({...f,sysprompt:e.target.value}))} placeholder="You are a helpful AI assistant..." />
+      </div>
+    `}
+    ${tab==='compliance' && html`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card">
+          <div class="card-label">🛡️ Compliance & Tuân Thủ Dữ Liệu</div>
+          <p style="font-size:12px;color:var(--text2);margin:0 0 16px">Cấu hình chính sách bảo vệ dữ liệu và tuân thủ quy định cho toàn bộ hệ thống AI Agent.</p>
+          <div style="display:grid;gap:12px;font-size:13px">
+            <!-- PDPA Toggle -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+              <div>
+                <strong>🇻🇳 PDPA (Bảo vệ Dữ liệu Cá nhân)</strong>
+                <div style="font-size:11px;color:var(--text2);margin-top:2px">Tuân thủ Nghị định 13/2023/NĐ-CP</div>
+              </div>
+              <div style="position:relative;width:44px;height:24px;background:${compliance.pdpa?'var(--green)':'var(--border)'};border-radius:12px;cursor:pointer;transition:background 0.3s" onClick=${()=>setCompliance(c=>({...c,pdpa:!c.pdpa}))}>
+                <div style="position:absolute;top:2px;left:${compliance.pdpa?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
+              </div>
+            </div>
+            <!-- Data Residency -->
+            <label>Data Residency (Nơi lưu trữ dữ liệu)
+              <select style="${inp}" value=${compliance.data_residency} onChange=${e=>setCompliance(c=>({...c,data_residency:e.target.value}))}>
+                <option value="vietnam">🇻🇳 Việt Nam (On-premise / VPS nội địa)</option>
+                <option value="singapore">🇸🇬 Singapore (Cloud SEA)</option>
+                <option value="local">💻 Local Device (Privacy-First)</option>
+                <option value="hybrid">🌐 Hybrid (Cloud + Local fallback)</option>
+              </select>
+            </label>
+            <!-- Audit Log -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+              <div>
+                <strong>📝 Audit Log (Nhật ký Kiểm toán)</strong>
+                <div style="font-size:11px;color:var(--text2);margin-top:2px">Ghi lại mọi thao tác của Agent và admin</div>
+              </div>
+              <div style="position:relative;width:44px;height:24px;background:${compliance.audit_log?'var(--green)':'var(--border)'};border-radius:12px;cursor:pointer;transition:background 0.3s" onClick=${()=>setCompliance(c=>({...c,audit_log:!c.audit_log}))}>
+                <div style="position:absolute;top:2px;left:${compliance.audit_log?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
+              </div>
+            </div>
+            <!-- Data Retention -->
+            <label>Data Retention (Định kỳ xóa dữ liệu cũ)
+              <select style="${inp}" value=${compliance.retention_days} onChange=${e=>setCompliance(c=>({...c,retention_days:+e.target.value}))}>
+                <option value="30">30 ngày</option>
+                <option value="90">90 ngày (Khuyến nghị)</option>
+                <option value="180">180 ngày</option>
+                <option value="365">365 ngày</option>
+                <option value="0">Vĩnh viễn (Không xóa)</option>
+              </select>
+            </label>
+            <!-- PII Anonymization -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+              <div>
+                <strong>🔒 Anonymize PII (Mã hóa SĐT/CMND)</strong>
+                <div style="font-size:11px;color:var(--text2);margin-top:2px">Tự động mask số điện thoại, CMND trong log</div>
+              </div>
+              <div style="position:relative;width:44px;height:24px;background:${compliance.anonymize_pii?'var(--green)':'var(--border)'};border-radius:12px;cursor:pointer;transition:background 0.3s" onClick=${()=>setCompliance(c=>({...c,anonymize_pii:!c.anonymize_pii}))}>
+                <div style="position:absolute;top:2px;left:${compliance.anonymize_pii?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
+              </div>
+            </div>
+            <!-- DPO Contact -->
+            <label>DPO Email (Liên hệ Bảo vệ Dữ liệu)
+              <input style="${inp}" value=${compliance.dpo_email} onInput=${e=>setCompliance(c=>({...c,dpo_email:e.target.value}))} placeholder="dpo@company.com" />
+            </label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">🏅 Compliance Scorecard</div>
+          <div style="display:grid;gap:8px;font-size:13px">
+            ${[
+              { label: 'PDPA Việt Nam', ok: compliance.pdpa, icon: '🇻🇳' },
+              { label: 'Data Residency', ok: compliance.data_residency !== '', icon: '📡' },
+              { label: 'Audit Logging', ok: compliance.audit_log, icon: '📝' },
+              { label: 'Data Retention Policy', ok: compliance.retention_days > 0, icon: '⏰' },
+              { label: 'PII Anonymization', ok: compliance.anonymize_pii, icon: '🔒' },
+              { label: 'Encryption at Rest', ok: compliance.encrypt_at_rest, icon: '🛡️' },
+              { label: 'DPO Contact', ok: !!compliance.dpo_email, icon: '📧' },
+            ].map(item => html`
+              <div key=${item.label} style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-radius:8px;border-left:3px solid ${item.ok ? 'var(--green)' : 'var(--red)'}">
+                <span style="font-size:18px">${item.icon}</span>
+                <span style="flex:1;font-weight:500">${item.label}</span>
+                <span class="badge ${item.ok ? 'badge-green' : 'badge-red'}" style="font-size:10px">${item.ok ? '✅ OK' : '⚠️ Chưa'}</span>
+              </div>
+            `)}
+            <div style="margin-top:8px;padding:14px;background:${[compliance.pdpa,compliance.audit_log,compliance.anonymize_pii,compliance.encrypt_at_rest,!!compliance.dpo_email].filter(Boolean).length >= 4 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.06)'};border-radius:10px;text-align:center">
+              <div style="font-size:28px;font-weight:800;color:${[compliance.pdpa,compliance.audit_log,compliance.anonymize_pii,compliance.encrypt_at_rest,!!compliance.dpo_email].filter(Boolean).length >= 4 ? 'var(--green)' : 'var(--red)'}">
+                ${Math.round([compliance.pdpa,compliance.audit_log,compliance.anonymize_pii,compliance.encrypt_at_rest,!!compliance.dpo_email,compliance.retention_days>0,compliance.data_residency!==''].filter(Boolean).length / 7 * 100)}%
+              </div>
+              <div style="font-size:12px;color:var(--text2);margin-top:4px">Độ tuân thủ tổng thể</div>
+            </div>
+          </div>
+        </div>
       </div>
     `}
   </div>`;

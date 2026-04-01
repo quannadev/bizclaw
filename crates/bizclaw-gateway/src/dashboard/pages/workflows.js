@@ -3,6 +3,41 @@
 const { h, html, useState, useEffect, useContext, useCallback, useRef, useMemo } = window;
 import { t, authFetch, authHeaders, StatsCard } from '/static/dashboard/shared.js';
 
+// ═══ 10 PRE-BUILT SME WORKFLOW TEMPLATES ═══
+// Inspired by Easy AI's standardized workflow catalog, adapted for BizClaw's action-centric model
+const SME_TEMPLATES = [
+  { id: 'tpl_sales_bot', name: '🛒 Bot Chốt Sale (Zalo/Messenger)', description: 'Tự động trả lời tin nhắn bán hàng, tư vấn giá, chốt đơn qua kênh chat. Sử dụng RAG bảng giá + Stealth Browser.', tags: ['sales','zalo','auto-reply'], category: 'sales',
+    steps: [{ name: 'Đọc tin khách', type: 'Sequential', agent_role: 'Listener', prompt: 'Đọc tin nhắn mới nhất từ khách qua kênh Zalo/Messenger' }, { name: 'Tra RAG bảng giá', type: 'Sequential', agent_role: 'Knowledge', prompt: 'Tìm sản phẩm liên quan trong Knowledge Base và trả về giá + tồn kho' }, { name: 'Soạn & Gửi trả lời', type: 'Sequential', agent_role: 'Writer', prompt: 'Soạn tin nhắn bán hàng thân thiện, có giá, khuyến mãi, và CTA chốt đơn' }] },
+  { id: 'tpl_faq_responder', name: '❓ FAQ Auto-Responder', description: 'Tự động trả lời câu hỏi thường gặp dựa trên tài liệu FAQ/SOP đã nạp vào RAG.', tags: ['faq','support','rag'], category: 'support',
+    steps: [{ name: 'Phân loại câu hỏi', type: 'Sequential', agent_role: 'Classifier', prompt: 'Phân loại câu hỏi: FAQ / Kỹ thuật / Khiếu nại / Khác' }, { name: 'Tra cứu RAG', type: 'Sequential', agent_role: 'Knowledge', prompt: 'Tìm câu trả lời trong kho FAQ operational' }, { name: 'Trả lời khách', type: 'Sequential', agent_role: 'Responder', prompt: 'Soạn câu trả lời ngắn gọn, chuyên nghiệp' }] },
+  { id: 'tpl_order_tracker', name: '📦 Tra Cứu Đơn Hàng (SQL RAG)', description: 'Khách hỏi trạng thái đơn hàng bằng tiếng Việt → AI tự truy vấn Database trả kết quả.', tags: ['orders','sql','tracking'], category: 'operations',
+    steps: [{ name: 'Nhận yêu cầu', type: 'Sequential', agent_role: 'Listener', prompt: 'Trích xuất mã đơn / tên khách từ tin nhắn' }, { name: 'Query Database', type: 'Sequential', agent_role: 'SQL Analyst', prompt: 'Dịch yêu cầu thành SQL query và truy vấn bảng orders' }, { name: 'Format kết quả', type: 'Sequential', agent_role: 'Formatter', prompt: 'Trình bày trạng thái đơn hàng rõ ràng cho khách' }] },
+  { id: 'tpl_appointment', name: '📅 Đặt Lịch Hẹn Tự Động', description: 'Khách nhắn tin đặt lịch → AI check slot trống → Xác nhận lịch hẹn tự động.', tags: ['appointment','scheduling','crm'], category: 'operations',
+    steps: [{ name: 'Parse yêu cầu đặt lịch', type: 'Sequential', agent_role: 'Parser', prompt: 'Trích xuất: ngày/giờ mong muốn, dịch vụ, tên khách' }, { name: 'Kiểm tra lịch trống', type: 'Sequential', agent_role: 'Scheduler', prompt: 'Tra cứu Google Calendar/Database tìm slot khả dụng' }, { name: 'Xác nhận & nhắc lịch', type: 'Sequential', agent_role: 'Confirmer', prompt: 'Gửi xác nhận lịch hẹn kèm reminder SMS/Zalo' }] },
+  { id: 'tpl_lead_extraction', name: '🎯 Cào Lead từ Mạng Xã Hội', description: 'Stealth Browser quét comment Facebook/Group → Trích xuất Lead tiềm năng → Lưu CRM.', tags: ['leads','social','browser'], category: 'marketing',
+    steps: [{ name: 'Mở trang Facebook', type: 'Sequential', agent_role: 'Browser', prompt: 'Stealth Browser mở Group/Page target, scroll lấy comment mới' }, { name: 'AI phân tích intent', type: 'FanOut', agent_role: 'Analyst', prompt: 'Phân biệt comment thể hiện nhu cầu mua vs comment rác' }, { name: 'Lưu Lead', type: 'Collect', agent_role: 'CRM Writer', prompt: 'Lưu tên + SĐT/link FB vào danh sách Lead tiềm năng' }] },
+  { id: 'tpl_daily_revenue', name: '📊 Báo Cáo Doanh Thu Hàng Ngày', description: 'Mỗi 8h tối tự động query doanh thu → Tạo báo cáo → Gửi qua Zalo/Telegram cho Boss.', tags: ['report','cron','sql'], category: 'analytics',
+    steps: [{ name: 'Query doanh thu', type: 'Sequential', agent_role: 'SQL Analyst', prompt: 'SELECT tổng doanh thu, số đơn, top sản phẩm hôm nay' }, { name: 'So sánh vs hôm qua', type: 'Sequential', agent_role: 'Analyst', prompt: 'So sánh % tăng/giảm với ngày hôm qua và cùng kỳ tuần trước' }, { name: 'Gửi báo cáo', type: 'Sequential', agent_role: 'Reporter', prompt: 'Format báo cáo dạng bảng đẹp, gửi qua kênh Zalo/Telegram của Boss' }] },
+  { id: 'tpl_customer_360', name: '👤 Xây Dựng Hồ Sơ KH 360°', description: 'Tổng hợp lịch sử mua + chat + hành vi → Tạo profile khách hàng toàn diện cho AI nhớ.', tags: ['customer','profile','memory'], category: 'crm',
+    steps: [{ name: 'Thu thập dữ liệu', type: 'FanOut', agent_role: 'Collector', prompt: 'Song song: query DB đơn hàng + đọc lịch sử chat + check interaction data' }, { name: 'Phân tích hành vi', type: 'Sequential', agent_role: 'Analyst', prompt: 'Tóm tắt: tần suất mua, giá trị trung bình, sở thích, tone chat' }, { name: 'Lưu Memory', type: 'Sequential', agent_role: 'Memory Writer', prompt: 'Lưu profile vào OpenGnothia Cumulative Memory cho agent nhớ lâu dài' }] },
+  { id: 'tpl_content_creator', name: '✍️ Tạo Nội Dung Marketing (Reels/Posts)', description: 'AI viết caption + lên lịch đăng → Stealth Browser tự up lên Facebook/Tiktok.', tags: ['content','marketing','social'], category: 'marketing',
+    steps: [{ name: 'Lên ý tưởng', type: 'Sequential', agent_role: 'Creative', prompt: 'Dựa trên trend + sản phẩm hot → Gợi ý 3 ý tưởng nội dung' }, { name: 'Viết caption + hashtag', type: 'Sequential', agent_role: 'Writer', prompt: 'Viết caption viral cho SME, thêm hashtag SEO, tone phù hợp thương hiệu' }, { name: 'Đăng bài tự động', type: 'Sequential', agent_role: 'Publisher', prompt: 'Stealth Browser mở Facebook/Tiktok → Upload video + paste caption → Đăng' }] },
+  { id: 'tpl_sop_query', name: '📖 Tra Cứu SOP / Quy Trình Nội Bộ', description: 'Nhân viên hỏi quy trình → AI tra SOP trong Knowledge Base → Trả lời chính xác từng bước.', tags: ['sop','internal','compliance'], category: 'operations',
+    steps: [{ name: 'Nhận câu hỏi NV', type: 'Sequential', agent_role: 'Listener', prompt: 'Đọc câu hỏi từ kênh nội bộ (Telegram/Discord)' }, { name: 'Tra SOP RAG', type: 'Sequential', agent_role: 'Knowledge', prompt: 'Tìm tài liệu SOP/Chính sách liên quan trong zone Vận Hành (Operational)' }, { name: 'Tóm tắt quy trình', type: 'Sequential', agent_role: 'Summarizer', prompt: 'Trình bày quy trình theo dạng từng bước 1-2-3 ngắn gọn' }] },
+  { id: 'tpl_ticket_bot', name: '🎫 Quản Lý Ticket CSKH', description: 'Khách gửi khiếu nại → AI tạo ticket → Phân loại ưu tiên → Giao cho nhân viên phù hợp.', tags: ['ticket','support','automation'], category: 'support',
+    steps: [{ name: 'Nhận khiếu nại', type: 'Sequential', agent_role: 'Intake', prompt: 'Đọc tin nhắn khiếu nại, trích xuất: vấn đề, mã đơn, mức độ khẩn' }, { name: 'Phân loại & ưu tiên', type: 'Conditional', agent_role: 'Classifier', prompt: 'Phân loại: Kỹ thuật / Đổi trả / Thanh toán. Ưu tiên: Cao / TB / Thấp' }, { name: 'Tạo Ticket & Assign', type: 'Sequential', agent_role: 'Dispatcher', prompt: 'Tạo ticket trên Kanban, assign cho nhân viên phụ trách đúng category' }] },
+];
+
+const TEMPLATE_CATEGORIES = [
+  { id: '', label: 'Tất cả', icon: '📋' },
+  { id: 'sales', label: 'Bán Hàng', icon: '🛒' },
+  { id: 'support', label: 'Hỗ Trợ KH', icon: '🎧' },
+  { id: 'operations', label: 'Vận Hành', icon: '⚙️' },
+  { id: 'marketing', label: 'Marketing', icon: '📢' },
+  { id: 'analytics', label: 'Phân Tích', icon: '📊' },
+  { id: 'crm', label: 'CRM', icon: '👤' },
+];
+
 function WorkflowsPage({ lang }) {
   const { showToast } = useContext(AppContext);
   const [workflows, setWorkflows] = useState([]);
@@ -15,6 +50,23 @@ function WorkflowsPage({ lang }) {
   const [running, setRunning] = useState(null);
   const [runInput, setRunInput] = useState('');
   const [showRunInput, setShowRunInput] = useState(null);
+  const [templateCat, setTemplateCat] = useState('');
+  const [showTemplates, setShowTemplates] = useState(false);
+
+  const visibleTemplates = templateCat ? SME_TEMPLATES.filter(t => t.category === templateCat) : SME_TEMPLATES;
+
+  const useTemplate = (tpl) => {
+    setEditWf(null);
+    setForm({
+      name: tpl.name.replace(/^[^\s]+ /, ''),
+      description: tpl.description,
+      tags: tpl.tags.join(', '),
+      steps: tpl.steps.map(s => ({...s})),
+    });
+    setShowForm(true);
+    setShowTemplates(false);
+    showToast('📋 Đã nạp template. Tuỳ chỉnh rồi bấm Tạo!', 'success');
+  };
 
   const load = async () => {
     try {
@@ -137,8 +189,60 @@ function WorkflowsPage({ lang }) {
     <div class="stats">
       <${StatsCard} label=${t('wf.total', lang)} value=${workflows.length} color="accent" icon="🔄" />
       <${StatsCard} label="Custom" value=${workflows.filter(w=>!w.builtin).length} color="green" icon="✨" />
-      <${StatsCard} label=${t('wf.templates', lang)} value=${workflows.filter(w=>w.builtin).length} color="blue" icon="📋" />
+      <${StatsCard} label="SME Templates" value=${SME_TEMPLATES.length} color="blue" icon="📋" />
     </div>
+
+    <!-- TEMPLATE GALLERY TOGGLE -->
+    <div style="margin-bottom:14px">
+      <button class="btn ${showTemplates ? '' : 'btn-outline'}" onClick=${() => setShowTemplates(!showTemplates)}
+        style="${showTemplates ? 'background:var(--accent);color:#fff;' : ''}padding:8px 18px;font-size:13px;display:flex;align-items:center;gap:6px">
+        📦 ${showTemplates ? 'Ẩn' : 'Xem'} Kho Mẫu SME (${SME_TEMPLATES.length} templates)
+      </button>
+    </div>
+
+    ${showTemplates ? html`
+      <div class="card" style="margin-bottom:14px;border:1px solid var(--accent);padding:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <h3 style="margin:0;display:flex;align-items:center;gap:8px">📦 Kho Workflow Mẫu cho Doanh Nghiệp SME
+            <span class="badge badge-blue" style="font-size:10px">Easy AI Model</span>
+          </h3>
+          <button class="btn btn-outline btn-sm" onClick=${() => setShowTemplates(false)}>✕</button>
+        </div>
+        <p style="font-size:12px;color:var(--text2);margin:0 0 14px">Chọn template → Tuỳ chỉnh Agent Role & Prompt → Chạy. Tiết kiệm 80% thời gian setup.</p>
+        <!-- Category Filter -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+          ${TEMPLATE_CATEGORIES.map(c => html`
+            <button key=${c.id} class="btn btn-sm" onClick=${() => setTemplateCat(c.id)}
+              style="padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;
+                border:1px solid ${templateCat === c.id ? 'var(--accent)' : 'var(--border)'};
+                background:${templateCat === c.id ? 'var(--accent)' : 'transparent'};
+                color:${templateCat === c.id ? '#fff' : 'var(--text2)'}">
+              ${c.icon} ${c.label}
+            </button>
+          `)}
+        </div>
+        <!-- Template Grid -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px">
+          ${visibleTemplates.map(tpl => html`
+            <div key=${tpl.id} style="padding:14px;background:var(--bg2);border-radius:10px;border:1px solid var(--border);cursor:pointer;transition:all 0.2s"
+              onMouseOver=${e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseOut=${e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'none'; }}>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                <strong style="font-size:13px">${tpl.name}</strong>
+              </div>
+              <p style="font-size:11px;color:var(--text2);margin:0 0 10px;line-height:1.5">${tpl.description}</p>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px">
+                ${tpl.tags.map(tag => html`<span key=${tag} class="badge" style="font-size:9px">${tag}</span>`)}
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <span style="font-size:11px;color:var(--text2)">${tpl.steps.length} steps</span>
+                <button class="btn btn-sm" style="background:var(--accent);color:#fff;padding:4px 12px;font-size:11px" onClick=${() => useTemplate(tpl)}>📋 Dùng Mẫu</button>
+              </div>
+            </div>
+          `)}
+        </div>
+      </div>
+    ` : ''}
 
     ${showForm && html`
       <div class="card" style="margin-bottom:14px;border:1px solid var(--accent)">

@@ -110,6 +110,228 @@ const WIKI_ARTICLES = [
         <p>Người thuê chuyển khoản ghi mã <code>BZ123</code>. Cổng Webhook của Bizclaw bắt tín hiệu từ SePay -> Gọi thẳng vào <strong>Multi-Tenant Gateway</strong> -> Nâng cấp tài khoản, kích hoạt Token API cho User. Boss chỉ việc ngủ và đếm tít tít ting ting.</p>
       </div>
     `
+  },
+  {
+    id: 'channel-setup',
+    icon: '📡',
+    title: 'HƯỚNG DẪN: KẾT NỐI KÊNH CHAT',
+    content: `
+      <h2>📡 Kết Nối 9 Kênh Messaging — Hướng Dẫn Từng Bước</h2>
+      <p>BizClaw hỗ trợ 9 kênh messaging. Mỗi kênh có thể tạo nhiều instance và gán cho Agent riêng biệt.</p>
+
+      <h3 style="margin-top:24px">💜 Facebook Messenger (Phổ biến nhất cho SME Việt)</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #a046ff;">
+        <p><strong>Yêu cầu:</strong> Facebook Page của shop + Tài khoản Meta Developer</p>
+        <ol>
+          <li>Truy cập <strong>developers.facebook.com</strong> → Tạo App mới (loại "Business")</li>
+          <li>Trong App Dashboard → <strong>Add Product</strong> → Chọn <strong>Messenger</strong></li>
+          <li>Mục <strong>Access Tokens</strong> → Link Facebook Page → Bấm <strong>Generate Token</strong></li>
+          <li>Copy <strong>Page Access Token</strong> (dạng EAA...)</li>
+          <li>Mục <strong>Webhooks</strong> → Subscribe:
+            <ul>
+              <li>Callback URL: <code>https://your-bizclaw-domain/api/v1/webhooks/messenger</code></li>
+              <li>Verify Token: nhập bất kỳ (VD: <code>bizclaw_verify_2024</code>)</li>
+              <li>Tick chọn: <strong>messages, messaging_postbacks</strong></li>
+            </ul>
+          </li>
+          <li>Vào BizClaw Dashboard → <strong>Channels</strong> → Thêm <strong>Facebook Messenger</strong></li>
+          <li>Paste: Page ID, Page Access Token, App Secret, Verify Token</li>
+          <li>Gán Agent → Bật → <strong>Done! ✅</strong></li>
+        </ol>
+        <p style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;margin-top:12px">
+          ⚠️ <strong>Lưu ý:</strong> Ở Development Mode chỉ admin/tester nhắn được. Để mở cho TẤT CẢ khách → vào <strong>App Review</strong> → Submit quyền <code>pages_messaging</code> → Meta duyệt 1-5 ngày. Cần <strong>Business Verification</strong> (upload GPKD).
+        </p>
+        <p style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;margin-top:8px">
+          💡 <strong>Quy tắc 24h:</strong> Bot chỉ trả lời trong 24h kể từ tin nhắn cuối của khách. Sau 24h phải dùng Message Tags hoặc One-Time Notification.
+        </p>
+      </div>
+
+      <h3>🏪 Zalo OA (Official Account)</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #006aff;">
+        <p><strong>Yêu cầu:</strong> Tài khoản Zalo OA + Đăng ký developers.zalo.me</p>
+        <ol>
+          <li>Truy cập <strong>developers.zalo.me</strong> → Tạo ứng dụng mới</li>
+          <li>Chọn <strong>Official Account API</strong> → Link OA của shop</li>
+          <li>Tab <strong>Cài đặt</strong> → Copy <strong>App ID</strong> và <strong>Secret Key</strong></li>
+          <li>Tab <strong>Official Account</strong> → Bấm <strong>Cấp quyền</strong> → Đăng nhập OA → Lấy <strong>Access Token</strong></li>
+          <li>Mục <strong>Webhook</strong>:
+            <ul>
+              <li>URL: <code>https://your-bizclaw-domain/api/v1/webhooks/zalo-oa</code></li>
+              <li>Tick chọn: <strong>Gửi và nhận tin nhắn, Quản lý OA</strong></li>
+            </ul>
+          </li>
+          <li>Vào BizClaw Dashboard → <strong>Channels</strong> → Thêm <strong>Zalo OA</strong></li>
+          <li>Paste credentials → Gán Agent → Bật</li>
+        </ol>
+        <p style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;margin-top:12px">
+          ℹ️ <strong>Access Token hết hạn sau 90 ngày.</strong> Cần lưu Refresh Token để tự động gia hạn. BizClaw hỗ trợ auto-refresh khi cấu hình đầy đủ.
+        </p>
+      </div>
+
+      <h3>💙 Zalo Cá Nhân</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #006aff;">
+        <p><strong>Ưu điểm:</strong> Không cần OA, dùng tài khoản cá nhân. Phù hợp shop nhỏ.</p>
+        <ol>
+          <li>Vào BizClaw Dashboard → <strong>Channels</strong> → Cấu hình <strong>Zalo Cá Nhân</strong></li>
+          <li>Bấm <strong>🔲 Quét QR</strong> → Mở Zalo trên điện thoại → Quét mã</li>
+          <li>Hoặc: Vào <code>chat.zalo.me</code> → Copy Cookie → Paste vào ô Cookie</li>
+        </ol>
+        <p style="padding:10px;background:var(--bg2);border-radius:6px;font-size:12px;margin-top:12px">
+          ⚠️ Cần license <strong>zca-cli</strong> để auto-listen tin nhắn. Chạy <code>zca license support-code</code> để lấy mã thiết bị.
+        </p>
+      </div>
+
+      <h3>📱 Telegram Bot</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #0088cc;">
+        <ol>
+          <li>Mở Telegram → Nhắn <code>@BotFather</code> → <code>/newbot</code></li>
+          <li>Đặt tên bot → Nhận <strong>Bot Token</strong></li>
+          <li>Nếu dùng trong Group: <code>/setprivacy</code> → <strong>Disable</strong></li>
+          <li>Vào BizClaw → Paste Bot Token → Gán Agent → xong!</li>
+        </ol>
+      </div>
+
+      <h3>Các kênh khác</h3>
+      <table>
+        <tr><th>Kênh</th><th>Cần gì</th><th>Thời gian setup</th></tr>
+        <tr><td>🎮 Discord</td><td>Bot Token + Message Content Intent</td><td>5 phút</td></tr>
+        <tr><td>💬 WhatsApp</td><td>Meta Cloud API + Phone Number ID</td><td>15 phút</td></tr>
+        <tr><td>📧 Email</td><td>SMTP/IMAP credentials (Gmail App Password)</td><td>5 phút</td></tr>
+        <tr><td>🌐 Webhook</td><td>URL endpoint + Secret</td><td>2 phút</td></tr>
+      </table>
+    `
+  },
+  {
+    id: 'guide-products-payment',
+    icon: '🛍️',
+    title: 'HƯỚNG DẪN: BÁN HÀNG + THANH TOÁN',
+    content: `
+      <h2>🛍️ Bán Hàng Tự Động: Product Catalog → VietQR → Xác Nhận</h2>
+
+      <h3>Bước 1: Nạp Sản Phẩm (Product Catalog)</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid var(--accent);">
+        <ol>
+          <li>Vào Menu <strong>🛍️ Sản Phẩm</strong> → Bấm <strong>+ Thêm Sản Phẩm</strong></li>
+          <li>Điền: Tên, Giá, Tồn kho, Phân loại, Mô tả sản phẩm</li>
+          <li>Bấm <strong>🔄 Đồng bộ → RAG</strong> để AI "nuốt" bảng giá</li>
+          <li>Từ giờ khách hỏi giá qua BẤT KỲ kênh nào → AI trả lời chính xác!</li>
+        </ol>
+      </div>
+
+      <h3>Bước 2: Cấu Hình Thanh Toán (VietQR)</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #10b981;">
+        <ol>
+          <li>Vào Menu <strong>💳 Thanh Toán QR</strong></li>
+          <li>Chọn ngân hàng (MB, VCB, TCB, ACB...)</li>
+          <li>Nhập số tài khoản + tên chủ TK</li>
+          <li>(Optional) Nhập SePay API Key để xác nhận tự động</li>
+        </ol>
+      </div>
+
+      <h3>Bước 3: Flow Hoàn Chỉnh</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;line-height:2.2">
+          <span style="padding:4px 12px;background:var(--bg2);border-radius:6px;">Khách nhắn Zalo: "Áo khoác giá bao nhiêu?"</span>
+          <span>→</span>
+          <span style="padding:4px 12px;background:var(--bg2);border-radius:6px;">AI tra Product Catalog → "450k, còn 124 cái"</span>
+          <span>→</span>
+          <span style="padding:4px 12px;background:var(--bg2);border-radius:6px;">Khách: "Lấy 2 cái"</span>
+          <span>→</span>
+          <span style="padding:4px 12px;background:var(--bg2);border-radius:6px;">AI tạo QR 900k gửi khách</span>
+          <span>→</span>
+          <span style="padding:4px 12px;background:#10b981;color:#fff;border-radius:6px;">SePay webhook → Xác nhận ✅</span>
+        </div>
+      </div>
+    `
+  },
+  {
+    id: 'guide-handoff',
+    icon: '🤝',
+    title: 'HƯỚNG DẪN: AI CHUYỂN CHO NGƯỜI',
+    content: `
+      <h2>🤝 Human Handoff — Khi Nào AI Cần "Gọi Sếp"?</h2>
+      <p>Không có AI nào hoàn hảo 100%. Tính năng Handoff cho phép AI tự nhận biết giới hạn và chuyển cuộc chat cho người thật, kèm toàn bộ context.</p>
+
+      <h3>Cấu hình</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid var(--accent);">
+        <ol>
+          <li>Vào Menu <strong>🤝 Human Handoff</strong></li>
+          <li>Bật các <strong>Trigger</strong> (khi nào chuyển):
+            <ul>
+              <li>🤔 AI không chắc chắn (confidence < 60%)</li>
+              <li>😤 Phát hiện khiếu nại (từ khóa: "gặp quản lý", "refund"...)</li>
+              <li>💳 Vấn đề thanh toán</li>
+              <li>🔄 Khách hỏi cùng câu 3+ lần</li>
+              <li>🙋 Khách yêu cầu gặp người</li>
+              <li>💎 Đơn giá trị cao (tùy chỉnh ngưỡng)</li>
+            </ul>
+          </li>
+          <li>Tuỳ chỉnh <strong>Tin Nhắn Handoff</strong> (AI nói gì khi chuyển)</li>
+          <li>Cài <strong>Giờ làm việc</strong> (ngoài giờ → gửi tin nhắn tự động)</li>
+        </ol>
+      </div>
+
+      <h3>Khi có Handoff</h3>
+      <div class="card" style="margin-bottom:16px;border-left:4px solid #ef4444;">
+        <p>Hàng đợi sẽ hiện 🔴 số ticket đang chờ. Boss/nhân viên:</p>
+        <ol>
+          <li>Xem <strong>Context AI</strong>: Tóm tắt cuộc chat + lý do chuyển</li>
+          <li>Bấm <strong>💬 Nhảy vào Chat</strong> để trả lời trực tiếp</li>
+          <li>Xử lý xong → Bấm <strong>✅ Đã xử lý</strong> → AI tiếp tục phục vụ</li>
+        </ol>
+    </div>
+    `
+  },
+  {
+    id: 'module-connection',
+    icon: '🔗',
+    title: 'BẢN ĐỒ LIÊN KẾT MODULE',
+    content: `<h2>🔗 Bản Đồ Liên Kết — Tất Cả Module Hoạt Động Cùng Nhau</h2>
+      <p>BizClaw gồm 8 module chính. Dưới đây là cách setup nhanh nhất cho SME.</p>
+
+      <h3>📋 5 Bước Setup — Từ 0 Đến Bán Hàng Tự Động</h3>
+      <div class="card" style="margin-bottom:24px;border-left:4px solid var(--accent);padding:16px;">
+        <ol style="font-size:14px;line-height:2.2">
+          <li><strong>Tạo Agent</strong> — Menu Agents → Tạo mới → Gán model (GPT-4o/Gemini) → Viết System Prompt.</li>
+          <li><strong>Nạp Sản Phẩm</strong> — Menu Products → Thêm sản phẩm → Bấm <strong>🔄 Sync RAG</strong>.</li>
+          <li><strong>Kết Nối Kênh</strong> — Menu Channels → Thêm Zalo OA / Messenger / Telegram → Gán Agent.</li>
+          <li><strong>Cấu Hình Thanh Toán</strong> — Menu Payment QR → Nhập STK ngân hàng + SePay.</li>
+          <li><strong>Bật Handoff</strong> — Menu Human Handoff → Chọn trigger → Setup giờ làm việc → <strong>Done!</strong></li>
+        </ol>
+      </div>
+
+      <h3>🗺️ Flow Dữ Liệu</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;font-size:13px;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+          <div style="padding:8px 20px;background:var(--bg2);border-radius:8px;text-align:center;width:80%;">👤 <strong>Khách hàng</strong> nhắn qua Zalo OA / Messenger / Telegram / WhatsApp</div>
+          <div>⬇️</div>
+          <div style="padding:8px 20px;background:var(--bg2);border-radius:8px;text-align:center;width:80%;">📡 <strong>Channel Gateway</strong> nhận tin → route đến Agent phụ trách</div>
+          <div>⬇️</div>
+          <div style="display:flex;gap:12px;width:90%;justify-content:center;">
+            <div style="padding:8px 16px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:8px;flex:1;text-align:center;">🤖 <strong>AI Agent</strong><br>Xử lý + Trả lời</div>
+            <div style="padding:8px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;flex:1;text-align:center;">🤝 <strong>Handoff</strong><br>Chuyển người nếu cần</div>
+          </div>
+          <div>⬇️ Agent cần tra data</div>
+          <div style="display:flex;gap:12px;width:90%;justify-content:center;">
+            <div style="padding:8px 16px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;flex:1;text-align:center;">📚 <strong>RAG</strong><br>Tài liệu + Bảng giá</div>
+            <div style="padding:8px 16px;background:rgba(249,115,22,0.1);border:1px solid rgba(249,115,22,0.3);border-radius:8px;flex:1;text-align:center;">🗄️ <strong>SQL RAG</strong><br>DB thực tế</div>
+          </div>
+          <div>⬇️ Chốt đơn → Tạo QR</div>
+          <div style="padding:8px 20px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:8px;text-align:center;width:80%;">💳 <strong>VietQR</strong> gửi khách → SePay webhook xác nhận ✅</div>
+      </div>
+    </div>
+    <h3>📊 Module nào dùng cái gì?</h3>
+    <table>
+      <tr><th>Module</th><th>Đọc từ</th><th>Ghi tới</th></tr>
+      <tr><td>🤖 Agent</td><td>RAG, SQL RAG, Products</td><td>Channel (reply), Handoff</td></tr>
+      <tr><td>📡 Channel</td><td>Webhook/API</td><td>Agent (route tin nhắn)</td></tr>
+      <tr><td>🛍️ Products</td><td>—</td><td>RAG (Sync bảng giá)</td></tr>
+      <tr><td>📚 Knowledge</td><td>Files, Product Sync</td><td>Agent (kết quả tìm kiếm)</td></tr>
+      <tr><td>🗄️ SQL RAG</td><td>MySQL / PostgreSQL</td><td>Agent (kết quả query)</td></tr>
+      <tr><td>💳 Payment QR</td><td>Agent yêu cầu</td><td>Channel (gửi hình QR)</td></tr>
+      <tr><td>🤝 Handoff</td><td>Agent trigger</td><td>Người thật (notification)</td></tr>
+      <tr><td>⏰ Scheduler</td><td>Cron config</td><td>Agent (chạy prompt tự động)</td></tr>
+    </table>`
   }
 ];
 

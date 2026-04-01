@@ -23,9 +23,9 @@ RUN cargo build --release --bin bizclaw --bin bizclaw-platform
 # Stage 2: Runtime — minimal image with only what's needed
 FROM debian:trixie-slim AS runtime
 
-# Install minimal runtime deps (docker-cli only, not full docker.io)
+# Install minimal runtime deps (docker-cli only, not full docker.io) + yt-dlp/ffmpeg for media extraction
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates libssl3 curl \
+    ca-certificates libssl3 curl python3 python3-pip yt-dlp ffmpeg \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install docker CLI only (much smaller than docker.io)

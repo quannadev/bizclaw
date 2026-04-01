@@ -3,6 +3,15 @@
 const { h, html, useState, useEffect, useContext, useCallback, useRef, useMemo } = window;
 import { t, authFetch, authHeaders, StatsCard } from '/static/dashboard/shared.js';
 
+// ═══ DATA ZONE TAXONOMY (Easy AI Model) ═══
+const DATA_ZONES = [
+  { id: '', icon: '📁', label: 'Tất cả', labelEn: 'All Zones', desc: 'Toàn bộ kho dữ liệu', color: 'var(--text2)' },
+  { id: 'customer', icon: '👤', label: 'Khách Hàng', labelEn: 'Customer Data', desc: 'Hồ sơ, hành vi, phân khúc KH', color: '#6366f1' },
+  { id: 'transactional', icon: '📦', label: 'Giao Dịch', labelEn: 'Transactional', desc: 'Đơn hàng, tồn kho, sản phẩm', color: '#10b981' },
+  { id: 'operational', icon: '📋', label: 'Vận Hành', labelEn: 'Operational', desc: 'FAQ, SOP, hợp đồng, chính sách', color: '#f59e0b' },
+  { id: 'interaction', icon: '💬', label: 'Tương Tác', labelEn: 'Interaction', desc: 'Chat, email, khảo sát, gọi điện', color: '#ec4899' },
+];
+
 function KnowledgePage({ lang }) {
   const { showToast } = useContext(AppContext);
   // Shared Tabs: doc_rag | sql_rag
@@ -18,6 +27,9 @@ function KnowledgePage({ lang }) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
+  // Data Zone Filter (Easy AI taxonomy)
+  const [activeZone, setActiveZone] = useState('');
+
   // Vector Collections (Tài liệu Vector RAG)
   const collections = useMemo(() => {
     const s = new Set(docs.map(d => d.owner).filter(Boolean));
@@ -26,7 +38,17 @@ function KnowledgePage({ lang }) {
   const [selectedCol, setSelectedCol] = useState('');
   const [showAddCol, setShowAddCol] = useState(false);
   const [newColName, setNewColName] = useState('');
-  const filteredDocs = selectedCol ? docs.filter(d => d.owner === selectedCol) : docs;
+  const zoneFilteredDocs = activeZone ? docs.filter(d => (d.data_zone || '') === activeZone) : docs;
+  const filteredDocs = selectedCol ? zoneFilteredDocs.filter(d => d.owner === selectedCol) : zoneFilteredDocs;
+
+  // Zone stats
+  const zoneCounts = useMemo(() => {
+    const counts = {};
+    DATA_ZONES.forEach(z => { counts[z.id] = 0; });
+    docs.forEach(d => { const z = d.data_zone || ''; if (counts[z] !== undefined) counts[z]++; else counts[''] = (counts[''] || 0) + 1; });
+    counts[''] = docs.length; // "All" always shows total
+    return counts;
+  }, [docs]);
 
   // ==========================================
   // 2. SQL RAG STATE (DB Assistant)
@@ -216,7 +238,7 @@ function KnowledgePage({ lang }) {
     <div class="page-header" style="margin-bottom:16px;">
       <div>
         <h1>📚 Kho Dữ Liệu RAG (Unified Hub)</h1>
-        <div class="sub">Tập trung quản lý toàn bộ nguồn kiến thức của Multi-Agent (PDF & SQL DB)</div>
+        <div class="sub">Tập trung quản lý toàn bộ nguồn kiến thức theo mô hình 4 Lớp Dữ Liệu Doanh Nghiệp</div>
       </div>
       <!-- Mode Switcher -->
       <div style="display:flex;gap:4px;background:var(--bg2);padding:4px;border-radius:8px;border:1px solid var(--border)">
@@ -231,11 +253,39 @@ function KnowledgePage({ lang }) {
 
     <!-- MAIN BODY BASED ON MODE -->
     ${activeRagMode === 'doc_rag' ? html`
+      <!-- DATA ZONE SELECTOR (Easy AI 4-Layer Taxonomy) -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        ${DATA_ZONES.map(z => html`
+          <button key=${z.id} class="btn btn-sm"
+            onClick=${() => setActiveZone(z.id)}
+            style="display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;font-size:12px;font-weight:600;transition:all 0.2s;
+              border:1.5px solid ${activeZone === z.id ? z.color : 'var(--border)'};
+              background:${activeZone === z.id ? z.color + '18' : 'var(--bg2)'};
+              color:${activeZone === z.id ? z.color : 'var(--text2)'};
+              box-shadow:${activeZone === z.id ? '0 2px 8px ' + z.color + '22' : 'none'}">
+            <span style="font-size:15px">${z.icon}</span>
+            <span>${lang === 'en' ? z.labelEn : z.label}</span>
+            <span style="background:${activeZone === z.id ? z.color + '25' : 'var(--border)'};padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;min-width:20px;text-align:center">
+              ${zoneCounts[z.id] || 0}
+            </span>
+          </button>
+        `)}
+      </div>
+      ${activeZone ? html`
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;margin-bottom:14px;border-radius:10px;font-size:12px;
+          background:${DATA_ZONES.find(z=>z.id===activeZone)?.color}12;border:1px solid ${DATA_ZONES.find(z=>z.id===activeZone)?.color}30">
+          <span style="font-size:18px">${DATA_ZONES.find(z=>z.id===activeZone)?.icon}</span>
+          <span style="color:var(--text);font-weight:600">${DATA_ZONES.find(z=>z.id===activeZone)?.label}</span>
+          <span style="color:var(--text2)">— ${DATA_ZONES.find(z=>z.id===activeZone)?.desc}</span>
+        </div>
+      ` : ''}
+
       <!-- DOC RAG VIEW -->
       <div class="stats" style="margin-bottom:20px">
-        <${StatsCard} label="Tổng Tài liệu" value=${docs.length} color="accent" icon="📄" />
-        <${StatsCard} label="Vector Chunks" value=${docs.reduce((s,d)=>s+(d.chunks||0),0)} color="blue" icon="📝" />
-        <${StatsCard} label="Bộ Sưu Tập (Collections)" value=${collections.length} color="purple" icon="🗂️" />
+        <${StatsCard} label="Tổng Tài liệu" value=${filteredDocs.length} color="accent" icon="📄" />
+        <${StatsCard} label="Vector Chunks" value=${filteredDocs.reduce((s,d)=>s+(d.chunks||0),0)} color="blue" icon="📝" />
+        <${StatsCard} label="Bộ Sưu Tập" value=${collections.length} color="purple" icon="🗂️" />
+        <${StatsCard} label="Phân Vùng (Zones)" value=${DATA_ZONES.length - 1} color="green" icon="🏷️" />
       </div>
 
       <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">

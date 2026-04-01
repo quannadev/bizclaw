@@ -238,20 +238,6 @@ impl AdminServer {
                 "/api/oauth/disconnect/{provider}",
                 delete(crate::oauth::oauth_disconnect),
             )
-            // ── SOCIAL AUTOMATION: Content Pipeline + Auto-Reply ───────
-            .route(
-                "/api/social/status/{tenant_id}",
-                get(crate::social_automation::social_status),
-            )
-            .route(
-                "/api/social/pipeline/{tenant_id}",
-                get(crate::social_automation::get_pipeline_config)
-                    .post(crate::social_automation::update_pipeline_config),
-            )
-            .route(
-                "/api/social/pipeline/{tenant_id}/trigger",
-                post(crate::social_automation::trigger_pipeline),
-            )
             // ── MAMA AI: Orchestrator + Cost-Aware Provider Routing ───
             .route("/api/mama/providers", get(crate::mama::list_providers))
             .route("/api/mama/plan", post(crate::mama::create_plan))
@@ -312,12 +298,6 @@ impl AdminServer {
             .route(
                 "/api/oauth/callback/{provider}",
                 get(crate::oauth::oauth_callback),
-            )
-            // Facebook/Instagram webhook — public (Meta calls here)
-            .route(
-                "/api/social/fb-webhook",
-                get(crate::social_automation::fb_webhook_verify)
-                    .post(crate::social_automation::fb_webhook_handler),
             )
             .route("/", get(admin_dashboard_page));
 
@@ -770,6 +750,23 @@ async fn pay2s_webhook_handler(
                                         amount
                                     );
                                     let _ = db.complete_payment(&tx_ref, &tenant.id);
+
+                                    // Activate tenant
+                                    if tenant.status == "pending" {
+                                        let _ = db.update_tenant_status(&tenant.id, "stopped", None);
+                                    }
+
+                                    // Auto-activate the owner user if they are pending
+                                    if let Some(owner_id) = tenant.owner_id {
+                                        if let Ok(Some(user)) = db.get_user_by_id(&owner_id) {
+                                            if user.status == "pending" {
+                                                tracing::info!("🔓 Auto-activating pending user {} after payment", user.email);
+                                                let _ = db.update_user_status(&user.id, "active");
+                                                let _ = db.update_user_role(&user.id, "admin");
+                                            }
+                                        }
+                                    }
+
                                     let _ = db.log_event(
                                         "plan_activated",
                                         "pay2s",
@@ -1012,6 +1009,25 @@ async fn sepay_webhook_handler(
                                     amount
                                 );
                                 let _ = db.complete_payment(&tx_ref, &tenant.id);
+
+                                // Activate tenant from 'stopped' to 'running' if applicable,
+                                // or just 'stopped' so Watchdog can start it. We'll set 'stopped' 
+                                // if it's currently something else, to let Mama take over.
+                                if tenant.status == "pending" {
+                                    let _ = db.update_tenant_status(&tenant.id, "stopped", None);
+                                }
+
+                                // Auto-activate the owner user if they are pending
+                                if let Some(owner_id) = tenant.owner_id {
+                                    if let Ok(Some(user)) = db.get_user_by_id(&owner_id) {
+                                        if user.status == "pending" {
+                                            tracing::info!("🔓 Auto-activating pending user {} after payment", user.email);
+                                            let _ = db.update_user_status(&user.id, "active");
+                                            let _ = db.update_user_role(&user.id, "admin");
+                                        }
+                                    }
+                                }
+
                                 let _ = db.log_event(
                                     "plan_activated",
                                     "sepay",
@@ -1074,6 +1090,9 @@ async fn sepay_webhook_handler(
 struct BillingConfigReq {
     sepay_api_key: Option<String>,
     pay2s_api_key: Option<String>,
+    sepay_bank_name: Option<String>,
+    sepay_account_no: Option<String>,
+    sepay_account_name: Option<String>,
 }
 
 /// PUT /api/billing/config — update billing webhook configurations
@@ -1099,12 +1118,22 @@ async fn set_billing_config_handler(
         }
     }
 
+    if let Some(val) = req.sepay_bank_name {
+        let _ = db.set_platform_config("SEPAY_BANK_ID", &val);
+    }
+    if let Some(val) = req.sepay_account_no {
+        let _ = db.set_platform_config("SEPAY_ACCOUNT_NO", &val);
+    }
+    if let Some(val) = req.sepay_account_name {
+        let _ = db.set_platform_config("SEPAY_ACCOUNT_NAME", &val);
+    }
+
     Json(serde_json::json!({"ok": true}))
 }
 
 /// GET /api/billing/status — billing overview for dashboard.
 async fn billing_status_handler(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
-    let (sepay_configured, pay2s_configured) = {
+    let (sepay_cfg, pay2s_cfg, bank, acc_no, acc_name) = {
         let db = state.db.lock().await;
         let sepay = db
             .get_platform_config("sepay_api_key")
@@ -1112,7 +1141,10 @@ async fn billing_status_handler(State(state): State<Arc<AdminState>>) -> Json<se
         let pay2s = db
             .get_platform_config("pay2s_api_key")
             .unwrap_or_else(|| std::env::var("BIZCLAW_PAY2S_API_KEY").unwrap_or_default());
-        (!sepay.is_empty(), !pay2s.is_empty())
+        let b = db.get_platform_config("SEPAY_BANK_ID").unwrap_or_default();
+        let a = db.get_platform_config("SEPAY_ACCOUNT_NO").unwrap_or_default();
+        let n = db.get_platform_config("SEPAY_ACCOUNT_NAME").unwrap_or_default();
+        (sepay, pay2s, b, a, n)
     };
 
     let mut recent_transactions = serde_json::json!([]);
@@ -1155,11 +1187,16 @@ async fn billing_status_handler(State(state): State<Arc<AdminState>>) -> Json<se
             );
         }
     }
+    let sepay_configured = !sepay_cfg.is_empty();
+    let pay2s_configured = !pay2s_cfg.is_empty();
 
     Json(serde_json::json!({
         "sepay": {
             "configured": sepay_configured,
             "webhook_url": "/api/billing/sepay-webhook",
+            "bank_name": bank,
+            "account_no": acc_no,
+            "account_name": acc_name,
         },
         "pay2s": {
             "configured": pay2s_configured,

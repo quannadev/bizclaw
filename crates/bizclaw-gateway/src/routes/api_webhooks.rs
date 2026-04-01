@@ -356,13 +356,25 @@ pub async fn resolve_agent_for_channel(state: &AppState, channel: &str) -> Optio
     None
 }
 
-pub async fn dispatch_to_channel_agent(state: &AppState, channel: &str, content: &str) -> String {
+pub async fn dispatch_to_channel_agent(
+    state: &AppState,
+    channel: &str,
+    thread_id: Option<&str>,
+    content: &str,
+) -> Option<String> {
+    if let Some(t_id) = thread_id {
+        if state.paused_threads.read().await.contains(t_id) {
+            tracing::info!("⏸️ Handoff active: ignoring AI reply for thread {}", t_id);
+            return None;
+        }
+    }
+
     let target = resolve_agent_for_channel(state, channel).await;
     let mut orch = state.orchestrator.lock().await;
 
     if let Some(agent_name) = target {
         match orch.send_to(&agent_name, content).await {
-            Ok(r) => return r,
+            Ok(r) => return Some(r),
             Err(e) => {
                 tracing::warn!(
                     "Failed to route to mapped agent '{}': {}. Falling back to default.",
@@ -374,8 +386,8 @@ pub async fn dispatch_to_channel_agent(state: &AppState, channel: &str, content:
     }
 
     match orch.send(content).await {
-        Ok(r) => r,
-        Err(e) => format!("⚠️ Agent error: {e}"),
+        Ok(r) => Some(r),
+        Err(e) => Some(format!("⚠️ Agent error: {e}")),
     }
 }
 
@@ -472,6 +484,23 @@ pub async fn auto_connect_channels(state: Arc<AppState>) {
                     let iid = instance_id.to_string();
                     tokio::spawn(async move {
                         spawn_discord_gateway(s, an, bot_token, iid).await;
+                    });
+                    connected += 1;
+                }
+            }
+            "zalo" if !agent_name.is_empty() => {
+                // Zalo Personal
+                let enabled = inst["enabled"].as_bool().unwrap_or(false);
+                if enabled && inst["config"]["mode"].as_str() != Some("official") {
+                    let s = state.clone();
+                    let an = agent_name.to_string();
+                    let mut zalo_cfg = bizclaw_core::config::ZaloChannelConfig::default();
+                    zalo_cfg.mode = "personal".into();
+                    if let Some(cookie) = cfg["personal"]["cookie"].as_str() {
+                        zalo_cfg.personal.cookie_path = cookie.into(); // Hack: pass raw cookie
+                    }
+                    tokio::spawn(async move {
+                        spawn_zalo_personal_listener(s, an, zalo_cfg).await;
                     });
                     connected += 1;
                 }
@@ -598,19 +627,10 @@ pub async fn whatsapp_webhook(
                                 cfg.channel.whatsapp.first().cloned()
                             };
 
-                            let agent_lock = state.agent.clone();
+                            let state_clone = state.clone();
                             tokio::spawn(async move {
-                                let response = {
-                                    let mut agent = agent_lock.lock().await;
-                                    if let Some(agent) = agent.as_mut() {
-                                        match agent.process(&text).await {
-                                            Ok(r) => r,
-                                            Err(e) => format!("Error: {e}"),
-                                        }
-                                    } else {
-                                        "Agent not available".to_string()
-                                    }
-                                };
+                                let response = dispatch_to_channel_agent(&state_clone, "whatsapp", Some(&from), &text).await.unwrap_or_default();
+                                if response.is_empty() { return; }
 
                                 if let Some(wa_cfg) = wa_config {
                                     let url = format!(
@@ -679,7 +699,7 @@ pub async fn xiaozhi_webhook(
         req.lang
     );
 
-    let response = dispatch_to_channel_agent(&state, "xiaozhi", &req.content).await;
+    let response = dispatch_to_channel_agent(&state, "xiaozhi", None, &req.content).await.unwrap_or_default();
     let processing_ms = start.elapsed().as_millis() as u64;
 
     Json(serde_json::json!({
@@ -771,50 +791,50 @@ pub async fn zalo_oa_webhook(
                 msg_id
             );
 
-            let agent_response = dispatch_to_channel_agent(&state, "zalo", message_text).await;
+            let agent_response_opt = dispatch_to_channel_agent(&state, "zalo", Some(sender_id), message_text).await;
 
-            if let Some(config) = oa_config {
-                let access_token = &config.official.access_token;
-                if !access_token.is_empty() {
-                    let reply_payload = serde_json::json!({
-                        "recipient": { "user_id": sender_id },
-                        "message": { "text": agent_response }
-                    });
+            if let Some(agent_response) = agent_response_opt {
+                if let Some(config) = oa_config {
+                    let access_token = &config.official.access_token;
+                    if !access_token.is_empty() {
+                        let reply_payload = serde_json::json!({
+                            "recipient": { "user_id": sender_id },
+                            "message": { "text": agent_response }
+                        });
 
-                    let client = reqwest::Client::new();
-                    match client
-                        .post("https://openapi.zalo.me/v3.0/oa/message/cs")
-                        .header("access_token", access_token.as_str())
-                        .json(&reply_payload)
-                        .send()
-                        .await
-                    {
-                        Ok(resp) => {
-                            let status = resp.status();
-                            let reply_body =
-                                resp.json::<serde_json::Value>().await.unwrap_or_default();
-                            if status.is_success()
-                                && reply_body["error"].as_i64().unwrap_or(-1) == 0
-                            {
-                                tracing::info!(
-                                    "[zalo-oa] ✅ Replied to {} successfully",
-                                    sender_id
-                                );
-                            } else {
-                                let err_msg = reply_body["message"].as_str().unwrap_or("Unknown");
-                                tracing::error!(
-                                    "[zalo-oa] Reply failed: {} (code: {})",
-                                    err_msg,
-                                    reply_body["error"]
-                                );
+                        let client = reqwest::Client::new();
+                        match client
+                            .post("https://openapi.zalo.me/v3.0/oa/message/cs")
+                            .header("access_token", access_token.as_str())
+                            .json(&reply_payload)
+                            .send()
+                            .await
+                        {
+                            Ok(resp) => {
+                                let status = resp.status();
+                                let reply_body =
+                                    resp.json::<serde_json::Value>().await.unwrap_or_default();
+                                if status.is_success()
+                                    && reply_body["error"].as_i64().unwrap_or(-1) == 0
+                                {
+                                    tracing::info!(
+                                        "[zalo-oa] ✅ Replied to {} successfully",
+                                        sender_id
+                                    );
+                                } else {
+                                    let err_msg = reply_body["message"].as_str().unwrap_or("Unknown");
+                                    tracing::error!(
+                                        "[zalo-oa] Reply failed: {} (code: {})",
+                                        err_msg,
+                                        reply_body["error"]
+                                    );
+                                }
                             }
+                            Err(e) => tracing::error!("[zalo-oa] Reply failed: {}", e),
                         }
-                        Err(e) => {
-                            tracing::error!("[zalo-oa] Reply request failed: {e}");
-                        }
+                    } else {
+                        tracing::warn!("[zalo-oa] No access_token configured — cannot reply");
                     }
-                } else {
-                    tracing::warn!("[zalo-oa] No access_token configured — cannot reply");
                 }
             }
 
@@ -877,6 +897,293 @@ pub async fn zalo_oa_webhook(
         _ => {
             tracing::debug!("[zalo-oa] Unhandled event: {}", event_name);
             Json(serde_json::json!({"ok": true, "event": event_name, "handled": false}))
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FACEBOOK MESSENGER WEBHOOK — Receive/Reply via Page Messaging API
+// ═══════════════════════════════════════════════════════════════════════
+
+/// GET /api/v1/webhook/messenger — Meta webhook verification.
+/// Meta sends: hub.mode=subscribe&hub.verify_token=xxx&hub.challenge=yyy
+pub async fn messenger_webhook_verify(
+    axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
+    State(state): State<Arc<AppState>>,
+) -> axum::response::Response {
+    let mode = params.get("hub.mode").map(|s| s.as_str()).unwrap_or("");
+    let token = params.get("hub.verify_token").map(|s| s.as_str()).unwrap_or("");
+    let challenge = params.get("hub.challenge").map(|s| s.as_str()).unwrap_or("");
+
+    // Find verify_token from channel instances
+    let instances = load_channel_instances(&state);
+    let expected = instances.iter()
+        .find(|i| i["channel_type"].as_str() == Some("messenger") && i["enabled"].as_bool() == Some(true))
+        .and_then(|i| i["config"]["verify_token"].as_str())
+        .unwrap_or("");
+
+    if mode == "subscribe" && token == expected {
+        tracing::info!("[messenger] ✅ Webhook verified by Meta");
+        axum::response::Response::builder()
+            .status(200)
+            .body(axum::body::Body::from(challenge.to_string()))
+            .unwrap()
+    } else {
+        tracing::warn!("[messenger] ❌ Webhook verification failed (token mismatch)");
+        axum::response::Response::builder()
+            .status(403)
+            .body(axum::body::Body::from("Forbidden"))
+            .unwrap()
+    }
+}
+
+/// POST /api/v1/webhook/messenger — Receive incoming messages from Facebook Messenger.
+pub async fn messenger_webhook(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Json<serde_json::Value> {
+    let body_str = String::from_utf8_lossy(&body);
+    tracing::info!("[messenger] Webhook received: {} bytes", body.len());
+
+    // ── 1. Find Messenger channel instance ──
+    let instances = load_channel_instances(&state);
+    let messenger_inst = instances.iter().find(|i| {
+        i["channel_type"].as_str() == Some("messenger") && i["enabled"].as_bool() == Some(true)
+    });
+
+    let (page_access_token, app_secret, agent_name) = match messenger_inst {
+        Some(inst) => {
+            let token = inst["config"]["page_access_token"].as_str().unwrap_or("").to_string();
+            let secret = inst["config"]["app_secret"].as_str().unwrap_or("").to_string();
+            let agent = inst["agent_name"].as_str().unwrap_or("").to_string();
+            (token, secret, agent)
+        }
+        None => {
+            tracing::warn!("[messenger] No enabled Messenger channel instance found");
+            return Json(serde_json::json!({"status": "ok", "note": "no_instance"}));
+        }
+    };
+
+    // ── 2. Validate HMAC-SHA256 signature (X-Hub-Signature-256) ──
+    if !app_secret.is_empty() {
+        if let Some(sig_header) = headers.get("x-hub-signature-256") {
+            let sig_str = sig_header.to_str().unwrap_or("");
+            // Format: sha256=<hex>
+            let expected_sig = sig_str.strip_prefix("sha256=").unwrap_or("");
+            use hmac::Mac;
+            type HmacSha256 = hmac::Hmac<sha2::Sha256>;
+            if let Ok(mut mac) = HmacSha256::new_from_slice(app_secret.as_bytes()) {
+                mac.update(&body);
+                let computed = hex::encode(mac.finalize().into_bytes());
+                if computed != expected_sig {
+                    tracing::warn!("[messenger] Invalid HMAC signature — rejecting");
+                    return Json(serde_json::json!({"error": "Invalid signature"}));
+                }
+                tracing::debug!("[messenger] HMAC signature validated ✓");
+            }
+        }
+    }
+
+    // ── 3. Parse the webhook event ──
+    let event: serde_json::Value = match serde_json::from_str(&body_str) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("[messenger] Failed to parse webhook body: {e}");
+            return Json(serde_json::json!({"ok": false, "error": "Invalid JSON"}));
+        }
+    };
+
+    // ── 4. Process messaging events ──
+    if let Some(entries) = event["entry"].as_array() {
+        for entry in entries {
+            if let Some(messagings) = entry["messaging"].as_array() {
+                for messaging in messagings {
+                    let sender_id = messaging["sender"]["id"].as_str().unwrap_or("").to_string();
+                    let page_id = messaging["recipient"]["id"].as_str().unwrap_or("");
+
+                    // Skip echo messages (sent by the page itself)
+                    if messaging["message"]["is_echo"].as_bool() == Some(true) {
+                        continue;
+                    }
+
+                    // Text message
+                    if let Some(text) = messaging["message"]["text"].as_str() {
+                        if text.is_empty() || sender_id.is_empty() {
+                            continue;
+                        }
+                        tracing::info!(
+                            "[messenger] Message from {}: '{}' (page: {})",
+                            sender_id,
+                            safe_truncate(text, 80),
+                            page_id
+                        );
+
+                        if state.paused_threads.read().await.contains(&sender_id) {
+                            tracing::info!("⏸️ Handoff active: ignoring AI reply for Messenger thread {}", sender_id);
+                            continue;
+                        }
+
+                        // Route to agent
+                        let response = if !agent_name.is_empty() {
+                            let mut orch = state.orchestrator.lock().await;
+                            match orch.send_to(&agent_name, text).await {
+                                Ok(r) => r,
+                                Err(e) => format!("⚠️ Agent error: {e}"),
+                            }
+                        } else {
+                            dispatch_to_channel_agent(&state, "messenger", Some(&sender_id), text).await.unwrap_or_default()
+                        };
+
+                        // Reply via Graph API
+                        if !page_access_token.is_empty() {
+                            let reply_payload = serde_json::json!({
+                                "recipient": { "id": sender_id },
+                                "message": { "text": response },
+                                "messaging_type": "RESPONSE"
+                            });
+                            let client = reqwest::Client::new();
+                            match client
+                                .post("https://graph.facebook.com/v21.0/me/messages")
+                                .query(&[("access_token", &page_access_token)])
+                                .json(&reply_payload)
+                                .send()
+                                .await
+                            {
+                                Ok(resp) => {
+                                    let status = resp.status();
+                                    if status.is_success() {
+                                        tracing::info!("[messenger] ✅ Replied to {} successfully", sender_id);
+                                    } else {
+                                        let err = resp.text().await.unwrap_or_default();
+                                        tracing::error!("[messenger] Reply failed ({}): {}", status, safe_truncate(&err, 200));
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::error!("[messenger] Reply request failed: {e}");
+                                }
+                            }
+                        } else {
+                            tracing::warn!("[messenger] No page_access_token — cannot reply");
+                        }
+                    }
+
+                    // Postback (button click)
+                    if let Some(pb) = messaging["postback"]["payload"].as_str() {
+                        tracing::info!("[messenger] Postback from {}: {}", sender_id, pb);
+                    }
+                }
+            }
+        }
+    }
+
+    // Meta requires 200 OK within 20 seconds
+    Json(serde_json::json!({"status": "ok"}))
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// HANDOFF (HUMAN-IN-THE-LOOP)
+// ═══════════════════════════════════════════════════════════════════════
+
+#[derive(serde::Deserialize)]
+pub struct HandoffReq {
+    pub thread_id: String,
+}
+
+pub async fn handoff_pause(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Json(req): axum::extract::Json<HandoffReq>,
+) -> Json<serde_json::Value> {
+    state.paused_threads.write().await.insert(req.thread_id.clone());
+    tracing::info!("⏸️ Handoff manual override activated for thread: {}", req.thread_id);
+    Json(serde_json::json!({
+        "ok": true,
+        "thread_id": req.thread_id,
+        "status": "paused"
+    }))
+}
+
+pub async fn handoff_resume(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Json(req): axum::extract::Json<HandoffReq>,
+) -> Json<serde_json::Value> {
+    state.paused_threads.write().await.remove(&req.thread_id);
+    tracing::info!("▶️ AI resumed for thread: {}", req.thread_id);
+    Json(serde_json::json!({
+        "ok": true,
+        "thread_id": req.thread_id,
+        "status": "active"
+    }))
+}
+
+/// Spawn Zalo Personal real-time listener.
+pub async fn spawn_zalo_personal_listener(
+    state: Arc<AppState>,
+    agent_name: String,
+    config: bizclaw_core::config::ZaloChannelConfig,
+) {
+    use bizclaw_core::traits::Channel;
+    use futures::StreamExt;
+    
+    let mut channel = bizclaw_channels::zalo::ZaloChannel::new(config.clone());
+    if let Err(e) = channel.connect().await {
+        tracing::error!("[zalo-personal] Connect failed: {e}");
+        return;
+    }
+    tracing::info!("[zalo-personal] Connected → agent '{}'", agent_name);
+
+    if let Ok(mut stream) = channel.listen().await {
+        while let Some(msg) = stream.next().await {
+            let thread_id = msg.thread_id.clone();
+            let sender_id = msg.sender_id.clone();
+            let sender_name = msg.sender_name.clone();
+            let content = msg.content.clone();
+            
+            // Log to group_messages for summarization
+            let db = state.db.clone();
+            let group_id_clone = thread_id.clone();
+            let s_id_clone = sender_id.clone();
+            let s_name_clone = sender_name.clone();
+            let content_clone = content.clone();
+            tokio::task::spawn_blocking(move || {
+                let _ = db.insert_group_message(
+                    &group_id_clone,
+                    &s_id_clone,
+                    s_name_clone.as_deref(),
+                    &content_clone,
+                );
+            });
+
+            // For Zalo Personal, if sender != thread_id, it is likely a group.
+            let is_group = sender_id != thread_id && !thread_id.is_empty();
+            let is_mention = content.to_lowercase().contains("@agent") || content.to_lowercase().contains(&agent_name.to_lowercase());
+            
+            if !is_group || is_mention {
+                tracing::info!("[zalo-personal] {} → agent '{}': {}", sender_id, agent_name, crate::routes::safe_truncate(&content, 100));
+                
+                // Fire and forget reply to avoid locking the stream
+                let channel_clone = bizclaw_channels::zalo::ZaloChannel::new(config.clone());
+                let s = state.clone();
+                let an = agent_name.clone();
+                tokio::spawn(async move {
+                    let mut channel = channel_clone;
+                    if channel.connect().await.is_ok() {
+                        let response = {
+                            let mut orch = s.orchestrator.lock().await;
+                            match orch.send_to(&an, &content).await {
+                                Ok(r) => r,
+                                Err(e) => format!("⚠️ Agent error: {e}"),
+                            }
+                        };
+                        let _ = channel.send(bizclaw_core::types::OutgoingMessage {
+                            thread_id: thread_id.clone(),
+                            thread_type: bizclaw_core::types::ThreadType::Direct,
+                            content: response,
+                            reply_to: None,
+                        }).await;
+                    }
+                });
+            }
         }
     }
 }
