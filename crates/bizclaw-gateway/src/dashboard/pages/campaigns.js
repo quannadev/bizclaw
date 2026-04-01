@@ -90,9 +90,9 @@ function CampaignForm({ onSave, onCancel, editData }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: \`Viết một tin nhắn broadcast chuyên nghiệp cho chiến dịch "\${name}". 
+          message: `Viết một tin nhắn broadcast chuyên nghiệp cho chiến dịch "${name}". 
 Yêu cầu: ngắn gọn (dưới 200 ký tự), thân thiện, có emoji, kêu gọi hành động. 
-Chỉ trả về nội dung tin nhắn, không giải thích.\`,
+Chỉ trả về nội dung tin nhắn, không giải thích.`,
           agent: 'default'
         })
       });
@@ -255,7 +255,7 @@ export function CampaignsPage() {
   const saveCampaign = async (data) => {
     try {
       const method = editData ? 'PUT' : 'POST';
-      const url = editData ? \`/api/v1/campaigns/\${editData.id}\` : '/api/v1/campaigns';
+      const url = editData ? `/api/v1/campaigns/${editData.id}` : '/api/v1/campaigns';
       await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -273,17 +273,17 @@ export function CampaignsPage() {
   };
 
   const runCampaign = async (c) => {
-    if (!confirm(\`🚀 Gửi chiến dịch "\${c.name}" ngay bây giờ?\`)) return;
+    if (!confirm(`🚀 Gửi chiến dịch "${c.name}" ngay bây giờ?`)) return;
     try {
-      await authFetch(\`/api/v1/campaigns/\${c.id}/run\`, { method: 'POST' });
+      await authFetch(`/api/v1/campaigns/${c.id}/run`, { method: 'POST' });
     } catch(e) {}
     setCampaigns(prev => prev.map(x => x.id === c.id ? { ...x, status: 'running' } : x));
   };
 
   const deleteCampaign = async (c) => {
-    if (!confirm(\`🗑 Xoá chiến dịch "\${c.name}"?\`)) return;
+    if (!confirm(`🗑 Xoá chiến dịch "${c.name}"?`)) return;
     try {
-      await authFetch(\`/api/v1/campaigns/\${c.id}\`, { method: 'DELETE' });
+      await authFetch(`/api/v1/campaigns/${c.id}`, { method: 'DELETE' });
     } catch(e) {}
     setCampaigns(prev => prev.filter(x => x.id !== c.id));
   };
