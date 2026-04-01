@@ -120,6 +120,23 @@
         "base_delay_secs": 300,
         "backoff_multiplier": 1.0
       }
+    },
+    {
+      "name": "Morning Sync Report (Zalo & Gmail)",
+      "agent": "max",
+      "workflow": null,
+      "schedule": {
+        "type": "cron",
+        "expression": "0 8 * * *"
+      },
+      "prompt": "Call gmail_reader to read unread emails and call group_summarizer to read the latest Zalo group messages. Summarize everything into a clean daily briefing.",
+      "deliver_to": "telegram",
+      "enabled": true,
+      "retry": {
+        "max_retries": 1,
+        "base_delay_secs": 60,
+        "backoff_multiplier": 1.0
+      }
     }
   ]
 }
