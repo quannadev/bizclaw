@@ -332,11 +332,281 @@ const WIKI_ARTICLES = [
       <tr><td>🤝 Handoff</td><td>Agent trigger</td><td>Người thật (notification)</td></tr>
       <tr><td>⏰ Scheduler</td><td>Cron config</td><td>Agent (chạy prompt tự động)</td></tr>
     </table>`
+  },
+  {
+    id: 'quickstart',
+    icon: '🚀',
+    title: 'BẮT ĐẦU NHANH (5 PHÚT)',
+    content: `
+      <h2>🚀 Quick Start — Từ 0 Đến Có AI Trả Lời Khách Trong 5 Phút</h2>
+      <p style="color:var(--accent2);font-weight:600;font-size:15px">Nếu anh/chị chỉ muốn "cho Bot trả lời tin nhắn", hãy làm đúng 5 bước dưới đây. Không cần biết code!</p>
+
+      <div class="card" style="margin:20px 0;padding:20px;border-left:4px solid #3b82f6;">
+        <h3 style="margin-top:0">Bước 1: Chọn Provider AI (1 phút)</h3>
+        <ol>
+          <li>Vào sidebar <strong>⚙️ Cài đặt</strong></li>
+          <li>Mục <strong>Nhà cung cấp AI</strong> → chọn <strong>Gemini</strong> (miễn phí) hoặc OpenAI</li>
+          <li>Paste <strong>API Key</strong> → Lưu</li>
+        </ol>
+        <p style="padding:8px;background:var(--bg2);border-radius:6px;font-size:12px">💡 <strong>Chưa có API Key?</strong> Vào <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent2)">aistudio.google.com/apikey</a> → Tạo miễn phí!</p>
+      </div>
+
+      <div class="card" style="margin:20px 0;padding:20px;border-left:4px solid #10b981;">
+        <h3 style="margin-top:0">Bước 2: Tạo Agent AI (1 phút)</h3>
+        <ol>
+          <li>Vào <strong>🤖 AI Agent</strong> → Bấm <strong>"Tạo Agent"</strong></li>
+          <li>Đặt tên: VD <code>sales-bot</code></li>
+          <li>Viết System Prompt: <em>"Bạn là nhân viên tư vấn chuyên nghiệp của [Tên shop]. Xưng 'em', gọi 'anh/chị'. Trả lời ngắn gọn, đúng trọng tâm."</em></li>
+          <li>Chọn model: <code>gemini-2.5-flash</code></li>
+          <li>Bấm <strong>Lưu</strong></li>
+        </ol>
+      </div>
+
+      <div class="card" style="margin:20px 0;padding:20px;border-left:4px solid #f97316;">
+        <h3 style="margin-top:0">Bước 3: Kết nối Kênh Chat (2 phút)</h3>
+        <ol>
+          <li>Vào <strong>📱 Kênh liên lạc</strong></li>
+          <li>Chọn kênh phù hợp:<br/>
+            • <strong>Telegram</strong>: Nhanh nhất — chỉ cần Bot Token từ @BotFather<br/>
+            • <strong>Zalo OA</strong>: Phổ biến nhất cho SME Việt Nam<br/>
+            • <strong>Messenger</strong>: Cho shop bán trên Facebook</li>
+          <li>Paste thông tin → Gán Agent đã tạo ở Bước 2</li>
+          <li>Bấm <strong>Bật</strong> → Done!</li>
+        </ol>
+      </div>
+
+      <div class="card" style="margin:20px 0;padding:20px;border-left:4px solid #a855f7;">
+        <h3 style="margin-top:0">Bước 4: Nạp Tri Thức (1 phút)</h3>
+        <ol>
+          <li>Vào <strong>📚 Kho Dữ Liệu RAG</strong></li>
+          <li>Bấm <strong>"Thêm tài liệu"</strong></li>
+          <li>Upload file PDF/Word bảng giá, FAQ, hoặc paste text trực tiếp</li>
+          <li>Từ giờ AI sẽ tra cứu tài liệu để trả lời chính xác!</li>
+        </ol>
+      </div>
+
+      <div class="card" style="margin:20px 0;padding:20px;border-left:4px solid var(--green);background:rgba(16,185,129,0.05)">
+        <h3 style="margin-top:0">✅ Bước 5: Test thử!</h3>
+        <ol>
+          <li>Vào <strong>💬 Trò chuyện</strong> trong Dashboard → Thử chat với Bot</li>
+          <li>Hoặc mở Telegram/Zalo → Nhắn tin cho Bot bạn vừa tạo</li>
+          <li>Thấy Bot trả lời? <strong>Chúc mừng — hệ thống đã hoạt động!</strong> 🎉</li>
+        </ol>
+      </div>
+
+      <div style="padding:16px;background:rgba(59,130,246,0.08);border-radius:8px;border:1px solid rgba(59,130,246,0.2);margin-top:24px">
+        <strong>📌 Bước tiếp theo (nâng cấp):</strong>
+        <ul style="margin:8px 0 0;font-size:13px">
+          <li>Nạp Sản Phẩm → Menu <strong>🛍️ Sản Phẩm</strong></li>
+          <li>Thanh toán QR tự động → Menu <strong>💳 Thanh Toán QR</strong></li>
+          <li>AI chuyển cho người khi cần → Menu <strong>🤝 Chuyển cho Người</strong></li>
+          <li>Broadcast tin nhắn hàng loạt → Menu <strong>📢 Broadcast</strong></li>
+          <li>Tự động hóa quy trình → Menu <strong>🔄 Workflows</strong></li>
+        </ul>
+      </div>
+    `
+  },
+  {
+    id: 'dev-guide',
+    icon: '👨‍💻',
+    title: 'HƯỚNG DẪN DEVELOPER',
+    content: `
+      <h2>👨‍💻 Developer Setup Guide — Cài Đặt & Triển Khai BizClaw</h2>
+
+      <h3>📦 Yêu cầu hệ thống</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;">
+        <table>
+          <tr><th>Thành phần</th><th>Yêu cầu tối thiểu</th><th>Đề xuất</th></tr>
+          <tr><td>OS</td><td>Linux / macOS / Windows (WSL2)</td><td>Ubuntu 22.04+</td></tr>
+          <tr><td>CPU</td><td>2 cores</td><td>4+ cores</td></tr>
+          <tr><td>RAM</td><td>2 GB</td><td>8 GB (nếu chạy Ollama local)</td></tr>
+          <tr><td>Disk</td><td>500 MB</td><td>10 GB (cho model AI local)</td></tr>
+          <tr><td>Rust</td><td>1.80+</td><td>Latest stable</td></tr>
+        </table>
+      </div>
+
+      <h3>🔧 Cài đặt từ Source</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;border-left:4px solid var(--accent);">
+        <pre style="background:var(--bg2);padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.8">
+# 1. Clone repo
+git clone https://github.com/bizclaw/bizclaw.git
+cd bizclaw
+
+# 2. Build release binary
+cargo build --release
+
+# 3. Chạy server
+./target/release/bizclaw serve --port 3000
+
+# 4. Mở dashboard
+open http://localhost:3000</pre>
+      </div>
+
+      <h3>🌐 Chạy với Cloudflare Tunnel (truy cập từ xa)</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;border-left:4px solid #f97316;">
+        <pre style="background:var(--bg2);padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.8">
+# Cài cloudflared (macOS)
+brew install cloudflared
+
+# Chạy BizClaw + Tunnel tự động
+./run-local.sh
+
+# Output:
+#   🏠 Local:  http://localhost:3000
+#   🌐 Remote: https://xyz.trycloudflare.com</pre>
+        <p style="font-size:12px;color:var(--text2);margin:8px 0 0">💡 URL Remote dùng để paste vào Webhook URL của Zalo OA / Facebook / Telegram.</p>
+      </div>
+
+      <h3>⚙️ Cấu hình (config.toml)</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;border-left:4px solid #a855f7;">
+        <pre style="background:var(--bg2);padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.8">
+[server]
+port = 3000
+host = "0.0.0.0"
+
+[provider]
+name = "gemini"  # openai | ollama | anthropic
+api_key = "AIza..."
+model = "gemini-2.5-flash"
+
+[security]
+jwt_secret = ""  # Để trống = dev mode (no auth)
+autonomy = "supervised"
+
+[brain]
+workspace = "~/.bizclaw/brain"
+auto_memory = true</pre>
+      </div>
+
+      <h3>🚀 Deploy Production (VPS)</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;border-left:4px solid #10b981;">
+        <pre style="background:var(--bg2);padding:12px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.8">
+# 1. Build trên VPS (hoặc copy binary từ CI/CD)
+cargo build --release
+
+# 2. Tạo systemd service
+sudo cat > /etc/systemd/system/bizclaw.service << 'EOF'
+[Unit]
+Description=BizClaw AI Gateway
+After=network.target
+
+[Service]
+Type=simple
+User=bizclaw
+ExecStart=/opt/bizclaw/bizclaw serve --port 3000
+WorkingDirectory=/opt/bizclaw
+Restart=always
+RestartSec=5
+Environment=RUST_LOG=info
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# 3. Enable & start
+sudo systemctl enable bizclaw
+sudo systemctl start bizclaw
+
+# 4. Reverse proxy (Caddy — tự động HTTPS)
+# Caddyfile:
+# bizclaw.yourdomain.com {
+#   reverse_proxy localhost:3000
+# }</pre>
+      </div>
+
+      <h3>📡 API Endpoints chính</h3>
+      <div class="card" style="margin-bottom:16px;padding:16px;">
+        <table>
+          <tr><th>Endpoint</th><th>Method</th><th>Mô tả</th></tr>
+          <tr><td><code>/api/v1/info</code></td><td>GET</td><td>Health check, version, status</td></tr>
+          <tr><td><code>/api/v1/chat</code></td><td>POST</td><td>Chat với Agent (streaming)</td></tr>
+          <tr><td><code>/api/v1/agents</code></td><td>GET/POST</td><td>CRUD Agent</td></tr>
+          <tr><td><code>/api/v1/channels/*</code></td><td>*</td><td>Channel management</td></tr>
+          <tr><td><code>/api/v1/knowledge/*</code></td><td>*</td><td>RAG documents</td></tr>
+          <tr><td><code>/api/v1/brain/files/*</code></td><td>GET/PUT</td><td>Brain workspace CRUD</td></tr>
+          <tr><td><code>/api/v1/webhooks/*</code></td><td>POST</td><td>Webhook receivers (Zalo, FB, Telegram)</td></tr>
+          <tr><td><code>/api/v1/handoff/*</code></td><td>*</td><td>Human handoff queue</td></tr>
+          <tr><td><code>/api/v1/campaigns/*</code></td><td>*</td><td>Broadcast campaigns</td></tr>
+          <tr><td><code>/api/v1/scheduler/*</code></td><td>*</td><td>Scheduled tasks</td></tr>
+        </table>
+      </div>
+
+      <h3>🏗️ Kiến trúc Codebase</h3>
+      <div class="card" style="padding:16px;font-size:13px;">
+        <pre style="background:var(--bg2);padding:12px;border-radius:6px;font-size:11px;line-height:1.6;overflow-x:auto">
+bizclaw/
+├── crates/
+│   ├── bizclaw-core/          # LLM providers, tools, memory
+│   ├── bizclaw-gateway/       # Axum HTTP server + Dashboard
+│   │   ├── src/
+│   │   │   ├── server.rs      # Route definitions
+│   │   │   ├── dashboard.rs   # Static file embedding
+│   │   │   ├── dashboard/     # Preact SPA (embedded)
+│   │   │   │   ├── app.js     # Main app shell
+│   │   │   │   ├── shared.js  # Sidebar + auth + i18n
+│   │   │   │   └── pages/     # Lazy-loaded page modules
+│   │   │   └── routes/        # API handlers
+│   │   └── Cargo.toml
+│   └── bizclaw-orchestrator/  # Multi-agent + workflows
+├── data/                      # Runtime configs (JSON)
+├── config.toml                # Main config
+└── run-local.sh               # Dev launcher + tunnel</pre>
+      </div>
+    `
+  },
+  {
+    id: 'faq',
+    icon: '❓',
+    title: 'CÂU HỎI THƯỜNG GẶP (FAQ)',
+    content: `
+      <h2>❓ FAQ — Giải Đáp Nhanh</h2>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">🆓 BizClaw có miễn phí không?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px">Có! Bản <strong>Single (Free)</strong> chạy trên máy cá nhân, không giới hạn Agent. Bản <strong>Cloud (Trả phí)</strong> có GPU + VPS + support team.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">🤖 Cần biết lập trình không?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px">Không! Dashboard thiết kế cho người không biết code. Chỉ cần paste API key + viết System Prompt bằng tiếng Việt.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">💸 AI tốn bao nhiêu tiền?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px">Dùng <strong>Gemini Flash</strong> miễn phí 1500 request/ngày. Dùng <strong>Ollama</strong> trên máy mình = hoàn toàn miễn phí, không giới hạn. GPT-4o khoảng $0.01/câu.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">📱 Zalo cá nhân vs Zalo OA?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px"><strong>Zalo cá nhân:</strong> Dùng SĐT cá nhân, setup nhanh, phù hợp shop nhỏ. <strong>Zalo OA:</strong> Chuyên nghiệp hơn, có template message, broadcast, phù hợp doanh nghiệp.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">🔒 Dữ liệu có an toàn không?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px">100%! BizClaw Single chạy trên máy bạn — dữ liệu KHÔNG ra khỏi máy (trừ API call tới OpenAI/Gemini). Dùng Ollama local = hoàn toàn offline.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">🤝 AI gặp giới hạn thì sao?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px">Tính năng <strong>Human Handoff</strong> cho phép AI tự nhận biết và chuyển cuộc chat cho người thật kèm toàn bộ context. Boss nhận thông báo qua Zalo/Telegram.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">🔄 Muốn thêm tính năng thì sao?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px">BizClaw hỗ trợ <strong>MCP (Model Context Protocol)</strong> và <strong>Plugin Market</strong>. Dev có thể viết tool/plugin riêng hoặc cài từ marketplace.</p>
+      </div>
+
+      <div class="card" style="margin-bottom:12px;padding:16px;border-left:3px solid var(--accent)">
+        <h4 style="margin:0 0 4px">📧 Liên hệ hỗ trợ?</h4>
+        <p style="margin:0;color:var(--text2);font-size:13px">Telegram: <code>@bizclaw_support</code> • Email: <code>support@bizclaw.io</code> • Cộng đồng: <code>t.me/bizclaw_community</code></p>
+      </div>
+    `
   }
 ];
 
 function WikiPage({ lang }) {
-  const [activeId, setActiveId] = useState('overview');
+  const isFirstVisit = !localStorage.getItem('bizclaw_wiki_visited');
+  const [activeId, setActiveId] = useState(isFirstVisit ? 'quickstart' : 'overview');
   const [searchQ, setSearchQ] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 

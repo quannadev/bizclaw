@@ -6,7 +6,14 @@ export const en = {
   'nav.providers':'Providers','nav.channels':'Channels','nav.tools':'Tools',
   'nav.brain':'Brain Engine','nav.mcp':'MCP Servers','nav.agents':'AI Agent',
   'nav.gallery':'Gallery','nav.knowledge':'Knowledge','nav.config':'Config File',
-  'nav.scheduler':'Scheduler','nav.orchestration':'Orchestration',
+  'nav.scheduler':'Scheduler',
+  'nav.handoff':'Human Handoff','nav.campaigns':'Broadcast',
+  'nav.hands':'Robot Hands','nav.products':'Products',
+  'nav.paymentlinks':'QR Payment','nav.analytics':'Analytics',
+  'nav.wiki':'Wiki & Guide','nav.plugins':'Plugin Market',
+  // Sidebar group labels
+  'nav.group_ops':'OPERATIONS','nav.group_biz':'BUSINESS',
+  'nav.group_intel':'INTELLIGENCE','nav.group_cfg':'SETTINGS',
   // Orchestration
   'orch.title':'Orchestration','orch.subtitle':'Delegation, Handoff, Evaluate Loop, Permission Links, LLM Traces',
   'orch.delegations':'Delegations','orch.links':'Permission Links','orch.traces':'LLM Traces',

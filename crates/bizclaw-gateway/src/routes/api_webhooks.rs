@@ -204,6 +204,23 @@ pub async fn spawn_telegram_polling(
                                     let sender = msg.sender_name.clone().unwrap_or_default();
                                     let text = msg.content.clone();
 
+                                    // ── Handoff Auto-Routing (Intercept) ──
+                                    let lower = text.to_lowercase();
+                                    if lower.contains("gặp nhân viên") || lower.contains("gap nhan vien") || lower.contains("chuyển khách") {
+                                        tracing::info!("📞 Handoff hotword detected in Telegram: '{}'", text);
+                                        let req = crate::routes::api_handoff::HandoffRequestPayload {
+                                            customer: sender.clone(),
+                                            channel: Some("Telegram".to_string()),
+                                            reason: Some("Khách hàng yêu cầu hỗ trợ từ nhân viên qua Telegram".to_string()),
+                                            message: Some(text.clone()),
+                                        };
+                                        let _ = crate::routes::api_handoff::execute_handoff(state_clone.clone(), req).await;
+                                        
+                                        let reply = crate::routes::api_handoff::load_handoff_settings(&state_clone).greeting;
+                                        let _ = channel.send_message(chat_id, message_thread_id, &reply).await;
+                                        continue;
+                                    }
+
                                     tracing::info!("[telegram] {} → agent '{}': {}", sender, agent_name_clone, safe_truncate(&text, 100));
                                     let _ = channel.send_typing(chat_id, message_thread_id).await;
 
@@ -301,6 +318,23 @@ pub async fn spawn_discord_gateway(
             let text = msg.content.clone();
             let sender = msg.sender_name.clone().unwrap_or_default();
 
+            // ── Handoff Auto-Routing (Intercept) ──
+            let lower = text.to_lowercase();
+            if lower.contains("gặp nhân viên") || lower.contains("gap nhan vien") || lower.contains("chuyển khách") {
+                tracing::info!("📞 Handoff hotword detected in Discord: '{}'", text);
+                let req = crate::routes::api_handoff::HandoffRequestPayload {
+                    customer: sender.clone(),
+                    channel: Some("Discord".to_string()),
+                    reason: Some("Khách hàng yêu cầu hỗ trợ từ nhân viên qua Discord".to_string()),
+                    message: Some(text.clone()),
+                };
+                let _ = crate::routes::api_handoff::execute_handoff(state_clone.clone(), req).await;
+                
+                let reply = crate::routes::api_handoff::load_handoff_settings(&state_clone).greeting;
+                let _ = reply_client.send_message(&channel_id, &reply).await;
+                continue;
+            }
+
             tracing::info!(
                 "[discord] {} → agent '{}': {}",
                 sender,
@@ -357,7 +391,7 @@ pub async fn resolve_agent_for_channel(state: &AppState, channel: &str) -> Optio
 }
 
 pub async fn dispatch_to_channel_agent(
-    state: &AppState,
+    state: Arc<AppState>,
     channel: &str,
     thread_id: Option<&str>,
     content: &str,
@@ -367,9 +401,23 @@ pub async fn dispatch_to_channel_agent(
             tracing::info!("⏸️ Handoff active: ignoring AI reply for thread {}", t_id);
             return None;
         }
+
+        // ── Handoff Auto-Routing (Intercept) ──
+        let lower = content.to_lowercase();
+        if lower.contains("gặp nhân viên") || lower.contains("gap nhan vien") || lower.contains("chuyển khách") {
+            tracing::info!("📞 Handoff hotword detected in {}: '{}'", channel, content);
+            let req = crate::routes::api_handoff::HandoffRequestPayload {
+                customer: t_id.to_string(),
+                channel: Some(channel.to_string()),
+                reason: Some(format!("Khách hàng yêu cầu hỗ trợ từ nhân viên qua {}", channel)),
+                message: Some(content.to_string()),
+            };
+            let _ = crate::routes::api_handoff::execute_handoff(state.clone(), req).await;
+            return Some(crate::routes::api_handoff::load_handoff_settings(&state).greeting);
+        }
     }
 
-    let target = resolve_agent_for_channel(state, channel).await;
+    let target = resolve_agent_for_channel(&state, channel).await;
     let mut orch = state.orchestrator.lock().await;
 
     if let Some(agent_name) = target {
@@ -629,7 +677,7 @@ pub async fn whatsapp_webhook(
 
                             let state_clone = state.clone();
                             tokio::spawn(async move {
-                                let response = dispatch_to_channel_agent(&state_clone, "whatsapp", Some(&from), &text).await.unwrap_or_default();
+                                let response = dispatch_to_channel_agent(state_clone.clone(), "whatsapp", Some(&from), &text).await.unwrap_or_default();
                                 if response.is_empty() { return; }
 
                                 if let Some(wa_cfg) = wa_config {
@@ -699,7 +747,7 @@ pub async fn xiaozhi_webhook(
         req.lang
     );
 
-    let response = dispatch_to_channel_agent(&state, "xiaozhi", None, &req.content).await.unwrap_or_default();
+    let response = dispatch_to_channel_agent(state.clone(), "xiaozhi", None, &req.content).await.unwrap_or_default();
     let processing_ms = start.elapsed().as_millis() as u64;
 
     Json(serde_json::json!({
@@ -791,7 +839,7 @@ pub async fn zalo_oa_webhook(
                 msg_id
             );
 
-            let agent_response_opt = dispatch_to_channel_agent(&state, "zalo", Some(sender_id), message_text).await;
+            let agent_response_opt = dispatch_to_channel_agent(state.clone(), "zalo", Some(sender_id), message_text).await;
 
             if let Some(agent_response) = agent_response_opt {
                 if let Some(config) = oa_config {
@@ -1032,7 +1080,7 @@ pub async fn messenger_webhook(
                                 Err(e) => format!("⚠️ Agent error: {e}"),
                             }
                         } else {
-                            dispatch_to_channel_agent(&state, "messenger", Some(&sender_id), text).await.unwrap_or_default()
+                            dispatch_to_channel_agent(state.clone(), "messenger", Some(&sender_id), text).await.unwrap_or_default()
                         };
 
                         // Reply via Graph API

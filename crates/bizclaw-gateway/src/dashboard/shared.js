@@ -82,50 +82,41 @@ export function StatsCard({ label, value, color = 'accent', sub, icon }) {
   </div>`;
 }
 
-// ═══ PAGE DEFINITIONS ═══
+// ═══ PAGE DEFINITIONS — Clean grouped sidebar for SME-friendly UX ═══
 export const PAGES = [
+  // ── Trang chủ ──
   { id: 'dashboard', icon: '📊', label: 'nav.dashboard' },
+
+  // ── Vận hành (Operations) ──
+  { id: 'sep_ops', sep: true, groupLabel: 'nav.group_ops' },
   { id: 'chat', icon: '💬', label: 'nav.webchat' },
-  { id: 'sep1', sep: true },
-  // AI & Content
+  { id: 'handoff', icon: '🤝', label: 'nav.handoff' },
+  { id: 'campaigns', icon: '📢', label: 'nav.campaigns' },
+  { id: 'hands', icon: '🤚', label: 'nav.hands' },
+  { id: 'workflows', icon: '🔄', label: 'nav.workflows' },
+  { id: 'scheduler', icon: '⏰', label: 'nav.scheduler' },
+
+  // ── Kinh doanh (Business) ──
+  { id: 'sep_biz', sep: true, groupLabel: 'nav.group_biz' },
+  { id: 'products', icon: '🛍️', label: 'nav.products' },
+  { id: 'paymentlinks', icon: '💳', label: 'nav.paymentlinks' },
+  { id: 'analytics', icon: '📈', label: 'nav.analytics' },
+
+  // ── Trí tuệ (Intelligence) ──
+  { id: 'sep_intel', sep: true, groupLabel: 'nav.group_intel' },
   { id: 'agents', icon: '🤖', label: 'nav.agents' },
   { id: 'knowledge', icon: '📚', label: 'nav.knowledge' },
+  { id: 'wiki', icon: '📖', label: 'nav.wiki' },
+  { id: 'gallery', icon: '📦', label: 'nav.gallery' },
+  { id: 'plugins', icon: '🛒', label: 'nav.plugins' },
+
+  // ── Cấu hình (Settings) ──
+  { id: 'sep_cfg', sep: true, groupLabel: 'nav.group_cfg' },
   { id: 'channels', icon: '📱', label: 'nav.channels' },
-  { id: 'settings', icon: '⚙️', label: 'nav.settings' },
   { id: 'providers', icon: '🔌', label: 'nav.providers' },
   { id: 'tools', icon: '🛠️', label: 'nav.tools' },
   { id: 'mcp', icon: '🔗', label: 'nav.mcp' },
-  { id: 'wiki', icon: '📖', label: 'Wiki & Guide' },
-  { id: 'products', icon: '🛍️', label: 'Sản Phẩm' },
-  { id: 'handoff', icon: '🤝', label: 'Human Handoff' },
-  { id: 'paymentlinks', icon: '💳', label: 'Thanh Toán QR' },
-  { id: 'sep2', sep: true },
-  // Automation
-  { id: 'hands', icon: '🤚', label: 'Autonomous Hands' },
-  { id: 'workflows', icon: '🔄', label: 'nav.workflows' },
-  { id: 'orchestration', icon: '🔀', label: 'nav.orchestration' },
-  { id: 'orgmap', icon: '🗺️', label: 'Org Map' },
-  { id: 'kanban', icon: '📋', label: 'Kanban Board' },
-  { id: 'gallery', icon: '📦', label: 'nav.gallery' },
-  { id: 'scheduler', icon: '⏰', label: 'nav.scheduler' },
-  { id: 'campaigns', icon: '📢', label: 'Broadcast' },
-  { id: 'sep3', sep: true },
-  // Monitoring & Analytics
-  { id: 'traces', icon: '🔍', label: 'nav.traces' },
-  { id: 'cost', icon: '💰', label: 'nav.cost' },
-  { id: 'activity', icon: '⚡', label: 'activity.title' },
-  { id: 'usage', icon: '📊', label: 'Usage & Quotas' },
-  { id: 'analytics', icon: '📈', label: 'Analytics' },
-  { id: 'sep4', sep: true },
-  // Enterprise
-  { id: 'plugins', icon: '🛒', label: 'Plugin Marketplace' },
-  { id: 'sso', icon: '🔐', label: 'Enterprise SSO' },
-  { id: 'finetuning', icon: '🧪', label: 'Fine-Tuning' },
-  { id: 'edgegateway', icon: '📡', label: 'Edge IoT Gateway' },
-  { id: 'sep5', sep: true },
-  // System
-  { id: 'apikeys', icon: '🔑', label: 'API Keys' },
-  { id: 'configfile', icon: '📄', label: 'nav.config' },
+  { id: 'settings', icon: '⚙️', label: 'nav.settings' },
 ];
 
 // Make shared functions available globally (for backward compat with page modules)

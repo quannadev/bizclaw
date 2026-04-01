@@ -35,18 +35,41 @@ function HandoffPage({ lang }) {
     { id: 'hf3', customer: 'Lê Hoàng Anh', channel: 'Telegram', reason: 'explicit_request', message: 'Cho tôi nói chuyện với quản lý', time: '09:30', status: 'resolved', context_summary: 'KH VIP hỏi về chính sách đại lý. Đã chuyển cho Boss xử lý.', ai_attempts: 3 },
   ]);
 
-  useEffect(() => { loadQueue(); }, []);
+  useEffect(() => { loadQueue(); loadSettings(); }, []);
 
   const loadQueue = async () => {
     try {
       const res = await authFetch('/api/v1/handoff/queue');
       if (res.ok) {
         const data = await res.json();
-        if (data.queue && data.queue.length > 0) {
+        if (data.queue /* && data.queue.length > 0 */) {
             setQueue(data.queue);
         }
       }
     } catch(e) {}
+  };
+
+  const loadSettings = async () => {
+    try {
+      const res = await authFetch('/api/v1/handoff/settings');
+      if (res.ok) {
+        setSettings(await res.json());
+      }
+    } catch(e) {}
+  };
+
+  const saveSettings = async () => {
+    try {
+      const res = await authFetch('/api/v1/handoff/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+      if (res.ok) showToast('✅ Đã lưu cấu hình Handoff', 'success');
+      else showToast('❌ Không thể lưu', 'error');
+    } catch(e) {
+      showToast('❌ Lỗi kết nối', 'error');
+    }
   };
 
   const waitingCount = queue.filter(q => q.status === 'waiting').length;
@@ -65,6 +88,15 @@ function HandoffPage({ lang }) {
     } catch(e) {}
     setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'resolved' } : q));
     showToast('✅ Đã giải quyết — AI tiếp tục phục vụ khách', 'success');
+  };
+
+  const deleteTicket = async (id) => {
+    if (!confirm('Bạn có chắc muốn xoá yêu cầu này không?')) return;
+    try {
+        await authFetch(`/api/v1/handoff/delete/${id}`, { method: 'DELETE' });
+    } catch(e) {}
+    setQueue(prev => prev.filter(q => q.id !== id));
+    showToast('🗑️ Đã xoá yêu cầu hỗ trợ', 'success');
   };
 
   const jumpToChat = (ticket) => {
@@ -140,8 +172,13 @@ function HandoffPage({ lang }) {
                   <div style="display:flex;gap:6px;justify-content:flex-end">
                     <button class="btn btn-sm" style="background:var(--accent);color:#fff;padding:5px 14px;font-size:11px" onClick=${() => jumpToChat(ticket)}>💬 Nhảy vào Chat</button>
                     <button class="btn btn-sm btn-outline" style="font-size:11px" onClick=${() => resolveTicket(ticket.id)}>✅ Đã xử lý</button>
+                    <button class="btn btn-sm" style="background:transparent;border:1px solid var(--red);color:var(--red);padding:5px 10px;font-size:11px" onClick=${() => deleteTicket(ticket.id)}>🗑️ Xoá</button>
                   </div>
-                ` : ''}
+                ` : html`
+                  <div style="display:flex;gap:6px;justify-content:flex-end">
+                    <button class="btn btn-sm" style="background:transparent;border:1px solid var(--red);color:var(--red);padding:5px 10px;font-size:11px" onClick=${() => deleteTicket(ticket.id)}>🗑️ Xoá</button>
+                  </div>
+                `}
               </div>
             `)}
           </div>
@@ -151,7 +188,10 @@ function HandoffPage({ lang }) {
       <!-- RIGHT: Settings -->
       <div>
         <div class="card" style="margin-bottom:14px">
-          <h3 style="margin-bottom:12px">⚡ Trigger Conditions (Khi nào chuyển?)</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="margin:0">⚡ Trigger Conditions (Khi nào chuyển?)</h3>
+            <button class="btn btn-sm" style="background:var(--accent);color:#fff" onClick=${saveSettings}>💾 Lưu Cấu Hình</button>
+          </div>
           <p style="font-size:12px;color:var(--text2);margin:0 0 12px">Chọn các tình huống AI cần tự động chuyển cho người thật:</p>
           <div style="display:grid;gap:6px">
             ${HANDOFF_TRIGGERS.map(trigger => html`

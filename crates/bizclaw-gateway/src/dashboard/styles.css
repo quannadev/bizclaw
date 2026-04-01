@@ -24,6 +24,7 @@ a{color:var(--accent2);text-decoration:none}
 .nav a:hover{background:var(--surface2);color:var(--text)}
 .nav a.active{background:var(--accent-glow);color:var(--accent2)}
 .nav-sep{height:1px;background:var(--border);margin:8px 12px}
+.nav-group-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--text2);padding:12px 16px 4px;opacity:0.6;user-select:none}
 .sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)}
 
 /* Header */
@@ -226,7 +227,50 @@ tr:hover td{background:rgba(99,102,241,.03)}
 .main{transition:opacity .2s}
 
 /* Responsive */
-@media(max-width:768px){.app{grid-template-columns:1fr}.sidebar{display:none}.main{padding:16px}.form-row{grid-template-columns:1fr}.chat-layout{grid-template-columns:1fr}.chat-sidebar{display:none}}
+@media(max-width:768px){
+  .app{grid-template-columns:1fr}
+  .sidebar{
+    position:fixed;inset:0;z-index:100;
+    transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+    width:280px;box-shadow:4px 0 24px rgba(0,0,0,.4);
+  }
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop{
+    display:none;position:fixed;inset:0;z-index:99;
+    background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+    animation:fadeIn .2s;
+  }
+  .sidebar-backdrop.show{display:block}
+  .main{padding:16px 12px}
+  .page-header{flex-direction:column;align-items:flex-start;gap:12px}
+  .page-header h1{font-size:18px}
+  .stats{grid-template-columns:repeat(2,1fr);gap:8px}
+  .card-value{font-size:20px}
+  .form-row{grid-template-columns:1fr}
+  .chat-layout{grid-template-columns:1fr;height:calc(100vh - 60px)}
+  .chat-sidebar{display:none}
+  .ch-grid{grid-template-columns:1fr}
+  .btn{padding:10px 16px;font-size:14px}
+  table{display:block;overflow-x:auto;white-space:nowrap}
+  .mobile-header{
+    display:flex!important;position:sticky;top:0;z-index:50;
+    padding:10px 12px;background:var(--surface);border-bottom:1px solid var(--border);
+    align-items:center;justify-content:space-between;
+  }
+  .mobile-hamburger{
+    width:40px;height:40px;border:1px solid var(--border);border-radius:8px;
+    background:var(--surface2);color:var(--text);font-size:20px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:all .2s;
+  }
+  .mobile-hamburger:active{transform:scale(.92)}
+  .mobile-logo{font-size:15px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .mobile-logo .text{background:var(--grad1);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+}
+@media(min-width:769px){
+  .mobile-header{display:none!important}
+  .sidebar-backdrop{display:none!important}
+}
 
 /* ═══ LIGHT THEME ═══ */
 html.light {
@@ -255,7 +299,7 @@ html.light body {
 }
 html.light ::-webkit-scrollbar-track { background: var(--bg); }
 html.light ::-webkit-scrollbar-thumb { background: var(--border-hover); }
-html.light .sidebar { background: rgba(255,255,255,.85); box-shadow: 2px 0 12px rgba(0,0,0,.04); }
+html.light .sidebar { background: rgba(255,255,255,.95); box-shadow: 2px 0 12px rgba(0,0,0,.06); }
 html.light .logo .text { background: var(--grad1); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 html.light .nav a { color: var(--text2); }
 html.light .nav a:hover { background: var(--surface2); color: var(--text); }
@@ -270,6 +314,14 @@ html.light .btn-primary { box-shadow: 0 2px 8px rgba(91,91,214,.25); }
 html.light .btn-primary:hover { box-shadow: 0 4px 16px rgba(91,91,214,.35); }
 html.light tr:hover td { background: rgba(0,0,0,.02); }
 html.light .ch-card { box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+html.light .nav-group-label { color: var(--text2); opacity: 0.8; }
+html.light .badge { font-weight: 800; }
+html.light .stats-value { letter-spacing: -0.3px; }
+html.light .form-row input, html.light .form-row select, html.light .form-row textarea {
+  background: var(--surface); border-color: var(--border);
+}
+html.light .chat-input-wrap input { background: var(--surface); }
+html.light pre { background: var(--bg2) !important; }
 
 /* Theme toggle button */
 .theme-toggle {
@@ -499,7 +551,7 @@ html.light .onboarding-chat { box-shadow: 0 8px 40px rgba(0,0,0,.06); }
 html.light .onboarding-msg-ai .onboarding-msg-bubble { background: var(--surface2); }
 html.light .onboarding-btn-primary { box-shadow: 0 4px 20px rgba(91,91,214,.2); }
 
-/* Mobile responsive */
+/* Mobile responsive — onboarding */
 @media(max-width:768px) {
   .onboarding-container { padding: 16px; }
   .onboarding-title { font-size: 22px; }

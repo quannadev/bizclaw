@@ -8,19 +8,31 @@ const STATUS_MAP = { active: { label: 'Đang bán', badge: 'badge-green' }, draf
 
 function ProductsPage({ lang }) {
   const { showToast } = useContext(AppContext);
-  const [products, setProducts] = useState([
-    // Demo seed data
-    { id: 'p1', name: 'Áo Khoác Gió Premium', sku: 'AKG-001', price: 450000, stock: 124, category: 'Thời trang', status: 'active', image: '', desc: 'Áo khoác gió chống nước, thoáng khí, freesize M-XL' },
-    { id: 'p2', name: 'Túi Xách Da Bò Handmade', sku: 'TXD-015', price: 1200000, stock: 23, category: 'Thời trang', status: 'active', image: '', desc: 'Túi xách da bò thật 100%, khâu tay thủ công' },
-    { id: 'p3', name: 'Set Skincare Hàn Quốc 5 Bước', sku: 'SKC-088', price: 890000, stock: 0, category: 'Mỹ phẩm', status: 'outofstock', image: '', desc: 'Bộ skincare 5 bước: tẩy trang, sữa rửa, toner, serum, kem dưỡng' },
-    { id: 'p4', name: 'Combo Cà Phê Rang Xay 1kg', sku: 'CF-201', price: 280000, stock: 56, category: 'Thực phẩm', status: 'active', image: '', desc: 'Cà phê Arabica Đà Lạt rang medium, xay sẵn' },
-  ]);
+  const [products, setProducts] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
   const [form, setForm] = useState({ name: '', sku: '', price: 0, stock: 0, category: 'Khác', status: 'active', image: '', desc: '' });
   const [filterCat, setFilterCat] = useState('Tất cả');
   const [search, setSearch] = useState('');
   const [syncing, setSyncing] = useState(false);
+
+  const loadProducts = async () => {
+    try {
+      const res = await authFetch('/api/v1/products');
+      if (res.ok) {
+        const data = await res.json();
+        const mapped = (data.products || []).map(p => ({
+          ...p,
+          desc: p.description || '',
+          image: p.image_url || '',
+          status: p.active ? (p.stock > 0 ? 'active' : 'outofstock') : 'draft'
+        }));
+        setProducts(mapped);
+      }
+    } catch(e) {}
+  };
+
+  useEffect(() => { loadProducts(); }, []);
 
   const filtered = useMemo(() => {
     let list = products;
@@ -43,37 +55,62 @@ function ProductsPage({ lang }) {
     setForm({ ...p });
     setShowForm(true);
   };
-  const saveProduct = () => {
+  const saveProduct = async () => {
     if (!form.name.trim()) { showToast('⚠️ Nhập tên sản phẩm', 'error'); return; }
-    if (editProduct) {
-      setProducts(prev => prev.map(p => p.id === editProduct.id ? { ...form, id: editProduct.id } : p));
-      showToast('✅ Đã cập nhật: ' + form.name, 'success');
-    } else {
-      const newId = 'p' + Date.now();
-      setProducts(prev => [...prev, { ...form, id: newId }]);
-      showToast('✅ Đã thêm: ' + form.name, 'success');
+    
+    let isEdit = !!editProduct;
+    let payload = {
+      id: editProduct ? editProduct.id : '',
+      name: form.name.trim(),
+      sku: form.sku.trim(),
+      price: Number(form.price) || 0,
+      stock: Number(form.stock) || 0,
+      category: form.category,
+      description: form.desc || '',
+      image_url: form.image || '',
+      active: form.status === 'active' || form.status === 'outofstock'
+    };
+
+    try {
+      const res = await authFetch('/api/v1/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        showToast(isEdit ? '✅ Đã cập nhật: ' + form.name : '✅ Đã thêm: ' + form.name, 'success');
+        loadProducts();
+      } else {
+        const d = await res.json();
+        showToast('❌ ' + (d.error || 'Lỗi lưu sản phẩm'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ Lỗi kết nối', 'error');
     }
     setShowForm(false);
   };
-  const deleteProduct = (p) => {
+  const deleteProduct = async (p) => {
     if (!confirm('Xoá "' + p.name + '"?')) return;
-    setProducts(prev => prev.filter(x => x.id !== p.id));
-    showToast('🗑️ Đã xoá: ' + p.name, 'success');
+    try {
+      const res = await authFetch(`/api/v1/products/${p.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        showToast('🗑️ Đã xoá: ' + p.name, 'success');
+        loadProducts();
+      }
+    } catch(e) { showToast('❌ Lỗi xoá', 'error'); }
   };
   const syncToRag = async () => {
     setSyncing(true);
-    // Build a markdown document from product catalog and push to RAG
-    const content = products.filter(p => p.status === 'active').map(p =>
-      `## ${p.name} (${p.sku})\n- Giá: ${p.price.toLocaleString('vi-VN')} VNĐ\n- Tồn kho: ${p.stock} cái\n- Phân loại: ${p.category}\n- Mô tả: ${p.desc}\n`
-    ).join('\n');
     try {
-      const r = await authFetch('/api/v1/knowledge/documents', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'product_catalog_auto.md', content, source: 'product_catalog', owner: '', data_zone: 'transactional' })
+      const r = await authFetch('/api/v1/products/sync-rag', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }
       });
       const d = await r.json();
-      if (d.ok) showToast('✅ Đã đồng bộ ' + products.filter(p => p.status === 'active').length + ' sản phẩm → RAG (' + d.chunks + ' chunks)', 'success');
-      else showToast('❌ ' + (d.error || 'Lỗi'), 'error');
+      if (d.ok || !(d.error)) {
+        showToast('✅ Đã đồng bộ ' + products.filter(p => p.status === 'active').length + ' sản phẩm → RAG (' + (d.chunks||1) + ' chunks)', 'success');
+      } else {
+        showToast('❌ ' + (d.error || 'Lỗi đồng bộ'), 'error');
+      }
     } catch (e) { showToast('❌ ' + e.message, 'error'); }
     setSyncing(false);
   };

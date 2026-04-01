@@ -43,14 +43,10 @@ async function loadPage(pageId) {
     mcp:           { file: 'mcp.js',           export: 'McpPage' },
     agents:        { file: 'agents.js',        export: 'AgentsPage' },
     knowledge:     { file: 'knowledge.js',     export: 'KnowledgePage' },
-    orchestration: { file: 'orchestration.js', export: 'OrchestrationPage' },
-    orgmap:        { file: 'org_map.js',       export: 'OrgMapPage' },
     kanban:        { file: 'kanban.js',        export: 'KanbanPage' },
-    gallery:       { file: 'gallery.js',       export: 'GalleryPage' },
     brain:         { file: 'settings.js',      export: 'SettingsPage' }, // brain → settings
     configfile:    { file: 'config_file.js',   export: 'ConfigFilePage' },
     scheduler:     { file: 'scheduler.js',     export: 'SchedulerPage' },
-    traces:        { file: 'traces.js',        export: 'TracesPage' },
     cost:          { file: 'cost.js',          export: 'CostPage' },
     activity:      { file: 'activity.js',      export: 'ActivityPage' },
     workflows:     { file: 'workflows.js',     export: 'WorkflowsPage' },
@@ -59,9 +55,7 @@ async function loadPage(pageId) {
     usage:         { file: 'usage.js',         export: 'UsagePage' },
     analytics:     { file: 'analytics.js',     export: 'AnalyticsPage' },
     plugins:       { file: 'plugins.js',       export: 'PluginsPage' },
-    sso:           { file: 'sso.js',           export: 'SsoPage' },
-    finetuning:    { file: 'fine_tuning.js',   export: 'FineTuningPage' },
-    edgegateway:   { file: 'edge_gateway.js',  export: 'EdgeGatewayPage' },
+    gallery:       { file: 'gallery.js',       export: 'GalleryPage' },
     dbassistant:   { file: 'db_assistant.js',  export: 'DbAssistantPage' },
     campaigns:     { file: 'campaigns.js',     export: 'CampaignsPage' },
     products:      { file: 'products.js',      export: 'ProductsPage' },
@@ -114,21 +108,27 @@ function PageRouter({ page, config, lang }) {
 }
 
 // ═══ SIDEBAR ═══
-function Sidebar({ currentPage, lang, wsStatus, agentName, theme }) {
-  return html`<aside class="sidebar">
+function Sidebar({ currentPage, lang, wsStatus, agentName, theme, isOpen, onClose }) {
+  return html`
+    <div class="sidebar-backdrop ${isOpen ? 'show' : ''}" onClick=${onClose}></div>
+    <aside class="sidebar ${isOpen ? 'open' : ''}">
     <div class="logo">
       <span class="icon">⚡</span>
       <span class="text">BizClaw</span>
     </div>
     <nav class="nav" id="sidebar-nav">
-      ${PAGES.map(p => p.sep
-        ? html`<div class="nav-sep" key=${p.id}></div>`
-        : html`<a key=${p.id} href="/${p.id === 'dashboard' ? '' : p.id}"
+      ${PAGES.map(p => {
+        if (p.sep) {
+          return p.groupLabel
+            ? html`<div class="nav-group-label" key=${p.id}>${t(p.groupLabel, lang)}</div>`
+            : html`<div class="nav-sep" key=${p.id}></div>`;
+        }
+        return html`<a key=${p.id} href="/${p.id === 'dashboard' ? '' : p.id}"
               data-page=${p.id}
               class=${currentPage === p.id ? 'active' : ''}>
             ${p.icon} <span>${t(p.label, lang)}</span>
-          </a>`
-      )}
+          </a>`;
+      })}
     </nav>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
@@ -173,6 +173,7 @@ export function App() {
   const [checkingPairing, setCheckingPairing] = useState(true);
   const [theme, setTheme] = useState(localStorage.getItem('bizclaw_theme') || 'dark');
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('bizclaw_onboarded'));
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Apply theme
   useEffect(() => {
@@ -316,6 +317,7 @@ export function App() {
     setTheme(next);
     localStorage.setItem('bizclaw_theme', next);
   };
+  window._closeMobileMenu = () => setMobileMenuOpen(false);
 
   // Global click handler
   useEffect(() => {
@@ -325,7 +327,10 @@ export function App() {
         e.preventDefault();
         e.stopPropagation();
         const pageId = link.getAttribute('data-page');
-        if (pageId && window._navigate) window._navigate(pageId);
+        if (pageId && window._navigate) {
+          window._navigate(pageId);
+          if (window._closeMobileMenu) window._closeMobileMenu();
+        }
         return;
       }
       const langBtn = e.target.closest('button[data-lang]');
@@ -387,8 +392,17 @@ export function App() {
           wsStatus=${wsStatus}
           agentName=${config?.agent_name || 'BizClaw Agent'}
           theme=${theme}
+          isOpen=${mobileMenuOpen}
+          onClose=${() => setMobileMenuOpen(false)}
         />
         <main class="main">
+          <div class="mobile-header">
+            <div class="mobile-logo">
+              <span class="icon">⚡</span>
+              <span class="text">BizClaw</span>
+            </div>
+            <button class="mobile-hamburger" onClick=${() => setMobileMenuOpen(true)}>☰</button>
+          </div>
           <${PageRouter} key=${currentPage} page=${currentPage} config=${config} lang=${lang} />
         </main>
       </div>

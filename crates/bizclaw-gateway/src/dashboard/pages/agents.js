@@ -34,10 +34,18 @@ function AgentsPage({ config, lang }) {
       setProvidersList(provData.providers || []);
       
       // Extract unique collections from documents array or generic list
+      let s = new Set();
       if (docsData.documents) {
-        const s = new Set(docsData.documents.map(d => d.owner).filter(Boolean));
-        setCollections(Array.from(s).sort());
+        docsData.documents.map(d => d.owner).filter(Boolean).forEach(o => s.add(o));
       }
+      try {
+        const colRes = await authFetch('/api/v1/brain/files/rag_collections.json');
+        if (colRes.ok) {
+          const d = await colRes.json();
+          (d.collections || []).forEach(o => s.add(o));
+        }
+      } catch(e) {}
+      setCollections(Array.from(s).sort());
       if (sqlData.connections) {
         setSqlConns(sqlData.connections || []);
       }

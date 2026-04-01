@@ -6,7 +6,14 @@ export const vi = {
   'nav.providers':'Nhà cung cấp','nav.channels':'Kênh liên lạc','nav.tools':'Công cụ',
   'nav.brain':'Brain Engine','nav.mcp':'Máy chủ MCP','nav.agents':'AI Agent',
   'nav.gallery':'Gallery','nav.knowledge':'Kho Dữ Liệu RAG','nav.config':'Tệp cấu hình',
-  'nav.scheduler':'Lịch trình','nav.orchestration':'Điều phối',
+  'nav.scheduler':'Lịch trình',
+  'nav.handoff':'Chuyển cho Người','nav.campaigns':'Broadcast',
+  'nav.hands':'Tay Robot','nav.products':'Sản Phẩm',
+  'nav.paymentlinks':'Thanh Toán QR','nav.analytics':'Phân Tích',
+  'nav.wiki':'Wiki & Guide','nav.plugins':'Plugin Market',
+  // Sidebar group labels
+  'nav.group_ops':'VẬN HÀNH','nav.group_biz':'KINH DOANH',
+  'nav.group_intel':'TRÍ TUỆ','nav.group_cfg':'CẤU HÌNH',
   // Orchestration
   'orch.title':'Điều phối','orch.subtitle':'Ủy quyền, Chuyển giao, Vòng lặp đánh giá, Liên kết quyền, LLM Traces',
   'orch.delegations':'Ủy quyền','orch.links':'Liên kết quyền','orch.traces':'LLM Traces',

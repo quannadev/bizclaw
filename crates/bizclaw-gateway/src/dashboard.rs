@@ -73,11 +73,6 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
         ("mcp.js", include_str!("dashboard/pages/mcp.js")),
         ("agents.js", include_str!("dashboard/pages/agents.js")),
         ("knowledge.js", include_str!("dashboard/pages/knowledge.js")),
-        (
-            "orchestration.js",
-            include_str!("dashboard/pages/orchestration.js"),
-        ),
-        ("org_map.js", include_str!("dashboard/pages/org_map.js")),
         ("kanban.js", include_str!("dashboard/pages/kanban.js")),
         ("gallery.js", include_str!("dashboard/pages/gallery.js")),
         ("brain.js", include_str!("dashboard/pages/brain.js")),
@@ -85,7 +80,6 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
             "config_file.js",
             include_str!("dashboard/pages/config_file.js"),
         ),
-        ("traces.js", include_str!("dashboard/pages/traces.js")),
         ("cost.js", include_str!("dashboard/pages/cost.js")),
         ("activity.js", include_str!("dashboard/pages/activity.js")),
         ("workflows.js", include_str!("dashboard/pages/workflows.js")),
@@ -94,15 +88,6 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
         ("api_keys.js", include_str!("dashboard/pages/api_keys.js")),
         ("usage.js", include_str!("dashboard/pages/usage.js")),
         ("analytics.js", include_str!("dashboard/pages/analytics.js")),
-        ("sso.js", include_str!("dashboard/pages/sso.js")),
-        (
-            "fine_tuning.js",
-            include_str!("dashboard/pages/fine_tuning.js"),
-        ),
-        (
-            "edge_gateway.js",
-            include_str!("dashboard/pages/edge_gateway.js"),
-        ),
         ("plugins.js", include_str!("dashboard/pages/plugins.js")),
         (
             "db_assistant.js",

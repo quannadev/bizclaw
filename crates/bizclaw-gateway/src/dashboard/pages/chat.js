@@ -3,12 +3,32 @@ const { h, html, useState, useEffect, useContext, useCallback, useRef, useMemo }
 import { t, authFetch, authHeaders, StatsCard } from '/static/dashboard/shared.js';
 
 function ChatPage({ config, lang }) {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bizclaw_chat_messages');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [];
+  });
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const [streamContent, setStreamContent] = useState('');
   const [streamReqId, setStreamReqId] = useState(null);
-  const [sessions, setSessions] = useState([{ id: 'main', name: 'Main Chat', icon: '🤖', time: 'now', count: 0, mode: '1v1' }]);
+  const [sessions, setSessions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bizclaw_chat_sessions');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [{ id: 'main', name: 'Main Chat', icon: '🤖', time: 'now', count: 0, mode: '1v1' }];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('bizclaw_chat_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('bizclaw_chat_sessions', JSON.stringify(sessions));
+  }, [sessions]);
   const [activeSession, setActiveSession] = useState('main');
   const activeSessionObj = sessions.find(s => s.id === activeSession);
   const isGroupMode = activeSessionObj?.mode === 'group';

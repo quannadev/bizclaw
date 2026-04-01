@@ -620,6 +620,9 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route("/api/v1/tools", post(super::routes::tools_create))
         .route("/api/v1/handoff/pause", post(super::routes::handoff_pause))
         .route("/api/v1/handoff/resume", post(super::routes::handoff_resume))
+        .route("/api/v1/handoff/request", post(super::routes::request_handoff))
+        .route("/api/v1/handoff/settings", get(super::routes::get_handoff_settings))
+        .route("/api/v1/handoff/settings", post(super::routes::save_handoff_settings))
         .route(
             "/api/v1/tools/{name}/toggle",
             post(super::routes::tools_toggle),
@@ -655,6 +658,10 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route(
             "/api/v1/handoff/resolve/{id}",
             post(super::routes::resolve_handoff),
+        )
+        .route(
+            "/api/v1/handoff/delete/{id}",
+            axum::routing::delete(super::routes::delete_handoff),
         )
         .route(
             "/api/v1/orchestration/delegate",

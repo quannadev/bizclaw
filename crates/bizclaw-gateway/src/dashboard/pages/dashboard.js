@@ -194,11 +194,38 @@ function DashboardPage({ config, lang }) {
     return days.map((d, i) => counts[i] > 0 ? Math.round(d / counts[i]) : 0);
   }, [traces]);
 
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bizclaw_welcome_dismissed'));
+  const dismissWelcome = () => { localStorage.setItem('bizclaw_welcome_dismissed', '1'); setShowWelcome(false); };
+
   return html`<div>
     <div class="page-header"><div>
-      <h1>📊 ${t('dash.title', lang)}</h1>
+      <h1>⚡ MAMA Tổng Quản</h1>
       <div class="sub">${t('dash.subtitle', lang)}</div>
     </div></div>
+
+    ${/* ── Welcome Banner (first visit) ── */null}
+    ${showWelcome && html`
+      <div style="margin-bottom:16px;padding:20px 24px;border-radius:12px;background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(168,85,247,0.08));border:1px solid rgba(59,130,246,0.2);position:relative;animation:fadeIn 0.5s">
+        <button onClick=${dismissWelcome} style="position:absolute;top:10px;right:14px;background:none;border:none;color:var(--text2);font-size:18px;cursor:pointer;padding:4px;line-height:1" title="Đóng">✕</button>
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:40px">👋</div>
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">${lang === 'vi' ? 'Chào mừng đến BizClaw!' : 'Welcome to BizClaw!'}</div>
+            <div style="font-size:13px;color:var(--text2);line-height:1.5">${lang === 'vi' 
+              ? 'Bắt đầu bằng cách tạo Agent AI, kết nối kênh chat (Zalo/Telegram), và nạp tri thức cho Bot. Chỉ cần 5 phút!'
+              : 'Start by creating an AI Agent, connecting chat channels, and uploading knowledge. Just 5 minutes!'}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onClick=${() => window._navigate && window._navigate('wiki')} style="white-space:nowrap">
+              🚀 ${lang === 'vi' ? 'Quick Start Guide' : 'Quick Start Guide'}
+            </button>
+            <button class="btn btn-outline btn-sm" onClick=${() => window._navigate && window._navigate('agents')} style="white-space:nowrap">
+              🤖 ${lang === 'vi' ? 'Tạo Agent' : 'Create Agent'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `}
 
     <!-- Alerts -->
     <${AlertBanner} alerts=${alerts} lang=${lang} />
@@ -231,7 +258,7 @@ function DashboardPage({ config, lang }) {
       </div>
     </div>
 
-    <!-- System + Provider Info -->
+    <!-- System + Quick Actions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -250,10 +277,17 @@ function DashboardPage({ config, lang }) {
       <div class="card">
         <div class="card-label" style="margin-bottom:10px">⚡ ${t('dash.quickactions', lang)}</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${['chat', 'agents', 'channels', 'knowledge', 'traces', 'cost'].map(p => html`
-            <button class="btn btn-outline btn-sm" key=${p}
-              onClick=${() => window._navigate && window._navigate(p)}>
-              ${p === 'chat' ? '💬' : p === 'agents' ? '🤖' : p === 'channels' ? '📱' : p === 'knowledge' ? '📚' : p === 'traces' ? '📊' : '💰'} ${t('nav.' + (p === 'traces' ? 'traces' : p === 'cost' ? 'cost' : p), lang) || p}
+          ${[
+            { id: 'chat', icon: '💬', label: lang === 'vi' ? 'Trò chuyện' : 'Chat' },
+            { id: 'agents', icon: '🤖', label: 'AI Agent' },
+            { id: 'channels', icon: '📱', label: lang === 'vi' ? 'Kênh' : 'Channels' },
+            { id: 'knowledge', icon: '📚', label: 'RAG' },
+            { id: 'handoff', icon: '🤝', label: 'Handoff' },
+            { id: 'campaigns', icon: '📢', label: 'Broadcast' },
+          ].map(p => html`
+            <button class="btn btn-outline btn-sm" key=${p.id}
+              onClick=${() => window._navigate && window._navigate(p.id)}>
+              ${p.icon} ${p.label}
             </button>
           `)}
         </div>

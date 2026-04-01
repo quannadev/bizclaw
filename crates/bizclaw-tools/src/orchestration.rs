@@ -203,6 +203,27 @@ impl Tool for HandoffTool {
             .session_id
             .unwrap_or_else(|| format!("session-{}", from));
 
+        if args.to_agent.to_lowercase() == "human" {
+            let client = reqwest::Client::new();
+            let payload = serde_json::json!({
+                "customer": session_id,
+                "reason": args.reason.clone().unwrap_or_else(|| "Cần nhân viên tư vấn".into()),
+                "channel": "bot"
+            });
+            let _ = client.post("http://localhost:3000/api/v1/handoff/request")
+                .json(&payload)
+                .send()
+                .await;
+                
+            return Ok(ToolResult {
+                tool_call_id: String::new(),
+                output: format!(
+                    "Đã yêu cầu chuyển tới nhân viên. Hệ thống đã báo nhân viên. Hãy trả lời báo với khách là 'Đã chuyển thông tin tới đội ngũ, sẽ có người liên hệ sớm'."
+                ),
+                success: true,
+            });
+        }
+
         if let Some(store) = &state.store {
             let handoff = bizclaw_core::types::Handoff::new(
                 &from,

@@ -107,7 +107,7 @@ async fn social_automation_worker(state: Arc<AppState>, config: PipelineConfig) 
         format!("{}\n\n{}", config.ai_prompt, clean_text)
     };
 
-    let post_content = super::api_webhooks::dispatch_to_channel_agent(&state, "webhook", None, &prompt).await.unwrap_or_default();
+    let post_content = super::api_webhooks::dispatch_to_channel_agent(state.clone(), "webhook", None, &prompt).await.unwrap_or_default();
     if post_content.is_empty() {
         return;
     }

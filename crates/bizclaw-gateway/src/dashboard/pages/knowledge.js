@@ -31,10 +31,11 @@ function KnowledgePage({ lang }) {
   const [activeZone, setActiveZone] = useState('');
 
   // Vector Collections (Tài liệu Vector RAG)
+  const [explicitCols, setExplicitCols] = useState([]);
   const collections = useMemo(() => {
-    const s = new Set(docs.map(d => d.owner).filter(Boolean));
+    const s = new Set([...explicitCols, ...docs.map(d => d.owner).filter(Boolean)]);
     return Array.from(s).sort();
-  }, [docs]);
+  }, [docs, explicitCols]);
   const [selectedCol, setSelectedCol] = useState('');
   const [showAddCol, setShowAddCol] = useState(false);
   const [newColName, setNewColName] = useState('');
@@ -75,6 +76,7 @@ function KnowledgePage({ lang }) {
   useEffect(() => {
     if (activeRagMode === 'doc_rag') {
       loadDocs();
+      loadExplicitCollections();
     } else {
       loadSqlStatus();
     }
@@ -95,6 +97,40 @@ function KnowledgePage({ lang }) {
       setDocs(d.documents||[]);
     } catch(e) {}
     setDocLoading(false);
+  };
+  const loadExplicitCollections = async () => {
+    try {
+      const r = await authFetch('/api/v1/brain/files/rag_collections.json');
+      if (r.ok) {
+        const d = await r.json();
+        setExplicitCols(d.collections || []);
+      }
+    } catch(e) {}
+  };
+  const saveExplicitCollection = async (name) => {
+    try {
+      const newCols = Array.from(new Set([...explicitCols, name])).sort();
+      setExplicitCols(newCols);
+      await authFetch('/api/v1/brain/files/rag_collections.json', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: newCols })
+      });
+    } catch(e) {}
+  };
+  const deleteExplicitCollection = async (name) => {
+    if(!confirm('Xoá kho "' + name + '"? Các tài liệu trực thuộc vẫn sẽ còn nhưng kho này bị xoá tên.')) return;
+    try {
+      const newCols = explicitCols.filter(c => c !== name);
+      setExplicitCols(newCols);
+      await authFetch('/api/v1/brain/files/rag_collections.json', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ collections: newCols })
+      });
+      if (selectedCol === name) setSelectedCol('');
+      showToast('🗑️ Đã xoá kho RAG: ' + name, 'success');
+    } catch(e) {}
   };
 
   const addDoc = async () => {
@@ -288,37 +324,45 @@ function KnowledgePage({ lang }) {
         <${StatsCard} label="Phân Vùng (Zones)" value=${DATA_ZONES.length - 1} color="green" icon="🏷️" />
       </div>
 
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
-        <select value=${selectedCol} onChange=${e => setSelectedCol(e.target.value)}
-          style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;min-width:200px">
-          <option value="">📁 Tất cả tài liệu (Global)</option>
-          ${collections.map(c => html`<option key=${c} value=${c}>🗂️ ${c}</option>`)}
-        </select>
-        <button class="btn btn-outline btn-sm" onClick=${()=>setShowAddCol(!showAddCol)}>+ Tạo Bộ Sưu Tập</button>
-
-        <div style="flex:1"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn" style="background:var(--grad1);color:#fff;padding:8px 18px" onClick=${pickFile}>📤 Upload File</button>
-          <button class="btn btn-outline" onClick=${()=>setShowAdd(!showAdd)}>✏️ Paste Text</button>
+      <div class="card" style="margin-bottom:20px;background:var(--bg2)">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="margin:0;font-size:16px"><span style="font-size:20px;margin-right:6px">🗂️</span>Quản Lý Các Kho RAG (Collections)</h3>
+          <button class="btn btn-sm" style="background:var(--grad1);color:#fff;border:none;padding:8px 16px;border-radius:8px" onClick=${()=>setShowAddCol(!showAddCol)}>+ Tạo Kho RAG Mới</button>
+        </div>
+        ${showAddCol && html`
+          <div style="display:flex;gap:8px;margin-bottom:16px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--accent)">
+            <input style="${inp};margin:0;flex:1" value=${newColName} onInput=${e=>setNewColName(e.target.value)} placeholder="Nhập tên Kho RAG mới (VD: bang_gia_2024, tl_ky_thuat)..." />
+            <button class="btn" style="background:var(--accent);color:#fff;padding:8px 24px" onClick=${()=>{
+              if(!newColName.trim()){showToast('⚠️ Vui lòng nhập tên kho!','warning');return;}
+              saveExplicitCollection(newColName.trim());
+              setNewColName(''); setShowAddCol(false); showToast('✅ Tạo kho RAG thành công! Đã lưu.','success');
+            }}>Lưu Kho Ngay</button>
+          </div>
+        `}
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <button class="btn" style="padding:10px 16px;border-radius:10px;font-weight:${!selectedCol?'600':'400'};border:2px solid ${!selectedCol?'var(--accent)':'var(--border)'};background:${!selectedCol?'rgba(99,102,241,0.1)':'var(--bg)'};color:${!selectedCol?'var(--text)':'var(--text2)'}" onClick=${()=>setSelectedCol('')}>
+            🌍 Tất cả (Global)
+          </button>
+          ${collections.map(c => html`
+            <button key=${c} class="btn" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;font-weight:${selectedCol===c?'600':'400'};border:2px solid ${selectedCol===c?'var(--accent)':'var(--border)'};background:${selectedCol===c?'rgba(99,102,241,0.1)':'var(--bg)'};color:${selectedCol===c?'var(--text)':'var(--text2)'}" onClick=${()=>setSelectedCol(c)}>
+              🗂️ ${c}
+              <span class="badge ${selectedCol===c?'badge-blue':'badge-outline'}" style="margin-left:4px">${docs.filter(d=>d.owner===c).length} file</span>
+              ${explicitCols.includes(c) ? html`
+                <span onClick=${(e)=>{e.stopPropagation(); deleteExplicitCollection(c);}} title="Xoá kho này" style="margin-left:4px;padding:2px 6px;color:white;background:var(--red);border-radius:4px;cursor:pointer;opacity:0.8;font-size:10px">✕</span>
+              `:''}
+            </button>
+          `)}
         </div>
       </div>
 
-      ${showAddCol && html`
-        <div class="card" style="margin-bottom:14px;border:1px solid var(--accent)">
-          <h3 style="margin-bottom:12px">🗂️ Tạo Bộ Sưu Tập Tài Liệu (Vector Collection)</h3>
-          <p style="font-size:12px;color:var(--text2);margin:0 0 16px">Tạo nhóm để phân loại tài liệu (Ví dụ: "tailieu_sales", "kythuat"). Agent có thể kết nối chuyên biệt vào 1 nhánh này giúp RAG chính xác hơn.</p>
-          <div style="display:flex;gap:10px;font-size:13px">
-            <input style="${inp};margin:0" value=${newColName} onInput=${e=>setNewColName(e.target.value)} placeholder="Tên bộ sưu tập (VD: hdsd_phan_mem_v2)" />
-            <button class="btn" style="background:var(--accent);color:#fff;padding:8px 20px" onClick=${() => {
-              if(!newColName.trim()) { showToast('⚠️ Nhập tên bộ sưu tập', 'warning'); return; }
-              setSelectedCol(newColName.trim());
-              setNewColName('');
-              setShowAddCol(false);
-              showToast('✅ Đã tạo & Chọn bộ sưu tập mới. Giờ anh có thể upload file vào đó.', 'success');
-            }}>Tạo & Chọn</button>
-          </div>
+      <div style="display:flex;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-size:15px">📄 Files Tài Liệu trong ${selectedCol ? html`<span style="color:var(--accent)">Kho [${selectedCol}]</span>` : 'Tất Cả (Global)'}</h3>
+        <div style="flex:1"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn" style="background:var(--text);color:var(--bg);padding:8px 18px;border-radius:8px" onClick=${pickFile}>📤 Upload File</button>
+          <button class="btn btn-outline" onClick=${()=>setShowAdd(!showAdd)}>✏️ Dán Nội Dung Nhỏ</button>
         </div>
-      `}
+      </div>
 
       <div class="card" style="margin-bottom:14px" onDrop=${onDrop} onDragOver=${onDragOver} onDragLeave=${onDragLeave}>
         <div style="${dropZoneStyle}">
