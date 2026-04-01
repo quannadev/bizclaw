@@ -889,6 +889,10 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             post(super::routes::nl_query_rules_add),
         )
         .route(
+            "/api/v1/nl-query/connections",
+            post(super::routes::nl_query_connections_add),
+        )
+        .route(
             "/api/v1/nl-query/examples/{conn_id}",
             get(super::routes::nl_query_examples_get),
         )

@@ -337,18 +337,34 @@ impl NlQueryTool {
             let mut columns = Vec::new();
             let mut raw_cols = Vec::new();
             for row in &col_rows {
-                let col_name = row
-                    .try_get::<String, _>(0)
-                    .or_else(|_| row.try_get::<&str, _>(0).map(|s| s.to_string()))
-                    .unwrap_or_default();
-                let data_type = row
-                    .try_get::<String, _>(1)
-                    .or_else(|_| row.try_get::<&str, _>(1).map(|s| s.to_string()))
-                    .unwrap_or("unknown".to_string());
-                let nullable_str = row
-                    .try_get::<String, _>(2)
-                    .or_else(|_| row.try_get::<&str, _>(2).map(|s| s.to_string()))
-                    .unwrap_or("YES".to_string());
+                let (col_name, data_type, nullable_str) = if db_type == "sqlite" {
+                    let c_name = row
+                        .try_get::<String, _>(1)
+                        .or_else(|_| row.try_get::<&str, _>(1).map(|s| s.to_string()))
+                        .unwrap_or_default();
+                    let d_type = row
+                        .try_get::<String, _>(2)
+                        .or_else(|_| row.try_get::<&str, _>(2).map(|s| s.to_string()))
+                        .unwrap_or_else(|_| "unknown".to_string());
+                    let notnull = row.try_get::<i64, _>(3).or_else(|_| row.try_get::<i32, _>(3).map(|i| i as i64)).unwrap_or(0);
+                    let n_str = if notnull == 0 { "YES".to_string() } else { "NO".to_string() };
+                    (c_name, d_type, n_str)
+                } else {
+                    let c_name = row
+                        .try_get::<String, _>(0)
+                        .or_else(|_| row.try_get::<&str, _>(0).map(|s| s.to_string()))
+                        .unwrap_or_default();
+                    let d_type = row
+                        .try_get::<String, _>(1)
+                        .or_else(|_| row.try_get::<&str, _>(1).map(|s| s.to_string()))
+                        .unwrap_or_else(|_| "unknown".to_string());
+                    let n_str = row
+                        .try_get::<String, _>(2)
+                        .or_else(|_| row.try_get::<&str, _>(2).map(|s| s.to_string()))
+                        .unwrap_or_else(|_| "YES".to_string());
+                    (c_name, d_type, n_str)
+                };
+                
                 let nullable = nullable_str.to_uppercase() == "YES" || nullable_str == "1";
 
                 raw_cols.push(format!(

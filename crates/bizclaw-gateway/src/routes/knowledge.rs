@@ -318,11 +318,16 @@ pub async fn knowledge_upload_file(
 ) -> Json<serde_json::Value> {
     let mut file_name = String::new();
     let mut file_data: Vec<u8> = Vec::new();
+    let mut owner = String::new();
 
-    // Extract file from multipart
+    // Extract file and owner from multipart
     while let Ok(Some(field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
-        if name == "file" {
+        if name == "owner" {
+            if let Ok(text) = field.text().await {
+                owner = text;
+            }
+        } else if name == "file" {
             file_name = field.file_name().unwrap_or("unnamed.txt").to_string();
             match field.bytes().await {
                 Ok(bytes) => file_data = bytes.to_vec(),
@@ -357,12 +362,12 @@ pub async fn knowledge_upload_file(
     match kb.as_ref() {
         Some(store) => {
             let result = match ext.as_str() {
-                "pdf" => store.add_pdf_document_with_meta(&file_name, &file_data, "upload", ""),
+                "pdf" => store.add_pdf_document_with_meta(&file_name, &file_data, "upload", &owner),
                 _ => {
                     // Text-based files: convert bytes to string
                     match String::from_utf8(file_data) {
                         Ok(content) => store
-                            .add_document_with_meta(&file_name, &content, "upload", "", file_size),
+                            .add_document_with_meta(&file_name, &content, "upload", &owner, file_size),
                         Err(_) => Err("File is not valid UTF-8 text".into()),
                     }
                 }

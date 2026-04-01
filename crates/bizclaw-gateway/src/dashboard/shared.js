@@ -94,7 +94,6 @@ export const PAGES = [
   { id: 'settings', icon: '⚙️', label: 'nav.settings' },
   { id: 'providers', icon: '🔌', label: 'nav.providers' },
   { id: 'tools', icon: '🛠️', label: 'nav.tools' },
-  { id: 'dbassistant', icon: '🧠', label: 'DB Assistant' },
   { id: 'mcp', icon: '🔗', label: 'nav.mcp' },
   { id: 'wiki', icon: '📖', label: 'Wiki & Guide' },
   { id: 'sep2', sep: true },

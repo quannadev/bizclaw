@@ -160,3 +160,29 @@ pub async fn nl_query_examples_get(
     Json(serde_json::json!({"examples": examples}))
 }
 
+/// POST /api/v1/nl-query/connections — add a DB connection
+pub async fn nl_query_connections_add(Json(body): Json<bizclaw_tools::db_connection::DbConnectionProfile>) -> Json<serde_json::Value> {
+    let path = std::path::Path::new("data/db-connections.json");
+    let mut config = std::fs::read_to_string(path)
+        .ok()
+        .and_then(|c| serde_json::from_str::<bizclaw_tools::db_connection::DbConnectionConfig>(&c).ok())
+        .unwrap_or_default();
+
+    let mut found = false;
+    for c in config.connections.iter_mut() {
+        if c.id == body.id {
+            *c = body.clone();
+            found = true;
+            break;
+        }
+    }
+    if !found {
+        config.connections.push(body);
+    }
+
+    if let Ok(json) = serde_json::to_string_pretty(&config) {
+        let _ = std::fs::write(path, json);
+    }
+    Json(serde_json::json!({"ok": true}))
+}
+

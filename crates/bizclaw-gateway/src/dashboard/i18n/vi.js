@@ -5,7 +5,7 @@ export const vi = {
   'nav.dashboard':'Bảng điều khiển','nav.webchat':'Trò chuyện','nav.settings':'Cài đặt',
   'nav.providers':'Nhà cung cấp','nav.channels':'Kênh liên lạc','nav.tools':'Công cụ',
   'nav.brain':'Brain Engine','nav.mcp':'Máy chủ MCP','nav.agents':'AI Agent',
-  'nav.gallery':'Gallery','nav.knowledge':'Kho tri thức','nav.config':'Tệp cấu hình',
+  'nav.gallery':'Gallery','nav.knowledge':'Kho Dữ Liệu RAG','nav.config':'Tệp cấu hình',
   'nav.scheduler':'Lịch trình','nav.orchestration':'Điều phối',
   // Orchestration
   'orch.title':'Điều phối','orch.subtitle':'Ủy quyền, Chuyển giao, Vòng lặp đánh giá, Liên kết quyền, LLM Traces',
