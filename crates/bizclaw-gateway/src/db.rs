@@ -217,6 +217,11 @@ impl GatewayDb {
         Ok(db)
     }
 
+    /// Exposes a mutex guard to the underlying connection for custom API queries
+    pub fn lock_conn(&self) -> Result<std::sync::MutexGuard<'_, Connection>, String> {
+        self.conn.lock().map_err(|e| format!("Lock: {e}"))
+    }
+
     /// Run schema migrations.
     fn migrate(&self) -> Result<(), String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;

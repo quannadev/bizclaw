@@ -3,7 +3,7 @@ use axum::{
     Json,
 };
 use bizclaw_core::error::{BizClawError, Result};
-use bizclaw_core::types::AuthUser;
+
 use rusqlite::params;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -38,9 +38,11 @@ pub struct CreateCampaignRequest {
 
 pub async fn list_campaigns(
     State(state): State<Arc<AppState>>,
-    axum::extract::Extension(user): axum::extract::Extension<AuthUser>,
-) -> Result<Json<serde_json::Value>> {
-    let conn = state.db.get_conn().map_err(|e| BizClawError::Api(format!("DB error: {e}")))?;
+) -> Json<serde_json::Value> {
+    let conn = match state.db.lock_conn() {
+        Ok(c) => c,
+        Err(e) => return Json(serde_json::json!({"error": format!("DB error: {e}")}))
+    };
     
     // Ensure table exists
     conn.execute(
@@ -58,7 +60,7 @@ pub async fn list_campaigns(
             schedule_at TEXT
         )",
         [],
-    ).map_err(|e| BizClawError::Api(format!("DB error: {e}")))?;
+    ).unwrap();
 
     let mut stmt = conn.prepare("SELECT id, name, channels, segment, message, status, sent, delivered, read_count, created_at, schedule_at FROM campaigns ORDER BY created_at DESC").unwrap();
     
@@ -87,15 +89,17 @@ pub async fn list_campaigns(
         }
     }
 
-    Ok(Json(serde_json::json!({ "campaigns": campaigns })))
+    Json(serde_json::json!({ "campaigns": campaigns }))
 }
 
 pub async fn create_campaign(
     State(state): State<Arc<AppState>>,
-    axum::extract::Extension(user): axum::extract::Extension<AuthUser>,
     Json(req): Json<CreateCampaignRequest>,
-) -> Result<Json<serde_json::Value>> {
-    let conn = state.db.get_conn().map_err(|e| BizClawError::Api(format!("DB error: {e}")))?;
+) -> Json<serde_json::Value> {
+    let conn = match state.db.lock_conn() {
+        Ok(c) => c,
+        Err(e) => return Json(serde_json::json!({"error": format!("DB error: {e}")}))
+    };
     let id = Uuid::new_v4().to_string();
     let created_at = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
     let channels_json = serde_json::to_string(&req.channels).unwrap_or_default();
@@ -104,46 +108,45 @@ pub async fn create_campaign(
         "INSERT INTO campaigns (id, name, channels, segment, message, status, created_at, schedule_at) 
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
         params![id, req.name, channels_json, req.segment, req.message, req.status, created_at, req.schedule_at],
-    ).map_err(|e| BizClawError::Api(format!("Failed to insert campaign: {e}")))?;
+    ).unwrap();
 
     let mut activity_log = state.activity_log.lock().unwrap();
     activity_log.push(crate::openai_compat::ActivityEvent {
-        id: Uuid::new_v4().to_string(),
-        timestamp: created_at,
-        source: "campaigns".into(),
-        action: "create".into(),
-        details: format!("Tạo chiến dịch mới: {}", req.name),
-        status: "success".into(),
+        timestamp: chrono::Utc::now(),
+        event_type: "campaign_created".into(),
+        agent: "System".into(),
+        detail: format!("Tạo chiến dịch mới: {}", req.name),
     });
 
-    Ok(Json(serde_json::json!({ "id": id, "status": "success" })))
+    Json(serde_json::json!({ "id": id, "status": "success" }))
 }
 
 pub async fn delete_campaign(
     State(state): State<Arc<AppState>>,
-    axum::extract::Extension(user): axum::extract::Extension<AuthUser>,
     Path(id): Path<String>,
-) -> Result<Json<serde_json::Value>> {
-    let conn = state.db.get_conn().map_err(|e| BizClawError::Api(format!("DB error: {e}")))?;
-    conn.execute("DELETE FROM campaigns WHERE id = ?1", params![id])
-        .map_err(|e| BizClawError::Api(format!("DB error: {e}")))?;
+) -> Json<serde_json::Value> {
+    let conn = match state.db.lock_conn() {
+        Ok(c) => c,
+        Err(e) => return Json(serde_json::json!({"error": format!("DB error: {e}")}))
+    };
+    conn.execute("DELETE FROM campaigns WHERE id = ?1", params![id]).unwrap();
 
-    Ok(Json(serde_json::json!({ "status": "deleted" })))
+    Json(serde_json::json!({ "status": "deleted" }))
 }
 
 pub async fn run_campaign(
     State(state): State<Arc<AppState>>,
-    axum::extract::Extension(user): axum::extract::Extension<AuthUser>,
     Path(id): Path<String>,
-) -> Result<Json<serde_json::Value>> {
-    let conn = state.db.get_conn().map_err(|e| BizClawError::Api(format!("DB error: {e}")))?;
+) -> Json<serde_json::Value> {
+    let conn = match state.db.lock_conn() {
+        Ok(c) => c,
+        Err(e) => return Json(serde_json::json!({"error": format!("DB error: {e}")}))
+    };
     
     // Update status to running
-    conn.execute("UPDATE campaigns SET status = 'running' WHERE id = ?1", params![id])
-        .map_err(|e| BizClawError::Api(format!("DB error: {e}")))?;
+    conn.execute("UPDATE campaigns SET status = 'running' WHERE id = ?1", params![id]).unwrap();
 
-    // Ideally, we start a background tokio::spawn routine here to use AutoMessageTool
-    // For now, we update it and the UI optimistic update takes over
+    // and handles the AppleScript
     
-    Ok(Json(serde_json::json!({ "status": "running" })))
+    Json(serde_json::json!({ "status": "running" }))
 }

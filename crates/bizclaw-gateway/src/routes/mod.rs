@@ -8,6 +8,7 @@ pub mod api_social;
 pub mod api_systems;
 pub mod api_webhooks;
 pub mod api_campaigns;
+pub mod api_handoff;
 pub mod brain;
 pub mod channels;
 pub mod config;
@@ -159,6 +160,7 @@ pub use api_rag::*;
 pub use api_scheduler::*;
 pub use api_systems::*;
 pub use api_campaigns::*;
+pub use api_handoff::*;
 pub use api_webhooks::*;
 // ---- Multi-Agent Orchestrator API ----
 // Extracted to routes/agents.rs — re-export for backward compatibility

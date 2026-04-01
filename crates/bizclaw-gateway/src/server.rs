@@ -653,6 +653,10 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         )
         // Orchestration write
         .route(
+            "/api/v1/handoff/resolve/{id}",
+            post(super::routes::resolve_handoff),
+        )
+        .route(
             "/api/v1/orchestration/delegate",
             post(super::routes::orch_delegate),
         )
@@ -834,6 +838,8 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             "/api/v1/gallery/{id}/md",
             get(super::routes::gallery_get_md),
         )
+        // Handoff read
+        .route("/api/v1/handoff/queue", get(super::routes::list_handoff_queue))
         // Agent-Channel bindings read
         .route(
             "/api/v1/agents/channels",

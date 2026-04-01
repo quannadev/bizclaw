@@ -35,6 +35,20 @@ function HandoffPage({ lang }) {
     { id: 'hf3', customer: 'Lê Hoàng Anh', channel: 'Telegram', reason: 'explicit_request', message: 'Cho tôi nói chuyện với quản lý', time: '09:30', status: 'resolved', context_summary: 'KH VIP hỏi về chính sách đại lý. Đã chuyển cho Boss xử lý.', ai_attempts: 3 },
   ]);
 
+  useEffect(() => { loadQueue(); }, []);
+
+  const loadQueue = async () => {
+    try {
+      const res = await authFetch('/api/v1/handoff/queue');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.queue && data.queue.length > 0) {
+            setQueue(data.queue);
+        }
+      }
+    } catch(e) {}
+  };
+
   const waitingCount = queue.filter(q => q.status === 'waiting').length;
   const resolvedToday = queue.filter(q => q.status === 'resolved').length;
 
@@ -45,7 +59,10 @@ function HandoffPage({ lang }) {
     }));
   };
 
-  const resolveTicket = (id) => {
+  const resolveTicket = async (id) => {
+    try {
+        await authFetch(`/api/v1/handoff/resolve/${id}`, { method: 'POST' });
+    } catch(e) {}
     setQueue(prev => prev.map(q => q.id === id ? { ...q, status: 'resolved' } : q));
     showToast('✅ Đã giải quyết — AI tiếp tục phục vụ khách', 'success');
   };

@@ -41,5 +41,5 @@ _agents/workflows/deploy.md
 dist/
 Bizino-Dev_Kit-main/
 *.apk
-dashboard/
+/dashboard/
 .env.local
