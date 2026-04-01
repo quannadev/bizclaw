@@ -6,8 +6,8 @@
 use axum::{Json, extract::State};
 use std::sync::Arc;
 
-use super::mask_secret;
 use super::internal_error;
+use super::mask_secret;
 use crate::server::AppState;
 
 /// Get current configuration (sanitized — no API keys).

@@ -1,19 +1,19 @@
 //! API route handlers for the gateway.
 
-pub mod api_scheduler;
-pub mod api_rag;
-pub mod api_systems;
-pub mod api_webhooks;
 pub mod admin;
 pub mod agents;
+pub mod api_rag;
+pub mod api_scheduler;
+pub mod api_systems;
+pub mod api_webhooks;
 pub mod brain;
 pub mod channels;
 pub mod config;
 pub mod gallery;
 pub mod helpers;
 pub mod knowledge;
-pub mod providers;
 pub mod orchestrator;
+pub mod providers;
 pub mod telegram;
 pub mod workflows;
 
@@ -22,7 +22,6 @@ use std::sync::Arc;
 
 use super::db::GatewayDb;
 use super::server::AppState;
-
 
 /// Return sanitized error — logs real error server-side, sends generic message to client.
 fn internal_error(context: &str, e: impl std::fmt::Display) -> Json<serde_json::Value> {
@@ -150,21 +149,18 @@ pub use config::{get_config, get_full_config, update_config};
 // ---- Channel Management API ----
 // Extracted to routes/channels.rs — re-export for backward compatibility
 pub use channels::{
-    update_channel,
-    load_channel_instances, save_channel_instances,
-    list_channel_instances, save_channel_instance, delete_channel_instance,
-    agent_bind_channels, agent_channel_bindings,
+    agent_bind_channels, agent_channel_bindings, delete_channel_instance, list_channel_instances,
+    load_channel_instances, save_channel_instance, save_channel_instances, update_channel,
 };
 
-pub use api_webhooks::*;
-pub use api_scheduler::*;
 pub use api_rag::*;
+pub use api_scheduler::*;
 pub use api_systems::*;
+pub use api_webhooks::*;
 // ---- Multi-Agent Orchestrator API ----
 // Extracted to routes/agents.rs — re-export for backward compatibility
 pub use agents::{
-    list_agents, create_agent, delete_agent, update_agent,
-    agent_chat, agent_broadcast,
+    agent_broadcast, agent_chat, create_agent, delete_agent, list_agents, update_agent,
 };
 
 // (create_agent, delete_agent, update_agent, agent_chat, agent_broadcast
@@ -172,17 +168,13 @@ pub use agents::{
 
 // ---- Telegram Bot ↔ Agent API ----
 // Extracted to routes/telegram.rs — re-export for backward compatibility
-pub use telegram::{
-    connect_telegram, disconnect_telegram, telegram_status,
-};
+pub use telegram::{connect_telegram, disconnect_telegram, telegram_status};
 
 // ---- Brain Workspace API ----
 // Extracted to routes/brain.rs — re-export for backward compatibility
 pub use brain::{
-    brain_list_files, brain_read_file, brain_write_file,
-    brain_delete_file, brain_personalize,
+    brain_delete_file, brain_list_files, brain_personalize, brain_read_file, brain_write_file,
 };
-
 
 // ---- System Health Check ----
 
@@ -316,34 +308,29 @@ pub async fn system_health_check(State(state): State<Arc<AppState>>) -> Json<ser
 // ---- Gallery API ----
 // Extracted to routes/gallery.rs — re-export for backward compatibility
 pub use gallery::{
-    gallery_list, gallery_create, gallery_delete,
-    gallery_upload_md, gallery_get_md,
+    gallery_create, gallery_delete, gallery_get_md, gallery_list, gallery_upload_md,
 };
 
 // ---- Orchestration API ----
 // Extracted to routes/orchestrator.rs — re-export for backward compatibility
 pub use orchestrator::{
-    orch_delegate, orch_handoff, orch_clear_handoff, orch_evaluate,
-    orch_create_link, orch_list_links, orch_delete_link,
-    orch_list_delegations, orch_list_traces,
+    orch_clear_handoff, orch_create_link, orch_delegate, orch_delete_link, orch_evaluate,
+    orch_handoff, orch_list_delegations, orch_list_links, orch_list_traces,
 };
 // ═══ Workflows + Skills + Tools API ═══
 // Extracted to routes/workflows.rs — re-export for backward compatibility
 pub use workflows::{
-    workflows_list, workflows_create, workflows_update, workflows_delete, workflows_run,
-    skills_list, skills_create, skills_update, skills_delete,
-    skills_install, skills_uninstall, skills_detail,
-    tools_list, tools_create, tools_toggle, tools_delete,
+    skills_create, skills_delete, skills_detail, skills_install, skills_list, skills_uninstall,
+    skills_update, tools_create, tools_delete, tools_list, tools_toggle, workflows_create,
+    workflows_delete, workflows_list, workflows_run, workflows_update,
 };
 
 // ═══ Admin, PaaS, Metrics API ═══
 // Extracted to routes/admin.rs — re-export for backward compatibility
 pub use admin::{
-    clear_traces, clear_activity,
-    create_api_key, list_api_keys, revoke_api_key,
-    get_usage, get_usage_daily, get_plan_limits, update_plan_limits,
-    get_system_metrics, prometheus_metrics,
-    list_audit_log, export_backup, import_restore,
+    clear_activity, clear_traces, create_api_key, export_backup, get_plan_limits,
+    get_system_metrics, get_usage, get_usage_daily, import_restore, list_api_keys, list_audit_log,
+    prometheus_metrics, revoke_api_key, update_plan_limits,
 };
 
 #[cfg(test)]
@@ -374,10 +361,7 @@ mod tests {
             knowledge: Arc::new(tokio::sync::Mutex::new(None)),
             telegram_bots: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
             db: Arc::new(crate::db::GatewayDb::open(std::path::Path::new(":memory:")).unwrap()),
-            orch_store: {
-                
-                (Arc::new(bizclaw_db::SqliteStore::in_memory().unwrap())) as _
-            },
+            orch_store: { (Arc::new(bizclaw_db::SqliteStore::in_memory().unwrap())) as _ },
             traces: Arc::new(Mutex::new(Vec::new())),
             activity_tx,
             activity_log: Arc::new(Mutex::new(Vec::new())),

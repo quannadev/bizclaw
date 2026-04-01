@@ -1,17 +1,16 @@
 //! Knowledge Base and RAG/NL-Query APIs.
+use crate::server::AppState;
 use axum::{Json, extract::State};
 use std::sync::Arc;
-use crate::server::AppState;
 
 // ---- Knowledge Base API ----
 use bizclaw_core::traits::Tool;
 // Extracted to routes/knowledge.rs — re-export for backward compatibility
-pub use crate::routes::knowledge::{knowledge_search, knowledge_list_docs, knowledge_stats,
-        knowledge_nudges, knowledge_mcp_tools, knowledge_mcp_call,
-    knowledge_watch_scan, knowledge_signal_stats, knowledge_signal_feedback,
-    knowledge_add_doc, knowledge_remove_doc, knowledge_upload_file,
+pub use crate::routes::knowledge::{
+    knowledge_add_doc, knowledge_list_docs, knowledge_mcp_call, knowledge_mcp_tools,
+    knowledge_nudges, knowledge_remove_doc, knowledge_search, knowledge_signal_feedback,
+    knowledge_signal_stats, knowledge_stats, knowledge_upload_file, knowledge_watch_scan,
 };
-
 
 // ───── NL Query (Text2SQL RAG) API ─────
 
@@ -161,11 +160,15 @@ pub async fn nl_query_examples_get(
 }
 
 /// POST /api/v1/nl-query/connections — add a DB connection
-pub async fn nl_query_connections_add(Json(body): Json<bizclaw_tools::db_connection::DbConnectionProfile>) -> Json<serde_json::Value> {
+pub async fn nl_query_connections_add(
+    Json(body): Json<bizclaw_tools::db_connection::DbConnectionProfile>,
+) -> Json<serde_json::Value> {
     let path = std::path::Path::new("data/db-connections.json");
     let mut config = std::fs::read_to_string(path)
         .ok()
-        .and_then(|c| serde_json::from_str::<bizclaw_tools::db_connection::DbConnectionConfig>(&c).ok())
+        .and_then(|c| {
+            serde_json::from_str::<bizclaw_tools::db_connection::DbConnectionConfig>(&c).ok()
+        })
         .unwrap_or_default();
 
     let mut found = false;
@@ -185,4 +188,3 @@ pub async fn nl_query_connections_add(Json(body): Json<bizclaw_tools::db_connect
     }
     Json(serde_json::json!({"ok": true}))
 }
-

@@ -56,8 +56,6 @@ struct ClawHubSkillsResponse {
     skills: Vec<SkillListing>,
 }
 
-
-
 /// Registry source configuration.
 #[derive(Debug, Clone)]
 pub struct RegistrySource {

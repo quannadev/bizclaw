@@ -5,12 +5,29 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum EventType {
-    Mouse { x: f64, y: f64, click: bool },
-    Keyboard { text: String },
-    Window { title: String, app: String },
-    Clipboard { content: String },
-    Notification { app: String, title: String, body: String },
-    Screenshot { path: String },
+    Mouse {
+        x: f64,
+        y: f64,
+        click: bool,
+    },
+    Keyboard {
+        text: String,
+    },
+    Window {
+        title: String,
+        app: String,
+    },
+    Clipboard {
+        content: String,
+    },
+    Notification {
+        app: String,
+        title: String,
+        body: String,
+    },
+    Screenshot {
+        path: String,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

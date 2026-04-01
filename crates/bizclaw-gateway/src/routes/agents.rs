@@ -7,8 +7,8 @@
 use axum::{Json, extract::State};
 use std::sync::Arc;
 
-use crate::server::AppState;
 use super::apply_provider_config_from_db;
+use crate::server::AppState;
 
 /// List all agents in the orchestrator.
 pub async fn list_agents(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
@@ -32,10 +32,27 @@ pub async fn list_agents(State(state): State<Arc<AppState>>) -> Json<serde_json:
 
     for agent in agents.iter_mut() {
         if let Some(name) = agent["name"].as_str() {
-            let ch = bindings.get(name).cloned().unwrap_or(serde_json::json!([]));
-            agent
-                .as_object_mut()
-                .map(|o| o.insert("channels".into(), ch));
+            let ch_data = bindings.get(name).cloned().unwrap_or(serde_json::json!([]));
+            if ch_data.is_array() {
+                agent
+                    .as_object_mut()
+                    .map(|o| o.insert("channels".into(), ch_data));
+            } else if let Some(obj) = ch_data.as_object() {
+                agent.as_object_mut().map(|o| {
+                    o.insert(
+                        "channels".into(),
+                        obj.get("channels")
+                            .cloned()
+                            .unwrap_or(serde_json::json!([])),
+                    );
+                    if let Some(rag) = obj.get("rag_collection") {
+                        o.insert("rag_collection".into(), rag.clone());
+                    }
+                    if let Some(sql) = obj.get("sql_connection") {
+                        o.insert("sql_connection".into(), sql.clone());
+                    }
+                });
+            }
         }
     }
 

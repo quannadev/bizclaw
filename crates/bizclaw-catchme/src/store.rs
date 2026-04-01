@@ -145,4 +145,3 @@ impl CatchMeStore {
         Ok(events)
     }
 }
-

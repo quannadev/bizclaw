@@ -4,8 +4,8 @@
 //! and seamless integration with the BizClaw ecosystem.
 
 pub mod event;
-pub mod store;
 pub mod record;
+pub mod store;
 pub mod tree;
 // pub mod summarize;
 
@@ -72,7 +72,9 @@ impl CatchMeEngine {
         });
 
         if config.enable_clipboard {
-            tokio::spawn(crate::record::clipboard::start_clipboard_recorder(tx.clone()));
+            tokio::spawn(crate::record::clipboard::start_clipboard_recorder(
+                tx.clone(),
+            ));
             info!("CatchMe clipboard recorder started.");
         }
 

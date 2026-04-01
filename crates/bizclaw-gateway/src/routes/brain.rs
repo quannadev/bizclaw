@@ -7,8 +7,8 @@
 use axum::{Json, extract::State};
 use std::sync::Arc;
 
-use crate::server::AppState;
 use super::helpers::internal_error;
+use crate::server::AppState;
 
 /// List all brain files in the workspace.
 /// If `?tenant=slug` provided, uses per-tenant workspace.

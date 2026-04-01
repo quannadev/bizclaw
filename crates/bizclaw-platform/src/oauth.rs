@@ -5,9 +5,9 @@
 //!
 //! KHÔNG dùng cho billing/auth platform — chỉ cho agent tools.
 
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::response::{IntoResponse, Redirect};
-use axum::Json;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -37,9 +37,7 @@ impl OAuthProvider {
     fn auth_url(&self) -> &'static str {
         match self {
             Self::Google => "https://accounts.google.com/o/oauth2/v2/auth",
-            Self::Facebook | Self::Instagram => {
-                "https://www.facebook.com/v21.0/dialog/oauth"
-            }
+            Self::Facebook | Self::Instagram => "https://www.facebook.com/v21.0/dialog/oauth",
         }
     }
 
@@ -54,16 +52,22 @@ impl OAuthProvider {
 
     fn scopes(&self) -> &'static str {
         match self {
-            Self::Google => "https://www.googleapis.com/auth/gmail.send \
+            Self::Google => {
+                "https://www.googleapis.com/auth/gmail.send \
                              https://www.googleapis.com/auth/calendar \
                              https://www.googleapis.com/auth/spreadsheets \
                              https://www.googleapis.com/auth/drive.file \
-                             openid email profile",
-            Self::Facebook => "pages_manage_posts,pages_messaging,pages_read_engagement,\
-                               pages_show_list,public_profile,email",
-            Self::Instagram => "pages_manage_posts,pages_messaging,pages_read_engagement,\
+                             openid email profile"
+            }
+            Self::Facebook => {
+                "pages_manage_posts,pages_messaging,pages_read_engagement,\
+                               pages_show_list,public_profile,email"
+            }
+            Self::Instagram => {
+                "pages_manage_posts,pages_messaging,pages_read_engagement,\
                                 instagram_basic,instagram_manage_messages,\
-                                instagram_manage_comments,public_profile,email",
+                                instagram_manage_comments,public_profile,email"
+            }
         }
     }
 
@@ -336,9 +340,7 @@ pub async fn oauth_callback(
             }
         }
         OAuthProvider::Google => {
-            let refresh = token_body["refresh_token"]
-                .as_str()
-                .map(String::from);
+            let refresh = token_body["refresh_token"].as_str().map(String::from);
             (access_token.clone(), refresh)
         }
     };
@@ -605,12 +607,13 @@ pub async fn get_valid_token(
 
     // For Google: try refresh if we have refresh_token
     if provider == OAuthProvider::Google
-        && let Some(_refresh) = tokens.refresh_token {
-            // Try the current token first, refresh if it fails
-            return Ok(tokens.access_token.clone());
-            // Note: in production, check expires_in and auto-refresh
-            // For now, the agent should call refresh_google_token() if 401
-        }
+        && let Some(_refresh) = tokens.refresh_token
+    {
+        // Try the current token first, refresh if it fails
+        return Ok(tokens.access_token.clone());
+        // Note: in production, check expires_in and auto-refresh
+        // For now, the agent should call refresh_google_token() if 401
+    }
 
     Ok(tokens.access_token)
 }
@@ -623,7 +626,7 @@ pub async fn start_token_refresh_worker(
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(3600)).await;
         tracing::debug!("Token refresh check triggered...");
-        
+
         if let Some(db_arc) = &db {
             let _db_lock = db_arc.lock().await;
             // let tenants = db_lock.get_all_tenants().await
@@ -641,9 +644,18 @@ mod tests {
 
     #[test]
     fn test_provider_from_str() {
-        assert_eq!(OAuthProvider::from_str("google"), Some(OAuthProvider::Google));
-        assert_eq!(OAuthProvider::from_str("FACEBOOK"), Some(OAuthProvider::Facebook));
-        assert_eq!(OAuthProvider::from_str("Instagram"), Some(OAuthProvider::Instagram));
+        assert_eq!(
+            OAuthProvider::from_str("google"),
+            Some(OAuthProvider::Google)
+        );
+        assert_eq!(
+            OAuthProvider::from_str("FACEBOOK"),
+            Some(OAuthProvider::Facebook)
+        );
+        assert_eq!(
+            OAuthProvider::from_str("Instagram"),
+            Some(OAuthProvider::Instagram)
+        );
         assert_eq!(OAuthProvider::from_str("twitter"), None);
     }
 
@@ -659,7 +671,11 @@ mod tests {
         assert!(OAuthProvider::Google.scopes().contains("gmail"));
         assert!(OAuthProvider::Google.scopes().contains("calendar"));
         assert!(OAuthProvider::Facebook.scopes().contains("pages_messaging"));
-        assert!(OAuthProvider::Instagram.scopes().contains("instagram_basic"));
+        assert!(
+            OAuthProvider::Instagram
+                .scopes()
+                .contains("instagram_basic")
+        );
     }
 
     #[test]

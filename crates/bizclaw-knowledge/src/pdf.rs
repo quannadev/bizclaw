@@ -153,7 +153,5 @@ pub struct PdfInfo {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn test_pdf_module_compiles() {
-
-    }
+    fn test_pdf_module_compiles() {}
 }

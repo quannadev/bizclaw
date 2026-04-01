@@ -45,17 +45,22 @@ impl Identity {
         let base = &self.system_prompt;
 
         // Only append Vietnamese guidelines if locale is "vi"
-        let is_vi = self.locale == "vi"
-            || (self.locale == "auto" && self.has_vietnamese_context());
+        let is_vi = self.locale == "vi" || (self.locale == "auto" && self.has_vietnamese_context());
 
         if !is_vi {
             return base.clone();
         }
 
         let tone_guide = match self.tone.as_str() {
-            "formal" => "Giọng điệu chuyên nghiệp, lịch sự. Xưng 'tôi', gọi khách là 'Quý khách' hoặc 'anh/chị'.",
-            "friendly" => "Giọng điệu thân thiện, gần gũi. Xưng 'em', gọi khách là 'anh/chị'. Thêm 'ạ' cuối câu.",
-            "genz" => "Giọng điệu trẻ trung, năng động. Có thể dùng emoji 😊. Xưng 'mình', gọi khách là 'bạn'.",
+            "formal" => {
+                "Giọng điệu chuyên nghiệp, lịch sự. Xưng 'tôi', gọi khách là 'Quý khách' hoặc 'anh/chị'."
+            }
+            "friendly" => {
+                "Giọng điệu thân thiện, gần gũi. Xưng 'em', gọi khách là 'anh/chị'. Thêm 'ạ' cuối câu."
+            }
+            "genz" => {
+                "Giọng điệu trẻ trung, năng động. Có thể dùng emoji 😊. Xưng 'mình', gọi khách là 'bạn'."
+            }
             _ => "Giọng điệu trung lập, rõ ràng.",
         };
 
@@ -79,8 +84,7 @@ impl Identity {
         let text = format!("{} {} {}", self.name, self.persona, self.system_prompt);
         // Check for Vietnamese-specific characters (đ, ơ, ư and diacritical marks)
         text.chars().any(|c| {
-            matches!(c, 'đ' | 'Đ' | 'ơ' | 'Ơ' | 'ư' | 'Ư')
-                || ('\u{00C0}'..='\u{024F}').contains(&c) // Latin Extended (Vietnamese diacritics)
+            matches!(c, 'đ' | 'Đ' | 'ơ' | 'Ơ' | 'ư' | 'Ư') || ('\u{00C0}'..='\u{024F}').contains(&c) // Latin Extended (Vietnamese diacritics)
         })
     }
 }

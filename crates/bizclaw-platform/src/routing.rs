@@ -99,10 +99,7 @@ pub async fn check_ollama_available() -> bool {
 
     match client {
         Ok(c) => {
-            let resp = c
-                .get("http://127.0.0.1:11434/api/version")
-                .send()
-                .await;
+            let resp = c.get("http://127.0.0.1:11434/api/version").send().await;
             resp.is_ok()
         }
         Err(_) => false,
@@ -140,14 +137,20 @@ mod tests {
         let config = test_config();
         assert_eq!(route_message("Xin chào!", &config), RouteDecision::Local);
         assert_eq!(route_message("hello", &config), RouteDecision::Local);
-        assert_eq!(route_message("giá phòng bao nhiêu?", &config), RouteDecision::Local);
+        assert_eq!(
+            route_message("giá phòng bao nhiêu?", &config),
+            RouteDecision::Local
+        );
     }
 
     #[test]
     fn test_complex_task_routes_cloud() {
         let config = test_config();
         assert_eq!(
-            route_message("Hãy phân tích doanh thu quý 4 và đề xuất chiến lược", &config),
+            route_message(
+                "Hãy phân tích doanh thu quý 4 và đề xuất chiến lược",
+                &config
+            ),
             RouteDecision::Cloud
         );
         assert_eq!(
@@ -193,7 +196,12 @@ mod tests {
     #[test]
     fn test_resolve_provider_cloud() {
         let config = test_config();
-        let (p, m) = resolve_provider("phân tích doanh thu chi tiết", "openai", "gpt-4o-mini", &config);
+        let (p, m) = resolve_provider(
+            "phân tích doanh thu chi tiết",
+            "openai",
+            "gpt-4o-mini",
+            &config,
+        );
         assert_eq!(p, "openai");
         assert_eq!(m, "gpt-4o-mini");
     }
@@ -201,8 +209,14 @@ mod tests {
     #[test]
     fn test_vietnamese_keywords() {
         let config = test_config();
-        assert_eq!(route_message("so sánh giá đối thủ", &config), RouteDecision::Cloud);
-        assert_eq!(route_message("lập kế hoạch marketing", &config), RouteDecision::Cloud);
+        assert_eq!(
+            route_message("so sánh giá đối thủ", &config),
+            RouteDecision::Cloud
+        );
+        assert_eq!(
+            route_message("lập kế hoạch marketing", &config),
+            RouteDecision::Cloud
+        );
         assert_eq!(route_message("menu có gì?", &config), RouteDecision::Local);
     }
 }

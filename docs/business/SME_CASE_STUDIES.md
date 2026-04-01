@@ -13,6 +13,7 @@ Hệ thống BizClaw hiện tại không còn là một Chatbot thông thường
 2. **MAMA AI Orchestrator (Bộ não phân phối)**
    - **Là gì?** Não bộ LLM theo dõi và ra lệnh cho các cánh tay vật lý.
    - **Khả năng:** Nhìn vào Web không phải qua góc độ lập trình viên (rác HTML), mà nhờ tính năng `Snapshot`, nó "hiểu" bố cục nút bấm của trang web như mảng Text đơn giản. Sau đó MAMA AI tự phân tích logic và chỉ định bấm nút nào, gõ chữ nào vào đúng trọng tâm.
+-
 
 3. **SaaS Billing Webhooks (Pay2S & SePay)**
    - **Là gì?** Cổng soát vé tự động của nền tảng Bán phần mềm.

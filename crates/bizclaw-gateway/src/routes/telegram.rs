@@ -7,8 +7,8 @@
 use axum::{Json, extract::State};
 use std::sync::Arc;
 
-use crate::server::AppState;
 use super::safe_truncate;
+use crate::server::AppState;
 
 /// Connect a Telegram bot to a specific agent.
 /// Verifies the bot token, then spawns a polling loop.

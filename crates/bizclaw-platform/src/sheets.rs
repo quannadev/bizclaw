@@ -64,8 +64,8 @@ impl SheetsClient {
     pub fn from_env() -> Option<Self> {
         let sa_path = std::env::var("GOOGLE_SERVICE_ACCOUNT_JSON").ok()?;
         let spreadsheet_id = std::env::var("BIZCLAW_GOOGLE_SHEETS_ID").ok()?;
-        let sheet_name = std::env::var("BIZCLAW_GOOGLE_SHEETS_NAME")
-            .unwrap_or_else(|_| "Giao dịch".into());
+        let sheet_name =
+            std::env::var("BIZCLAW_GOOGLE_SHEETS_NAME").unwrap_or_else(|_| "Giao dịch".into());
 
         let sa_content = std::fs::read_to_string(&sa_path).ok()?;
         let mut service_account: ServiceAccountKey = serde_json::from_str(&sa_content).ok()?;
@@ -109,10 +109,9 @@ impl SheetsClient {
         };
 
         // Sign JWT with RS256
-        let key = jsonwebtoken::EncodingKey::from_rsa_pem(
-            self.service_account.private_key.as_bytes(),
-        )
-        .map_err(|e| format!("Invalid service account key: {e}"))?;
+        let key =
+            jsonwebtoken::EncodingKey::from_rsa_pem(self.service_account.private_key.as_bytes())
+                .map_err(|e| format!("Invalid service account key: {e}"))?;
 
         let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::RS256);
         let jwt = jsonwebtoken::encode(&header, &claims, &key)
@@ -190,10 +189,7 @@ impl SheetsClient {
         } else {
             let status = resp.status();
             let error_body = resp.text().await.unwrap_or_default();
-            Err(format!(
-                "Sheets API error {}: {}",
-                status, error_body
-            ))
+            Err(format!("Sheets API error {}: {}", status, error_body))
         }
     }
 
@@ -246,7 +242,10 @@ impl SheetsClient {
                 .await
                 .map_err(|e| format!("Sheets header write failed: {e}"))?;
 
-            tracing::info!("📊 Google Sheets: initialized headers in '{}'", self.sheet_name);
+            tracing::info!(
+                "📊 Google Sheets: initialized headers in '{}'",
+                self.sheet_name
+            );
         }
 
         Ok(())

@@ -7,9 +7,9 @@ use async_trait::async_trait;
 use bizclaw_core::error::Result;
 use bizclaw_core::traits::Tool;
 use bizclaw_core::types::{ToolDefinition, ToolResult};
+use headless_chrome::{Browser, LaunchOptionsBuilder, Tab};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use headless_chrome::{Browser, LaunchOptionsBuilder, Tab};
 
 /// Native Rust Stealth browser automation tool
 pub struct StealthBrowserTool {
@@ -25,7 +25,11 @@ impl StealthBrowserTool {
         }
     }
 
-    async fn ensure_browser_and_tab(&self, headless: bool, profile: Option<&str>) -> Result<Arc<Tab>> {
+    async fn ensure_browser_and_tab(
+        &self,
+        headless: bool,
+        profile: Option<&str>,
+    ) -> Result<Arc<Tab>> {
         let mut b_guard = self.browser.lock().await;
         let mut t_guard = self.tab.lock().await;
 
@@ -34,11 +38,14 @@ impl StealthBrowserTool {
         }
 
         // Initialize Native Rust Headless browser with anti-detect flags
-        tracing::info!("🚀 Starting Native Stealth Browser (Profile: {:?})...", profile);
-        
+        tracing::info!(
+            "🚀 Starting Native Stealth Browser (Profile: {:?})...",
+            profile
+        );
+
         let mut builder = LaunchOptionsBuilder::default();
         builder.headless(headless);
-        
+
         if let Some(p) = profile {
             let user_data_dir = dirs::home_dir()
                 .unwrap_or_else(|| std::path::PathBuf::from("."))
@@ -61,11 +68,13 @@ impl StealthBrowserTool {
             .build()
             .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Failed to build launch options: {e}")))?;
 
-        let new_browser = Browser::new(launch_options)
-            .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Failed starting headless chrome: {e}")))?;
-        
-        let new_tab = new_browser.new_tab()
-            .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Failed opening tab: {e}")))?;
+        let new_browser = Browser::new(launch_options).map_err(|e| {
+            bizclaw_core::error::BizClawError::Tool(format!("Failed starting headless chrome: {e}"))
+        })?;
+
+        let new_tab = new_browser.new_tab().map_err(|e| {
+            bizclaw_core::error::BizClawError::Tool(format!("Failed opening tab: {e}"))
+        })?;
 
         // We evaluate stealth script after navigating.
 
@@ -78,7 +87,10 @@ impl StealthBrowserTool {
     /// Extract innerText directly
     fn extract_text(tab: &Tab) -> std::result::Result<String, anyhow::Error> {
         let text = tab.evaluate("document.body.innerText", false)?;
-        let t = text.value.and_then(|v| v.as_str().map(|s| s.to_string())).unwrap_or_default();
+        let t = text
+            .value
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_default();
         Ok(t)
     }
 
@@ -129,7 +141,10 @@ impl StealthBrowserTool {
             })();
         "#;
         let res = tab.evaluate(script, false)?;
-        Ok(res.value.and_then(|v| v.as_str().map(|s| s.to_string())).unwrap_or_default())
+        Ok(res
+            .value
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_default())
     }
 }
 
@@ -209,21 +224,24 @@ impl Tool for StealthBrowserTool {
 
         let headless = args["headless"].as_bool().unwrap_or(true);
         let profile = args["profile"].as_str();
-        
+
         let tab = self.ensure_browser_and_tab(headless, profile).await?;
 
         // Perform actions on the blocking thread to avoid locking tokio runtime
         let args_clone = args.clone();
         let action_str = action.to_string();
 
-        let result = tokio::task::spawn_blocking(move || -> std::result::Result<String, anyhow::Error> {
-            match action_str.as_str() {
-                "navigate" => {
-                    let url = args_clone["url"].as_str().ok_or_else(|| anyhow::anyhow!("Missing url"))?;
-                    tab.navigate_to(url)?;
-                    tab.wait_until_navigated()?;
-                    
-                    let stealth_script = r#"
+        let result =
+            tokio::task::spawn_blocking(move || -> std::result::Result<String, anyhow::Error> {
+                match action_str.as_str() {
+                    "navigate" => {
+                        let url = args_clone["url"]
+                            .as_str()
+                            .ok_or_else(|| anyhow::anyhow!("Missing url"))?;
+                        tab.navigate_to(url)?;
+                        tab.wait_until_navigated()?;
+
+                        let stealth_script = r#"
                         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
                         window.chrome = { runtime: {} };
                         if (window.navigator.permissions) {
@@ -235,59 +253,70 @@ impl Tool for StealthBrowserTool {
                             };
                         }
                     "#;
-                    let _ = tab.evaluate(stealth_script, false);
-                    
-                    Ok(format!("✅ Navigated to: {}", url))
-                }
-                "snapshot" => {
-                    let snap = Self::get_interactive_snapshot(&tab)?;
-                    Ok(format!("📸 Page snapshot:\n{}", snap))
-                }
-                "text" => {
-                    let txt = Self::extract_text(&tab)?;
-                    Ok(format!("📄 Page text:\n{}", txt))
-                }
-                "click" => {
-                    let e_ref = args_clone["ref"].as_str().ok_or_else(|| anyhow::anyhow!("Missing ref"))?;
-                    let selector = format!("[data-pinch-id=\"{}\"]", e_ref);
-                    let element = tab.wait_for_element(&selector)?;
-                    element.click()?;
-                    Ok(format!("🖱️ Clicked {}", e_ref))
-                }
-                "fill" => {
-                    let e_ref = args_clone["ref"].as_str().ok_or_else(|| anyhow::anyhow!("Missing ref"))?;
-                    let val = args_clone["value"].as_str().unwrap_or_default();
-                    let selector = format!("[data-pinch-id=\"{}\"]", e_ref);
-                    let element = tab.wait_for_element(&selector)?;
-                    element.click()?;
-                    // Types directly
-                    element.type_into(val)?;
-                    Ok(format!("⌨️ Typed '{}' into {}", val, e_ref))
-                }
-                "upload" => {
-                    let e_ref = args_clone["ref"].as_str().ok_or_else(|| anyhow::anyhow!("Missing ref"))?;
-                    let path_val = args_clone["value"].as_str().ok_or_else(|| anyhow::anyhow!("Missing value (file path)"))?;
-                    let selector = format!("[data-pinch-id=\"{}\"]", e_ref);
-                    let element = tab.wait_for_element(&selector)?;
-                    
-                    if !std::path::Path::new(path_val).exists() {
-                        return Err(anyhow::anyhow!("File does not exist: {}", path_val));
+                        let _ = tab.evaluate(stealth_script, false);
+
+                        Ok(format!("✅ Navigated to: {}", url))
                     }
-                    
-                    element.set_input_files(&[path_val])?;
-                    Ok(format!("📁 Uploaded file '{}' successfully.", path_val))
+                    "snapshot" => {
+                        let snap = Self::get_interactive_snapshot(&tab)?;
+                        Ok(format!("📸 Page snapshot:\n{}", snap))
+                    }
+                    "text" => {
+                        let txt = Self::extract_text(&tab)?;
+                        Ok(format!("📄 Page text:\n{}", txt))
+                    }
+                    "click" => {
+                        let e_ref = args_clone["ref"]
+                            .as_str()
+                            .ok_or_else(|| anyhow::anyhow!("Missing ref"))?;
+                        let selector = format!("[data-pinch-id=\"{}\"]", e_ref);
+                        let element = tab.wait_for_element(&selector)?;
+                        element.click()?;
+                        Ok(format!("🖱️ Clicked {}", e_ref))
+                    }
+                    "fill" => {
+                        let e_ref = args_clone["ref"]
+                            .as_str()
+                            .ok_or_else(|| anyhow::anyhow!("Missing ref"))?;
+                        let val = args_clone["value"].as_str().unwrap_or_default();
+                        let selector = format!("[data-pinch-id=\"{}\"]", e_ref);
+                        let element = tab.wait_for_element(&selector)?;
+                        element.click()?;
+                        // Types directly
+                        element.type_into(val)?;
+                        Ok(format!("⌨️ Typed '{}' into {}", val, e_ref))
+                    }
+                    "upload" => {
+                        let e_ref = args_clone["ref"]
+                            .as_str()
+                            .ok_or_else(|| anyhow::anyhow!("Missing ref"))?;
+                        let path_val = args_clone["value"]
+                            .as_str()
+                            .ok_or_else(|| anyhow::anyhow!("Missing value (file path)"))?;
+                        let selector = format!("[data-pinch-id=\"{}\"]", e_ref);
+                        let element = tab.wait_for_element(&selector)?;
+
+                        if !std::path::Path::new(path_val).exists() {
+                            return Err(anyhow::anyhow!("File does not exist: {}", path_val));
+                        }
+
+                        element.set_input_files(&[path_val])?;
+                        Ok(format!("📁 Uploaded file '{}' successfully.", path_val))
+                    }
+                    "evaluate" => {
+                        let code = args_clone["value"].as_str().unwrap_or_default();
+                        let res = tab.evaluate(code, false)?;
+                        let txt = res
+                            .value
+                            .and_then(|v| v.as_str().map(|s| s.to_string()))
+                            .unwrap_or_default();
+                        Ok(format!("🔧 JS Evaluate Output:\n{}", txt))
+                    }
+                    _ => Ok(format!("Unsupported action in native mode: {}", action_str)),
                 }
-                "evaluate" => {
-                    let code = args_clone["value"].as_str().unwrap_or_default();
-                    let res = tab.evaluate(code, false)?;
-                    let txt = res.value.and_then(|v| v.as_str().map(|s| s.to_string())).unwrap_or_default();
-                    Ok(format!("🔧 JS Evaluate Output:\n{}", txt))
-                }
-                _ => Ok(format!("Unsupported action in native mode: {}", action_str)),
-            }
-        })
-        .await
-        .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Task panic: {e}")))?;
+            })
+            .await
+            .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Task panic: {e}")))?;
 
         match result {
             Ok(output) => Ok(ToolResult {

@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use bizclaw_core::error::Result;
-use bizclaw_core::types::{ToolDefinition, ToolResult};
 use bizclaw_core::traits::Tool;
-use serde_json::{json, Value};
+use bizclaw_core::types::{ToolDefinition, ToolResult};
+use serde_json::{Value, json};
 use tracing::{info, warn};
 
 /// Extract Insight Tool — implements OpenGnothia's Cumulative Memory pattern.
@@ -60,11 +60,13 @@ impl Tool for ExtractInsightTool {
     async fn execute(&self, arguments: &str) -> Result<ToolResult> {
         let args: Value = match serde_json::from_str(arguments) {
             Ok(v) => v,
-            Err(e) => return Ok(ToolResult {
-                tool_call_id: String::new(),
-                output: format!("Invalid arguments: {}", e),
-                success: false,
-            }),
+            Err(e) => {
+                return Ok(ToolResult {
+                    tool_call_id: String::new(),
+                    output: format!("Invalid arguments: {}", e),
+                    success: false,
+                });
+            }
         };
 
         let fact = args["fact"].as_str().unwrap_or("").trim();
@@ -79,7 +81,9 @@ impl Tool for ExtractInsightTool {
         }
 
         // Read existing MEMORY.md
-        let mut memory_content = self.memory_impl.read_file("MEMORY.md")
+        let mut memory_content = self
+            .memory_impl
+            .read_file("MEMORY.md")
             .unwrap_or_else(|| "# 🧠 Long-Term Memory\n\n".to_string());
 
         // Format the new insight
@@ -109,7 +113,10 @@ impl Tool for ExtractInsightTool {
 
         Ok(ToolResult {
             tool_call_id: String::new(),
-            output: format!("Insight successfully saved to persistent MEMORY.md: {}", fact),
+            output: format!(
+                "Insight successfully saved to persistent MEMORY.md: {}",
+                fact
+            ),
             success: true,
         })
     }

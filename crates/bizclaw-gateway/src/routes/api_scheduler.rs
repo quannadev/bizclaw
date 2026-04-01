@@ -1,7 +1,7 @@
 //! Scheduler and Workflow validation APIs.
+use crate::server::AppState;
 use axum::{Json, extract::State};
 use std::sync::Arc;
-use crate::server::AppState;
 
 // ---- Scheduler API ----
 
@@ -255,4 +255,3 @@ pub async fn workflow_rules_delete(
     let _ = db.delete_workflow_rule(&id);
     Json(serde_json::json!({"ok": true}))
 }
-

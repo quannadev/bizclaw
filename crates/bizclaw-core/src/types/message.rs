@@ -199,7 +199,6 @@ impl Usage {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

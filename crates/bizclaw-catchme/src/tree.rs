@@ -276,9 +276,7 @@ impl TreeOrganizer {
                 ActivityNode {
                     id: format!("action_{date_str}_{session_idx}_{app_name}_{i}"),
                     level: TreeLevel::Action,
-                    parent_id: Some(format!(
-                        "app_{date_str}_{session_idx}_{app_name}"
-                    )),
+                    parent_id: Some(format!("app_{date_str}_{session_idx}_{app_name}")),
                     summary,
                     start_time: start,
                     end_time: end,
@@ -340,10 +338,7 @@ impl TreeOrganizer {
             store.upsert_activity_node(node)?;
             self.persist_children(store, &node.children)?;
         }
-        info!(
-            "Persisted activity tree: {} day(s)",
-            tree.len()
-        );
+        info!("Persisted activity tree: {} day(s)", tree.len());
         Ok(())
     }
 
@@ -484,11 +479,35 @@ mod tests {
             ..Default::default()
         });
         let events = vec![
-            make_event("test", EventType::Keyboard { text: "hello".into() }, 0),
-            make_event("test", EventType::Keyboard { text: "world".into() }, 10),
+            make_event(
+                "test",
+                EventType::Keyboard {
+                    text: "hello".into(),
+                },
+                0,
+            ),
+            make_event(
+                "test",
+                EventType::Keyboard {
+                    text: "world".into(),
+                },
+                10,
+            ),
             // 120 second gap → new session
-            make_event("test", EventType::Keyboard { text: "new session".into() }, 130),
-            make_event("test", EventType::Keyboard { text: "still here".into() }, 140),
+            make_event(
+                "test",
+                EventType::Keyboard {
+                    text: "new session".into(),
+                },
+                130,
+            ),
+            make_event(
+                "test",
+                EventType::Keyboard {
+                    text: "still here".into(),
+                },
+                140,
+            ),
         ];
         let tree = org.organize(&events);
         assert_eq!(tree.len(), 1); // same day
@@ -499,10 +518,38 @@ mod tests {
     fn test_app_clustering() {
         let org = TreeOrganizer::new(OrganizerConfig::default());
         let events = vec![
-            make_event("test", EventType::Window { title: "main.rs".into(), app: "Code".into() }, 0),
-            make_event("test", EventType::Keyboard { text: "fn main()".into() }, 1),
-            make_event("test", EventType::Window { title: "Google Chrome".into(), app: "Chrome".into() }, 5),
-            make_event("test", EventType::Mouse { x: 100.0, y: 200.0, click: true }, 6),
+            make_event(
+                "test",
+                EventType::Window {
+                    title: "main.rs".into(),
+                    app: "Code".into(),
+                },
+                0,
+            ),
+            make_event(
+                "test",
+                EventType::Keyboard {
+                    text: "fn main()".into(),
+                },
+                1,
+            ),
+            make_event(
+                "test",
+                EventType::Window {
+                    title: "Google Chrome".into(),
+                    app: "Chrome".into(),
+                },
+                5,
+            ),
+            make_event(
+                "test",
+                EventType::Mouse {
+                    x: 100.0,
+                    y: 200.0,
+                    click: true,
+                },
+                6,
+            ),
         ];
         let tree = org.organize(&events);
         assert_eq!(tree.len(), 1);
@@ -515,8 +562,20 @@ mod tests {
     #[test]
     fn test_summarize_action_typing() {
         let events = vec![
-            make_event("test", EventType::Keyboard { text: "hello world".into() }, 0),
-            make_event("test", EventType::Keyboard { text: "test".into() }, 1),
+            make_event(
+                "test",
+                EventType::Keyboard {
+                    text: "hello world".into(),
+                },
+                0,
+            ),
+            make_event(
+                "test",
+                EventType::Keyboard {
+                    text: "test".into(),
+                },
+                1,
+            ),
         ];
         let summary = summarize_action(&events);
         assert!(summary.contains("Typed ~15 chars"));
@@ -525,9 +584,33 @@ mod tests {
     #[test]
     fn test_summarize_action_clicks() {
         let events = vec![
-            make_event("test", EventType::Mouse { x: 10.0, y: 20.0, click: true }, 0),
-            make_event("test", EventType::Mouse { x: 30.0, y: 40.0, click: true }, 1),
-            make_event("test", EventType::Mouse { x: 50.0, y: 60.0, click: false }, 2),
+            make_event(
+                "test",
+                EventType::Mouse {
+                    x: 10.0,
+                    y: 20.0,
+                    click: true,
+                },
+                0,
+            ),
+            make_event(
+                "test",
+                EventType::Mouse {
+                    x: 30.0,
+                    y: 40.0,
+                    click: true,
+                },
+                1,
+            ),
+            make_event(
+                "test",
+                EventType::Mouse {
+                    x: 50.0,
+                    y: 60.0,
+                    click: false,
+                },
+                2,
+            ),
         ];
         let summary = summarize_action(&events);
         assert!(summary.contains("2 clicks"));

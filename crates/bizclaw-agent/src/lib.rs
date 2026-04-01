@@ -795,8 +795,7 @@ impl Agent {
 
         let summary = format!(
             "[Compacted: {} earlier messages]\n{}\n[End of compacted context]",
-            old_count,
-            summary_text
+            old_count, summary_text
         );
 
         // Rebuild: system (already at [0]) + summary + recent

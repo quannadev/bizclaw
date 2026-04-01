@@ -21,7 +21,10 @@ pub async fn start_clipboard_recorder(tx: mpsc::Sender<CatchMeEvent>) {
             && current_text != last_content
             && !current_text.trim().is_empty()
         {
-            debug!("New clipboard content captured ({} chars)", current_text.len());
+            debug!(
+                "New clipboard content captured ({} chars)",
+                current_text.len()
+            );
             last_content = current_text.clone();
 
             let event = CatchMeEvent::new(

@@ -13,7 +13,10 @@ pub async fn start_window_recorder(tx: mpsc::Sender<CatchMeEvent>) {
         match get_active_window() {
             Ok(window) => {
                 if window.app_name != last_app || window.title != last_title {
-                    debug!("Focus changed to app: {}, title: {}", window.app_name, window.title);
+                    debug!(
+                        "Focus changed to app: {}, title: {}",
+                        window.app_name, window.title
+                    );
                     last_app = window.app_name.clone();
                     last_title = window.title.clone();
 

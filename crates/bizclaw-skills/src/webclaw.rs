@@ -38,8 +38,11 @@ pub async fn execute_webclaw_scrape(url: &str) -> Result<String> {
         .send()
         .await
         .map_err(|e| BizClawError::Other(format!("Content fetch failed: {}", e)))?;
-        
-    let html = response.text().await.map_err(|e| BizClawError::Other(format!("Could not read body: {}", e)))?;
+
+    let html = response
+        .text()
+        .await
+        .map_err(|e| BizClawError::Other(format!("Could not read body: {}", e)))?;
 
     // 3. Extract using webclaw core
     let result = webclaw_core::extract(&html, Some(url))
@@ -55,8 +58,8 @@ pub async fn execute_webclaw_scrape(url: &str) -> Result<String> {
     }
     out.push_str(&format!("**Word Count:** {}\n", result.metadata.word_count));
     out.push_str("\n---\n\n");
-    
+
     out.push_str(&result.content.markdown);
-    
+
     Ok(out)
 }

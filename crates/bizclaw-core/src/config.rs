@@ -45,15 +45,17 @@ impl LlmConfig {
 
         // 1. Check BIZCLAW_LLM_API_KEY (universal override)
         if let Ok(key) = std::env::var("BIZCLAW_LLM_API_KEY")
-            && !key.is_empty() {
-                return key;
-            }
+            && !key.is_empty()
+        {
+            return key;
+        }
         // 2. Check provider-specific env var
         if let Some(env_name) = provider_env
             && let Ok(key) = std::env::var(env_name)
-                && !key.is_empty() {
-                    return key;
-                }
+            && !key.is_empty()
+        {
+            return key;
+        }
         // 3. Fall back to config.toml field
         self.api_key.clone()
     }
@@ -62,9 +64,10 @@ impl LlmConfig {
     /// Returns (is_configured, source, masked_value).
     pub fn key_status(&self) -> (bool, &'static str, String) {
         if let Ok(key) = std::env::var("BIZCLAW_LLM_API_KEY")
-            && !key.is_empty() {
-                return (true, "env", mask_key(&key));
-            }
+            && !key.is_empty()
+        {
+            return (true, "env", mask_key(&key));
+        }
         let provider_env = match self.provider.as_str() {
             "openai" => Some("OPENAI_API_KEY"),
             "anthropic" => Some("ANTHROPIC_API_KEY"),
@@ -76,9 +79,10 @@ impl LlmConfig {
         };
         if let Some(env_name) = provider_env
             && let Ok(key) = std::env::var(env_name)
-                && !key.is_empty() {
-                    return (true, "env", mask_key(&key));
-                }
+            && !key.is_empty()
+        {
+            return (true, "env", mask_key(&key));
+        }
         if !self.api_key.is_empty() {
             return (true, "config", mask_key(&self.api_key));
         }
@@ -108,7 +112,6 @@ pub fn mask_key(key: &str) -> String {
     let suffix = &key[key.len() - 3..];
     format!("{}***{}", prefix, suffix)
 }
-
 
 /// Root configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -915,7 +918,10 @@ impl TelegramChannelConfig {
 
     pub fn key_status(&self) -> (bool, &'static str, String) {
         if let Ok(key) = std::env::var("BIZCLAW_TELEGRAM_BOT_TOKEN")
-            && !key.is_empty() { return (true, "env", mask_key(&key)); }
+            && !key.is_empty()
+        {
+            return (true, "env", mask_key(&key));
+        }
         if !self.bot_token.is_empty() {
             return (true, "config", mask_key(&self.bot_token));
         }
@@ -952,7 +958,10 @@ impl DiscordChannelConfig {
 
     pub fn key_status(&self) -> (bool, &'static str, String) {
         if let Ok(key) = std::env::var("BIZCLAW_DISCORD_BOT_TOKEN")
-            && !key.is_empty() { return (true, "env", mask_key(&key)); }
+            && !key.is_empty()
+        {
+            return (true, "env", mask_key(&key));
+        }
         if !self.bot_token.is_empty() {
             return (true, "config", mask_key(&self.bot_token));
         }
@@ -1014,7 +1023,10 @@ impl WhatsAppChannelConfig {
 
     pub fn key_status(&self) -> (bool, &'static str, String) {
         if let Ok(key) = std::env::var("BIZCLAW_WHATSAPP_ACCESS_TOKEN")
-            && !key.is_empty() { return (true, "env", mask_key(&key)); }
+            && !key.is_empty()
+        {
+            return (true, "env", mask_key(&key));
+        }
         if !self.access_token.is_empty() {
             return (true, "config", mask_key(&self.access_token));
         }

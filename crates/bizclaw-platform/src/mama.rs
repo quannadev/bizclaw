@@ -24,12 +24,12 @@ use serde::{Deserialize, Serialize};
 pub struct ModelCost {
     pub provider: &'static str,
     pub model: &'static str,
-    pub input_per_1m: f64,   // USD per 1M input tokens
-    pub output_per_1m: f64,  // USD per 1M output tokens
-    pub tier: TaskTier,      // Which task tier this model is best for
-    pub context_window: u32, // Max context length
+    pub input_per_1m: f64,     // USD per 1M input tokens
+    pub output_per_1m: f64,    // USD per 1M output tokens
+    pub tier: TaskTier,        // Which task tier this model is best for
+    pub context_window: u32,   // Max context length
     pub env_key: &'static str, // Env var for API key
-    pub speed: Speed,        // Relative response speed
+    pub speed: Speed,          // Relative response speed
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,9 +44,9 @@ pub enum TaskTier {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Speed {
-    Fast,    // < 1s TTFT
-    Medium,  // 1-3s TTFT
-    Slow,    // > 3s TTFT
+    Fast,   // < 1s TTFT
+    Medium, // 1-3s TTFT
+    Slow,   // > 3s TTFT
 }
 
 /// Global cost table — updated March 2026 pricing.
@@ -231,7 +231,9 @@ pub fn select_cheapest_model(tier: TaskTier) -> Option<AvailableProvider> {
     available.sort_by(|a, b| {
         let cost_a = a.cost_input * 0.6 + a.cost_output * 0.4;
         let cost_b = b.cost_input * 0.6 + b.cost_output * 0.4;
-        cost_a.partial_cmp(&cost_b).unwrap_or(std::cmp::Ordering::Equal)
+        cost_a
+            .partial_cmp(&cost_b)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
 
     available.into_iter().next()
@@ -244,17 +246,43 @@ pub fn classify_task_tier(request: &str) -> TaskTier {
 
     // Complex indicators (substring match is fine for multi-char phrases)
     let complex_keywords = [
-        "lập kế hoạch", "plan", "phân tích", "analyze", "strategy",
-        "code", "viết code", "tạo workflow", "refactor", "debug",
-        "so sánh", "compare", "đánh giá", "evaluate", "architecture",
-        "thiết kế", "design", "tối ưu", "optimize", "reasoning",
+        "lập kế hoạch",
+        "plan",
+        "phân tích",
+        "analyze",
+        "strategy",
+        "code",
+        "viết code",
+        "tạo workflow",
+        "refactor",
+        "debug",
+        "so sánh",
+        "compare",
+        "đánh giá",
+        "evaluate",
+        "architecture",
+        "thiết kế",
+        "design",
+        "tối ưu",
+        "optimize",
+        "reasoning",
     ];
 
     // Simple indicators — use exact word match for short tokens
     let simple_words = [
-        "trả lời", "reply", "format", "dịch", "translate",
-        "tóm tắt ngắn", "brief", "yes/no", "đúng không",
-        "chào", "hello", "cảm ơn", "thanks",
+        "trả lời",
+        "reply",
+        "format",
+        "dịch",
+        "translate",
+        "tóm tắt ngắn",
+        "brief",
+        "yes/no",
+        "đúng không",
+        "chào",
+        "hello",
+        "cảm ơn",
+        "thanks",
     ];
 
     if complex_keywords.iter().any(|k| lower.contains(k)) {
@@ -276,8 +304,7 @@ pub fn classify_task_tier(request: &str) -> TaskTier {
 
 /// Check if Ollama is running locally.
 fn check_ollama_available() -> bool {
-    let host = std::env::var("OLLAMA_HOST")
-        .unwrap_or_else(|_| "http://localhost:11434".into());
+    let host = std::env::var("OLLAMA_HOST").unwrap_or_else(|_| "http://localhost:11434".into());
     // Quick sync check — just verify env is set or use default
     // In production, would do async health check
     !host.is_empty()
@@ -303,61 +330,117 @@ pub fn builtin_skills() -> Vec<SkillMeta> {
             name: "browser".into(),
             description: "Duyệt web, crawl trang, lấy nội dung. Dùng PinchTab.".into(),
             category: "automation".into(),
-            keywords: vec!["web".into(), "crawl".into(), "scrape".into(), "browse".into(), "duyệt".into()],
+            keywords: vec![
+                "web".into(),
+                "crawl".into(),
+                "scrape".into(),
+                "browse".into(),
+                "duyệt".into(),
+            ],
         },
         SkillMeta {
             name: "calendar".into(),
             description: "Quản lý Google Calendar — xem lịch, tạo sự kiện, check lịch rảnh.".into(),
             category: "productivity".into(),
-            keywords: vec!["lịch".into(), "calendar".into(), "sự kiện".into(), "event".into(), "booking".into(), "đặt lịch".into()],
+            keywords: vec![
+                "lịch".into(),
+                "calendar".into(),
+                "sự kiện".into(),
+                "event".into(),
+                "booking".into(),
+                "đặt lịch".into(),
+            ],
         },
         SkillMeta {
             name: "social_post".into(),
             description: "Đăng bài lên Facebook Page, Telegram Channel, webhook.".into(),
             category: "marketing".into(),
-            keywords: vec!["đăng bài".into(), "post".into(), "facebook".into(), "telegram".into(), "marketing".into()],
+            keywords: vec![
+                "đăng bài".into(),
+                "post".into(),
+                "facebook".into(),
+                "telegram".into(),
+                "marketing".into(),
+            ],
         },
         SkillMeta {
             name: "research".into(),
             description: "Nghiên cứu học thuật — tìm papers từ OpenAlex, Semantic Scholar.".into(),
             category: "research".into(),
-            keywords: vec!["nghiên cứu".into(), "research".into(), "paper".into(), "academic".into()],
+            keywords: vec![
+                "nghiên cứu".into(),
+                "research".into(),
+                "paper".into(),
+                "academic".into(),
+            ],
         },
         SkillMeta {
             name: "shell".into(),
             description: "Chạy lệnh terminal trên server.".into(),
             category: "system".into(),
-            keywords: vec!["terminal".into(), "command".into(), "shell".into(), "lệnh".into()],
+            keywords: vec![
+                "terminal".into(),
+                "command".into(),
+                "shell".into(),
+                "lệnh".into(),
+            ],
         },
         SkillMeta {
             name: "file".into(),
             description: "Đọc/ghi file trên hệ thống.".into(),
             category: "system".into(),
-            keywords: vec!["file".into(), "đọc".into(), "ghi".into(), "read".into(), "write".into()],
+            keywords: vec![
+                "file".into(),
+                "đọc".into(),
+                "ghi".into(),
+                "read".into(),
+                "write".into(),
+            ],
         },
         SkillMeta {
             name: "http_request".into(),
             description: "Gọi API bên ngoài (GET/POST/PUT/DELETE).".into(),
             category: "integration".into(),
-            keywords: vec!["api".into(), "http".into(), "request".into(), "webhook".into()],
+            keywords: vec![
+                "api".into(),
+                "http".into(),
+                "request".into(),
+                "webhook".into(),
+            ],
         },
         SkillMeta {
             name: "memory_search".into(),
             description: "Tìm kiếm trong bộ nhớ agent (RAG).".into(),
             category: "memory".into(),
-            keywords: vec!["nhớ".into(), "memory".into(), "tìm".into(), "search".into(), "rag".into()],
+            keywords: vec![
+                "nhớ".into(),
+                "memory".into(),
+                "tìm".into(),
+                "search".into(),
+                "rag".into(),
+            ],
         },
         SkillMeta {
             name: "db_query".into(),
             description: "Truy vấn database SQLite/PostgreSQL.".into(),
             category: "data".into(),
-            keywords: vec!["database".into(), "query".into(), "sql".into(), "dữ liệu".into()],
+            keywords: vec![
+                "database".into(),
+                "query".into(),
+                "sql".into(),
+                "dữ liệu".into(),
+            ],
         },
         SkillMeta {
             name: "edit_file".into(),
             description: "Chỉnh sửa file (search & replace, append).".into(),
             category: "system".into(),
-            keywords: vec!["edit".into(), "sửa".into(), "replace".into(), "chỉnh".into()],
+            keywords: vec![
+                "edit".into(),
+                "sửa".into(),
+                "replace".into(),
+                "chỉnh".into(),
+            ],
         },
         SkillMeta {
             name: "document_reader".into(),
@@ -458,11 +541,7 @@ pub fn generate_plan_preview(request: &str) -> ExecutionPlan {
             );
             (p.provider.clone(), p.model.clone(), estimated)
         }
-        None => (
-            "none".into(),
-            "none".into(),
-            "No provider available".into(),
-        ),
+        None => ("none".into(), "none".into(), "No provider available".into()),
     };
 
     let skills_used: Vec<String> = relevant_skills.iter().map(|s| s.name.clone()).collect();
@@ -495,15 +574,13 @@ pub fn generate_plan_preview(request: &str) -> ExecutionPlan {
 // 5. API HANDLERS
 // ══════════════════════════════════════════════════════════
 
-use axum::extract::State;
-use axum::Json;
-use std::sync::Arc;
 use crate::admin::AdminState;
+use axum::Json;
+use axum::extract::State;
+use std::sync::Arc;
 
 /// GET /api/mama/providers — list available AI providers with costs.
-pub async fn list_providers(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn list_providers(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let providers = detect_available_providers();
     let all_models: Vec<serde_json::Value> = MODEL_COSTS
         .iter()
@@ -582,9 +659,7 @@ pub async fn search_skills_api(
 }
 
 /// GET /api/mama/status — Mama AI system overview.
-pub async fn mama_status(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn mama_status(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let providers = detect_available_providers();
     let skills = builtin_skills();
 
@@ -613,8 +688,8 @@ pub async fn mama_status(
 // 5b. WORKFLOW + TEAM + SKILLS INTEGRATION — The Nervous System
 // ══════════════════════════════════════════════════════════
 
+use bizclaw_orchestrator::team::{AgentOrganization, AgentRole, AgentTeam, TeamAgent};
 use bizclaw_workflows::{WorkflowEngine, builtin_workflows};
-use bizclaw_orchestrator::team::{AgentOrganization, AgentTeam, TeamAgent, AgentRole};
 
 /// Initialize the WorkflowEngine with all 22 built-in templates.
 pub fn init_workflow_engine() -> WorkflowEngine {
@@ -716,7 +791,11 @@ pub fn load_skills_from_registry() -> Vec<SkillMeta> {
             name: m.metadata.name.clone(),
             description: m.metadata.description.clone(),
             category: if m.metadata.category.is_empty() {
-                m.metadata.tags.first().cloned().unwrap_or_else(|| "general".into())
+                m.metadata
+                    .tags
+                    .first()
+                    .cloned()
+                    .unwrap_or_else(|| "general".into())
             } else {
                 m.metadata.category.clone()
             },
@@ -733,9 +812,7 @@ pub fn load_skills_from_registry() -> Vec<SkillMeta> {
 }
 
 /// GET /api/mama/workflows — list all available workflows.
-pub async fn list_workflows(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn list_workflows(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let engine = init_workflow_engine();
     let workflows: Vec<serde_json::Value> = engine
         .list()
@@ -810,9 +887,7 @@ pub async fn run_workflow(
 }
 
 /// GET /api/mama/teams — list all agent teams and org chart.
-pub async fn list_teams(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn list_teams(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let org = init_default_org().await;
     let summary = org.summary().await;
 
@@ -851,15 +926,21 @@ pub async fn team_for_channel(
 // 5c. BUDGET + HEARTBEAT + HANDS + EXECUTE — Complete Wiring
 // ══════════════════════════════════════════════════════════
 
-use bizclaw_orchestrator::budget::{BudgetManager, AgentBudget, BudgetExceedAction, BudgetStatus};
-use bizclaw_orchestrator::heartbeat::{HeartbeatMonitor, HeartbeatConfig};
+use bizclaw_orchestrator::budget::{AgentBudget, BudgetExceedAction, BudgetManager, BudgetStatus};
+use bizclaw_orchestrator::heartbeat::{HeartbeatConfig, HeartbeatMonitor};
 
 /// Initialize budget manager with default agent budgets.
 pub async fn init_budget_manager() -> BudgetManager {
     let mgr = BudgetManager::new();
 
     // Default budget: 100K tokens/month for free tier agents
-    let agent_ids = ["sales-lead", "sales-fb", "marketing-lead", "content-writer", "support-lead"];
+    let agent_ids = [
+        "sales-lead",
+        "sales-fb",
+        "marketing-lead",
+        "content-writer",
+        "support-lead",
+    ];
     for id in agent_ids {
         mgr.set_budget(AgentBudget {
             agent_id: id.into(),
@@ -868,10 +949,14 @@ pub async fn init_budget_manager() -> BudgetManager {
             alert_at_percent: 80.0,
             on_exceed: BudgetExceedAction::SwitchToLocal,
             fallback_model: "qwen3.5-4b-neo".into(),
-        }).await;
+        })
+        .await;
     }
 
-    tracing::info!("💰 Mama AI: Budget Manager initialized — {} agents tracked", agent_ids.len());
+    tracing::info!(
+        "💰 Mama AI: Budget Manager initialized — {} agents tracked",
+        agent_ids.len()
+    );
     mgr
 }
 
@@ -886,11 +971,29 @@ pub async fn init_heartbeat_monitor() -> HeartbeatMonitor {
     });
 
     // Register all org agents
-    monitor.register("sales-lead", vec!["zalo".into(), "facebook".into(), "web".into()], 30).await;
-    monitor.register("sales-fb", vec!["facebook".into()], 30).await;
-    monitor.register("marketing-lead", vec!["internal".into()], 60).await;
-    monitor.register("content-writer", vec!["internal".into()], 60).await;
-    monitor.register("support-lead", vec!["zalo".into(), "telegram".into(), "email".into()], 30).await;
+    monitor
+        .register(
+            "sales-lead",
+            vec!["zalo".into(), "facebook".into(), "web".into()],
+            30,
+        )
+        .await;
+    monitor
+        .register("sales-fb", vec!["facebook".into()], 30)
+        .await;
+    monitor
+        .register("marketing-lead", vec!["internal".into()], 60)
+        .await;
+    monitor
+        .register("content-writer", vec!["internal".into()], 60)
+        .await;
+    monitor
+        .register(
+            "support-lead",
+            vec!["zalo".into(), "telegram".into(), "email".into()],
+            30,
+        )
+        .await;
 
     tracing::info!("💓 Mama AI: Heartbeat Monitor initialized — 5 agents tracked");
     monitor
@@ -923,8 +1026,7 @@ pub async fn execute_plan(
     let skills = search_skills(&body.goal, 5);
 
     // 3. Route to cheapest provider for this tier
-    let best = select_cheapest_model(tier)
-        .unwrap_or_else(|| providers[0].clone());
+    let best = select_cheapest_model(tier).unwrap_or_else(|| providers[0].clone());
 
     // 4. Generate execution plan
     let plan = generate_plan_preview(&body.goal);
@@ -981,12 +1083,15 @@ pub async fn execute_plan(
 
         // ** Mama -> Execute Plan (Agent Spawning) **
         let mut agent = bizclaw_agent::Agent::new(config).unwrap();
-        
+
         let prompt = if current_input.is_empty() {
             format!("Task Goal: {}\n\nPlease execute your step.", body.goal)
         } else {
             // ** Agent-to-Agent Handoff **
-            format!("Task Goal: {}\n\n--- Handoff Context from Previous Agent ---\n{}\n--- End Context ---\n\nPlease execute your assigned step based on the previous agent's results.", body.goal, current_input)
+            format!(
+                "Task Goal: {}\n\n--- Handoff Context from Previous Agent ---\n{}\n--- End Context ---\n\nPlease execute your assigned step based on the previous agent's results.",
+                body.goal, current_input
+            )
         };
 
         let mut step_tokens = (prompt.len() as u64) / 4;
@@ -1001,20 +1106,23 @@ pub async fn execute_plan(
         };
 
         let executed_provider_log = format!("{}/{}", best.provider, best.model);
-        
+
         // Save result for the Next Agent
         current_input = final_result.clone();
 
         total_tokens += step_tokens;
-        let step_cost = step_tokens as f64 / 1_000_000.0 * match tier {
-            TaskTier::Simple => 0.10,
-            TaskTier::Medium => 0.50,
-            TaskTier::Complex => 3.00,
-        };
+        let step_cost = step_tokens as f64 / 1_000_000.0
+            * match tier {
+                TaskTier::Simple => 0.10,
+                TaskTier::Medium => 0.50,
+                TaskTier::Complex => 3.00,
+            };
         total_cost += step_cost;
 
         // Record total tokens used for this step
-        budget_mgr.record_usage("mama-executor", step_tokens / 2, step_tokens / 2, step_cost).await;
+        budget_mgr
+            .record_usage("mama-executor", step_tokens / 2, step_tokens / 2, step_cost)
+            .await;
 
         step_results.push(serde_json::json!({
             "step": i + 1,
@@ -1048,9 +1156,7 @@ pub async fn execute_plan(
 }
 
 /// GET /api/mama/budget — get budget summary for all agents.
-pub async fn budget_summary(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn budget_summary(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let mgr = init_budget_manager().await;
     Json(serde_json::json!({
         "budget": mgr.summary().await,
@@ -1059,9 +1165,7 @@ pub async fn budget_summary(
 }
 
 /// GET /api/mama/health — get heartbeat status for all agents.
-pub async fn health_status(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn health_status(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let monitor = init_heartbeat_monitor().await;
     Json(serde_json::json!({
         "health": monitor.summary().await,
@@ -1075,9 +1179,7 @@ pub async fn health_status(
 }
 
 /// GET /api/mama/dashboard — complete Mama AI dashboard.
-pub async fn mama_dashboard(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn mama_dashboard(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let org = init_default_org().await;
     let engine = init_workflow_engine();
     let budget_mgr = init_budget_manager().await;
@@ -1365,7 +1467,11 @@ pub async fn smart_onboard(
         detected.provider,
         detected.confidence,
         default_model,
-        if detected.confidence == "high" { "BẬT" } else { "TẮT (cần xác nhận)" },
+        if detected.confidence == "high" {
+            "BẬT"
+        } else {
+            "TẮT (cần xác nhận)"
+        },
         detected.estimated_monthly_cost,
         btype,
         recommended_skills
@@ -1429,16 +1535,28 @@ mod tests {
 
     #[test]
     fn test_classify_medium() {
-        assert_eq!(classify_task_tier("viết bài về du lịch Đà Lạt"), TaskTier::Medium);
-        assert_eq!(classify_task_tier("tổng hợp thông tin đặt phòng"), TaskTier::Medium);
+        assert_eq!(
+            classify_task_tier("viết bài về du lịch Đà Lạt"),
+            TaskTier::Medium
+        );
+        assert_eq!(
+            classify_task_tier("tổng hợp thông tin đặt phòng"),
+            TaskTier::Medium
+        );
         // "facebook" should NOT match "ok" anymore
         assert_eq!(classify_task_tier("đăng lên facebook"), TaskTier::Medium);
     }
 
     #[test]
     fn test_classify_complex() {
-        assert_eq!(classify_task_tier("lập kế hoạch marketing"), TaskTier::Complex);
-        assert_eq!(classify_task_tier("phân tích đối thủ cạnh tranh"), TaskTier::Complex);
+        assert_eq!(
+            classify_task_tier("lập kế hoạch marketing"),
+            TaskTier::Complex
+        );
+        assert_eq!(
+            classify_task_tier("phân tích đối thủ cạnh tranh"),
+            TaskTier::Complex
+        );
         assert_eq!(classify_task_tier("viết code API mới"), TaskTier::Complex);
     }
 
@@ -1446,7 +1564,11 @@ mod tests {
     fn test_model_costs_sorted() {
         for m in MODEL_COSTS {
             assert!(m.input_per_1m >= 0.0, "Negative input cost for {}", m.model);
-            assert!(m.output_per_1m >= 0.0, "Negative output cost for {}", m.model);
+            assert!(
+                m.output_per_1m >= 0.0,
+                "Negative output cost for {}",
+                m.model
+            );
         }
     }
 
@@ -1575,7 +1697,11 @@ mod tests {
     #[test]
     fn test_workflow_engine_init() {
         let engine = init_workflow_engine();
-        assert!(engine.count() >= 20, "Should have 20+ built-in workflows, got {}", engine.count());
+        assert!(
+            engine.count() >= 20,
+            "Should have 20+ built-in workflows, got {}",
+            engine.count()
+        );
         assert!(engine.get("content_pipeline").is_some());
         assert!(engine.get("meeting_recap").is_some());
         assert!(engine.get("ceo_daily_briefing").is_some());
@@ -1586,7 +1712,10 @@ mod tests {
         let mut engine = init_workflow_engine();
         let agent_fn: bizclaw_workflows::engine::AgentCallback =
             Box::new(|agent: &str, prompt: &str| {
-                Ok((format!("[{}] OK: {}", agent, &prompt[..prompt.len().min(30)]), 50))
+                Ok((
+                    format!("[{}] OK: {}", agent, &prompt[..prompt.len().min(30)]),
+                    50,
+                ))
             });
 
         let result = engine.execute("content_pipeline", "du lịch Đà Lạt", &agent_fn);
@@ -1668,8 +1797,14 @@ mod tests {
         assert_eq!(summary["healthy"], 5);
 
         // Verify specific agent registration
-        assert_eq!(monitor.status("sales-lead").await, Some(HealthStatus::Healthy));
-        assert_eq!(monitor.status("content-writer").await, Some(HealthStatus::Healthy));
+        assert_eq!(
+            monitor.status("sales-lead").await,
+            Some(HealthStatus::Healthy)
+        );
+        assert_eq!(
+            monitor.status("content-writer").await,
+            Some(HealthStatus::Healthy)
+        );
         assert_eq!(monitor.status("nonexistent").await, None);
     }
 
@@ -1677,7 +1812,10 @@ mod tests {
     fn test_plan_generates_steps() {
         let plan = generate_plan_preview("Phân tích đối thủ và tạo báo cáo marketing");
         assert!(!plan.steps.is_empty());
-        assert_eq!(plan.task_tier, classify_task_tier("Phân tích đối thủ và tạo báo cáo marketing"));
+        assert_eq!(
+            plan.task_tier,
+            classify_task_tier("Phân tích đối thủ và tạo báo cáo marketing")
+        );
     }
 
     #[test]
@@ -1685,21 +1823,49 @@ mod tests {
         let skills = load_skills_from_registry();
         for skill in &skills {
             assert!(!skill.name.is_empty(), "Skill name must not be empty");
-            assert!(!skill.description.is_empty(), "Skill description must not be empty");
+            assert!(
+                !skill.description.is_empty(),
+                "Skill description must not be empty"
+            );
         }
     }
 
     #[test]
     fn test_provider_detection_all_types() {
         // Anthropic
-        assert_eq!(detect_provider_from_key("sk-ant-api03-xxx").unwrap().provider, "anthropic");
+        assert_eq!(
+            detect_provider_from_key("sk-ant-api03-xxx")
+                .unwrap()
+                .provider,
+            "anthropic"
+        );
         // OpenAI
-        assert_eq!(detect_provider_from_key("sk-proj-xxxxxxxxxxxxxxxx").unwrap().provider, "openai");
+        assert_eq!(
+            detect_provider_from_key("sk-proj-xxxxxxxxxxxxxxxx")
+                .unwrap()
+                .provider,
+            "openai"
+        );
         // Gemini
-        assert_eq!(detect_provider_from_key("AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").unwrap().provider, "gemini");
+        assert_eq!(
+            detect_provider_from_key("AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                .unwrap()
+                .provider,
+            "gemini"
+        );
         // Groq
-        assert_eq!(detect_provider_from_key("gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").unwrap().provider, "groq");
+        assert_eq!(
+            detect_provider_from_key("gsk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                .unwrap()
+                .provider,
+            "groq"
+        );
         // xAI
-        assert_eq!(detect_provider_from_key("xai-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx").unwrap().provider, "xai");
+        assert_eq!(
+            detect_provider_from_key("xai-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
+                .unwrap()
+                .provider,
+            "xai"
+        );
     }
 }

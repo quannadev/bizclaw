@@ -29,9 +29,9 @@ pub use enterprise::{
     AnalyticsSummary, HandoffMessage, HandoffSession, QuotaStatus, TenantInvitation, TenantMember,
     TenantRole,
 };
+pub use health::{HealthMonitorConfig, spawn_health_monitor};
 pub use mission_control::{
     AgentSession, GithubSync, KANBAN_COLUMNS, QualityReview, Task, TaskComment,
 };
 pub use server_provisioner::{ProvisionRequest, RemoteServer};
 pub use tenant::TenantManager;
-pub use health::{HealthMonitorConfig, spawn_health_monitor};

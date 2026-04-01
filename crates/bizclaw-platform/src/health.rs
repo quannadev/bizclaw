@@ -172,7 +172,10 @@ fn run_health_check(
                     "tenant_restart_exhausted",
                     "system",
                     &tenant.id,
-                    Some(&format!("max_attempts={} exhausted", config.max_restart_attempts)),
+                    Some(&format!(
+                        "max_attempts={} exhausted",
+                        config.max_restart_attempts
+                    )),
                 )
                 .ok();
             }
@@ -225,18 +228,10 @@ fn run_health_check(
                     .ok();
                 }
                 tracker.reset(&tenant.id);
-                tracing::info!(
-                    "[health] ✅ '{}' restarted (pid={})",
-                    tenant.slug,
-                    new_pid
-                );
+                tracing::info!("[health] ✅ '{}' restarted (pid={})", tenant.slug, new_pid);
             }
             Err(e) => {
-                tracing::error!(
-                    "[health] ❌ Restart failed for '{}': {}",
-                    tenant.slug,
-                    e
-                );
+                tracing::error!("[health] ❌ Restart failed for '{}': {}", tenant.slug, e);
                 if let Ok(db) = db.lock() {
                     db.update_tenant_status(&tenant.id, "error", None).ok();
                 }

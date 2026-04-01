@@ -9,31 +9,47 @@ function AgentsPage({ config, lang }) {
   const [loading,setLoading] = useState(true);
   const [showForm,setShowForm] = useState(false);
   const [editAgent,setEditAgent] = useState(null);
-  const [form,setForm] = useState({name:'',role:'',description:'',system_prompt:'',provider:'',model:'',channels:[]});
+  const [form,setForm] = useState({name:'',role:'',description:'',system_prompt:'',provider:'',model:'',channels:[], rag_collection:'', sql_connection:''});
   const availableChannels = ['telegram','zalo','discord','webhook','web'];
   const [providersList, setProvidersList] = useState([]);
+  const [collections, setCollections] = useState([]);
+  const [sqlConns, setSqlConns] = useState([]);
   const [customAgentProv, setCustomAgentProv] = useState(false);
   const [customAgentModel, setCustomAgentModel] = useState(false);
 
   const load = async () => {
     try {
-      const [agRes, provRes] = await Promise.all([
+      const [agRes, provRes, docsRes, sqlRes] = await Promise.all([
         authFetch('/api/v1/agents'),
         authFetch('/api/v1/providers'),
+        authFetch('/api/v1/knowledge/documents'),
+        authFetch('/api/v1/nl-query/status')
       ]);
       const agData = await agRes.json();
       const provData = await provRes.json();
+      const docsData = await docsRes.json();
+      const sqlData = await sqlRes.json();
+
       setAgents(agData.agents || []);
       setProvidersList(provData.providers || []);
+      
+      // Extract unique collections from documents array or generic list
+      if (docsData.documents) {
+        const s = new Set(docsData.documents.map(d => d.owner).filter(Boolean));
+        setCollections(Array.from(s).sort());
+      }
+      if (sqlData.connections) {
+        setSqlConns(sqlData.connections || []);
+      }
     } catch(e){ console.error('AgentsPage load error:', e); }
     setLoading(false);
   };
   useEffect(()=>{ load(); },[]);
 
-  const openCreate = () => { setEditAgent(null); setCustomAgentProv(false); setCustomAgentModel(false); setForm({name:'',role:'general',description:'',system_prompt:'',provider:config?.default_provider||'',model:config?.default_model||'',channels:[]}); setShowForm(true); };
+  const openCreate = () => { setEditAgent(null); setCustomAgentProv(false); setCustomAgentModel(false); setForm({name:'',role:'general',description:'',system_prompt:'',provider:config?.default_provider||'',model:config?.default_model||'',channels:[], rag_collection:'', sql_connection:''}); setShowForm(true); };
   const openEdit = (a) => {
     setEditAgent(a);
-    setForm({name:a.name,role:a.role||'',description:a.description||'',system_prompt:a.system_prompt||'',provider:a.provider||'',model:a.model||'',channels:a.channels||[]});
+    setForm({name:a.name,role:a.role||'',description:a.description||'',system_prompt:a.system_prompt||'',provider:a.provider||'',model:a.model||'',channels:a.channels||[], rag_collection:a.rag_collection||'', sql_connection:a.sql_connection||''});
     // Check if provider/model exists in list
     setCustomAgentProv(a.provider && !providersList.find(p => p.name === a.provider));
     setCustomAgentModel(false);
@@ -42,7 +58,7 @@ function AgentsPage({ config, lang }) {
 
   const saveAgent = async () => {
     try {
-      const agentData = {name:form.name,role:form.role,description:form.description,system_prompt:form.system_prompt,provider:form.provider,model:form.model};
+      const agentData = {name:form.name,role:form.role,description:form.description,system_prompt:form.system_prompt,provider:form.provider,model:form.model, rag_collection: form.rag_collection, sql_connection: form.sql_connection};
       if(editAgent) {
         const r = await authFetch('/api/v1/agents/'+encodeURIComponent(editAgent.name), {
           method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(agentData)
@@ -144,6 +160,18 @@ function AgentsPage({ config, lang }) {
             `}
           </label>
           <label style="grid-column:span 2">Mô tả<input style="${inp}" value=${form.description} onInput=${e=>setForm(f=>({...f,description:e.target.value}))} placeholder="Mô tả ngắn..." /></label>
+          <label>Kho Nội Bộ (PDF/Doc) (Auto-RAG)
+            <select style="${inp}" value=${form.rag_collection} onChange=${e=>setForm(f=>({...f,rag_collection:e.target.value}))}>
+              <option value="">— Mặc định (Tất cả) —</option>
+              ${collections.map(c => html`<option key=${c} value=${c}>📚 ${c}</option>`)}
+            </select>
+          </label>
+          <label>Nguồn Dữ Liệu SQL
+            <select style="${inp}" value=${form.sql_connection} onChange=${e=>setForm(f=>({...f,sql_connection:e.target.value}))}>
+              <option value="">— Không kết nối —</option>
+              ${sqlConns.map(c => html`<option key=${c.id} value=${c.id}>🗄️ ${c.id} (${c.db_type})</option>`)}
+            </select>
+          </label>
           <label style="grid-column:span 2">System Prompt<textarea style="${inp};min-height:80px;resize:vertical;font-family:var(--mono)" value=${form.system_prompt} onInput=${e=>setForm(f=>({...f,system_prompt:e.target.value}))} placeholder="You are a..." /></label>
           <label style="grid-column:span 2">📡 Gán Agent với Kênh
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">

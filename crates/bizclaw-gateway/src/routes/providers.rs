@@ -5,10 +5,10 @@
 //!          update_provider, fetch_provider_models, list_channels,
 //!          ollama_models, brain_scan_models.
 
+use super::helpers::internal_error;
+use crate::server::AppState;
 use axum::{Json, extract::State};
 use std::sync::Arc;
-use crate::server::AppState;
-use super::helpers::internal_error;
 
 /// List available providers (from DB) — fully self-describing, no hardcoded metadata.
 pub async fn list_providers(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {

@@ -1,5 +1,5 @@
-use bizclaw_tools::stealth_browser::StealthBrowserTool;
 use bizclaw_core::traits::Tool;
+use bizclaw_tools::stealth_browser::StealthBrowserTool;
 use std::env;
 
 #[tokio::main]
@@ -26,20 +26,22 @@ async fn main() {
     println!("3. Close the browser window when you are done.");
 
     let tool = StealthBrowserTool::new();
-    
+
     // Set headless to false to make it look like a human and bypass blocks
     let navigate_cmd = format!(
         r#"{{"action":"navigate", "url":"{}", "headless": false, "profile": "{}"}}"#,
         url, profile
     );
-    
+
     match tool.execute(&navigate_cmd).await {
         Ok(res) => println!("{}", res.output),
         Err(e) => println!("❌ Failed to launch browser: {}", e),
     }
-    
+
     // Keep alive until user closes the window or press Ctrl+C
-    println!("\n🟢 Browser session active. Press Ctrl+C to exit this script after closing the browser.");
+    println!(
+        "\n🟢 Browser session active. Press Ctrl+C to exit this script after closing the browser."
+    );
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }

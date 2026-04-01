@@ -366,8 +366,9 @@ pub async fn knowledge_upload_file(
                 _ => {
                     // Text-based files: convert bytes to string
                     match String::from_utf8(file_data) {
-                        Ok(content) => store
-                            .add_document_with_meta(&file_name, &content, "upload", &owner, file_size),
+                        Ok(content) => store.add_document_with_meta(
+                            &file_name, &content, "upload", &owner, file_size,
+                        ),
                         Err(_) => Err("File is not valid UTF-8 text".into()),
                     }
                 }

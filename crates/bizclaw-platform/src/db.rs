@@ -436,7 +436,10 @@ impl PlatformDb {
             "datetime('now', '+31 days', '+7 hours')"
         };
 
-        let sql = format!("UPDATE tenants SET plan=?1, max_messages_day=?2, max_channels=?3, max_members=?4, updated_at=datetime('now', '+7 hours'), expires_at={} WHERE id=?5", expires_stmt);
+        let sql = format!(
+            "UPDATE tenants SET plan=?1, max_messages_day=?2, max_channels=?3, max_members=?4, updated_at=datetime('now', '+7 hours'), expires_at={} WHERE id=?5",
+            expires_stmt
+        );
 
         self.conn
             .execute(&sql, params![plan, max_msg, max_ch, max_mem, id])
@@ -465,19 +468,23 @@ impl PlatformDb {
 
     /// Link payment to a tenant and mark as success.
     pub fn complete_payment(&self, transaction_ref: &str, tenant_id: &str) -> Result<()> {
-        self.conn.execute(
-            "UPDATE payment_logs SET status='success', tenant_id=?1 WHERE transaction_ref=?2",
-            params![tenant_id, transaction_ref],
-        ).map_err(|e| BizClawError::Memory(format!("Complete payment: {e}")))?;
+        self.conn
+            .execute(
+                "UPDATE payment_logs SET status='success', tenant_id=?1 WHERE transaction_ref=?2",
+                params![tenant_id, transaction_ref],
+            )
+            .map_err(|e| BizClawError::Memory(format!("Complete payment: {e}")))?;
         Ok(())
     }
 
     /// Mark payment as failed or unmatched.
     pub fn fail_payment(&self, transaction_ref: &str, status: &str) -> Result<()> {
-        self.conn.execute(
-            "UPDATE payment_logs SET status=?1 WHERE transaction_ref=?2",
-            params![status, transaction_ref],
-        ).map_err(|e| BizClawError::Memory(format!("Fail payment: {e}")))?;
+        self.conn
+            .execute(
+                "UPDATE payment_logs SET status=?1 WHERE transaction_ref=?2",
+                params![status, transaction_ref],
+            )
+            .map_err(|e| BizClawError::Memory(format!("Fail payment: {e}")))?;
         Ok(())
     }
 
@@ -1496,4 +1503,3 @@ mod tests {
         assert_eq!(deleted, 0);
     }
 }
-

@@ -2,18 +2,15 @@
 //! Handles generic webhooks, Discord, Zalo OA, WhatsApp, Messenger, Xiaozhi.
 //! Provider management extracted to routes/providers.rs.
 
+use super::{load_channel_instances, safe_truncate, save_channel_instances};
+use crate::server::AppState;
 use axum::{Json, extract::State};
 use std::sync::Arc;
-use crate::server::AppState;
-use super::{
-    load_channel_instances, safe_truncate, save_channel_instances,
-};
 
 // Re-export provider functions for backward compat
 pub use super::providers::{
-    list_providers, create_provider, delete_provider,
-    update_provider, fetch_provider_models, list_channels,
-    ollama_models, brain_scan_models,
+    brain_scan_models, create_provider, delete_provider, fetch_provider_models, list_channels,
+    list_providers, ollama_models, update_provider,
 };
 
 /// Webhook inbound — receives external messages, routes to bound agent, replies.
@@ -367,7 +364,11 @@ pub async fn dispatch_to_channel_agent(state: &AppState, channel: &str, content:
         match orch.send_to(&agent_name, content).await {
             Ok(r) => return r,
             Err(e) => {
-                tracing::warn!("Failed to route to mapped agent '{}': {}. Falling back to default.", agent_name, e);
+                tracing::warn!(
+                    "Failed to route to mapped agent '{}': {}. Falling back to default.",
+                    agent_name,
+                    e
+                );
             }
         }
     }
@@ -402,7 +403,9 @@ pub async fn auto_connect_channels(state: Arc<AppState>) {
 
         if let Some((bot_token, chat_ids)) = tg_data {
             // Find which agent to bind to — check agent-channels.json first
-            let mut target_agent = resolve_agent_for_channel(&state, "telegram").await.unwrap_or_default();
+            let mut target_agent = resolve_agent_for_channel(&state, "telegram")
+                .await
+                .unwrap_or_default();
             // Fallback: bind to first agent available
             if target_agent.is_empty() {
                 let orch = state.orchestrator.lock().await;
@@ -690,7 +693,6 @@ pub async fn xiaozhi_webhook(
         "timestamp": chrono::Utc::now().to_rfc3339(),
     }))
 }
-
 
 // ═══════════════════════════════════════════════════════════════════════
 // ZALO OA WEBHOOK — Server-side Zalo without Android bridge

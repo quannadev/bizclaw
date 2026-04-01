@@ -5,8 +5,8 @@
 use axum::{Json, extract::State};
 use std::sync::Arc;
 
-use crate::server::AppState;
 use super::helpers::internal_error;
+use crate::server::AppState;
 
 // ═══ Workflows API ═══
 
@@ -276,13 +276,16 @@ pub async fn workflows_run(
         let response = {
             let mut orch = state.orchestrator.lock().await;
             let target = agent_role.to_lowercase().replace(" ", "_");
-            
+
             // Try explicit routing, fallback to default agent
             let res = orch.send_to(&target, &prompt).await;
             let res = match res {
                 Ok(r) => Ok(r),
                 Err(bizclaw_core::error::BizClawError::AgentNotFound(_)) => {
-                    tracing::warn!("Agent '{}' not found, falling back to default orchestration", target);
+                    tracing::warn!(
+                        "Agent '{}' not found, falling back to default orchestration",
+                        target
+                    );
                     orch.send(&prompt).await
                 }
                 Err(e) => Err(e),

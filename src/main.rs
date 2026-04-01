@@ -613,7 +613,9 @@ async fn main() -> Result<()> {
             }
 
             // ── Background Workers ──
-            let registry = std::sync::Arc::new(tokio::sync::Mutex::new(bizclaw_hands::registry::HandRegistry::with_defaults()));
+            let registry = std::sync::Arc::new(tokio::sync::Mutex::new(
+                bizclaw_hands::registry::HandRegistry::with_defaults(),
+            ));
             bizclaw_hands::runner::HandRunner::new(registry, 60).spawn();
             tokio::spawn(async move {
                 bizclaw_platform::oauth::start_token_refresh_worker(None).await;

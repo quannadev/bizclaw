@@ -54,7 +54,12 @@ impl Tool for CatchMeSearchTool {
         // Here we'd typically initialize CatchMeStore and query the activity_tree
         let _store = match CatchMeStore::new(&self.db_path) {
             Ok(s) => s,
-            Err(e) => return Err(BizClawError::Tool(format!("Failed to open CatchMe database: {}", e))),
+            Err(e) => {
+                return Err(BizClawError::Tool(format!(
+                    "Failed to open CatchMe database: {}",
+                    e
+                )));
+            }
         };
 
         // Stub response (logic to traverse the Tree Memory is complex and requires LLM integration)

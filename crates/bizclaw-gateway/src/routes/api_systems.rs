@@ -1,7 +1,7 @@
 //! Miscellaneous System APIs (MCP, SSO, TTS, Plugin, Edge IoT, Fine-tuning, Analytics).
+use crate::server::AppState;
 use axum::{Json, extract::State};
 use std::sync::Arc;
-use crate::server::AppState;
 
 // ═══ MCP Servers API ═══
 pub async fn mcp_list_servers(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
@@ -267,4 +267,3 @@ pub async fn tts_voices() -> Json<serde_json::Value> {
         .collect();
     Json(serde_json::json!({"ok": true, "voices": voices, "provider": "edge"}))
 }
-

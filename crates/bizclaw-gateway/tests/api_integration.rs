@@ -4,12 +4,12 @@
 //! Uses axum::test helpers for in-process integration testing.
 
 use axum::{
+    Router,
     body::Body,
     http::{Request, StatusCode},
-    Router,
 };
-use tower::ServiceExt;
 use serde_json::json;
+use tower::ServiceExt;
 
 /// Build a minimal test router with only the routes we want to test.
 /// This avoids needing a full AppState with real DB/agent/etc.
@@ -38,7 +38,9 @@ fn test_app() -> Router {
         )),
         knowledge: Arc::new(tokio::sync::Mutex::new(None)),
         telegram_bots: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
-        db: Arc::new(bizclaw_gateway::db::GatewayDb::open(std::path::Path::new(":memory:")).unwrap()),
+        db: Arc::new(
+            bizclaw_gateway::db::GatewayDb::open(std::path::Path::new(":memory:")).unwrap(),
+        ),
         orch_store: Arc::new(bizclaw_db::SqliteStore::in_memory().unwrap()) as _,
         traces: Arc::new(Mutex::new(Vec::new())),
         activity_tx,
@@ -48,18 +50,42 @@ fn test_app() -> Router {
 
     Router::new()
         .route("/health", axum::routing::get(routes::health_check))
-        .route("/api/v1/system/info", axum::routing::get(routes::system_info))
-        .route("/api/v1/system/health", axum::routing::get(routes::system_health_check))
+        .route(
+            "/api/v1/system/info",
+            axum::routing::get(routes::system_info),
+        )
+        .route(
+            "/api/v1/system/health",
+            axum::routing::get(routes::system_health_check),
+        )
         .route("/api/v1/config", axum::routing::get(routes::get_config))
-        .route("/api/v1/config/full", axum::routing::get(routes::get_full_config))
+        .route(
+            "/api/v1/config/full",
+            axum::routing::get(routes::get_full_config),
+        )
         .route("/api/v1/config", axum::routing::put(routes::update_config))
         .route("/api/v1/agents", axum::routing::get(routes::list_agents))
         .route("/api/v1/agents", axum::routing::post(routes::create_agent))
-        .route("/api/v1/agents/{name}", axum::routing::delete(routes::delete_agent))
-        .route("/api/v1/providers", axum::routing::get(routes::list_providers))
-        .route("/api/v1/channels", axum::routing::get(routes::list_channels))
-        .route("/api/v1/channel-instances", axum::routing::get(routes::list_channel_instances))
-        .route("/api/v1/gallery/skills", axum::routing::get(routes::gallery_list))
+        .route(
+            "/api/v1/agents/{name}",
+            axum::routing::delete(routes::delete_agent),
+        )
+        .route(
+            "/api/v1/providers",
+            axum::routing::get(routes::list_providers),
+        )
+        .route(
+            "/api/v1/channels",
+            axum::routing::get(routes::list_channels),
+        )
+        .route(
+            "/api/v1/channel-instances",
+            axum::routing::get(routes::list_channel_instances),
+        )
+        .route(
+            "/api/v1/gallery/skills",
+            axum::routing::get(routes::gallery_list),
+        )
         .with_state(state)
 }
 
@@ -79,7 +105,9 @@ async fn test_health_endpoint() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["status"], "ok");
     assert_eq!(json["service"], "bizclaw-gateway");
@@ -99,7 +127,9 @@ async fn test_system_info_endpoint() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["version"].is_string());
     assert!(json["uptime_secs"].is_number());
@@ -122,7 +152,9 @@ async fn test_get_config_endpoint() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["default_provider"].is_string());
     assert!(json["channels"].is_object());
@@ -143,7 +175,9 @@ async fn test_get_full_config_endpoint() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["ok"].as_bool().unwrap());
     assert!(json["toml"].is_string());
@@ -166,7 +200,9 @@ async fn test_agent_crud_flow() {
         )
         .await
         .unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["total"], 0);
 
@@ -188,7 +224,9 @@ async fn test_agent_crud_flow() {
         )
         .await
         .unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["ok"].as_bool().unwrap());
     assert_eq!(json["name"], "test-bot");
@@ -205,7 +243,9 @@ async fn test_agent_crud_flow() {
         )
         .await
         .unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["total"], 1);
 
@@ -221,7 +261,9 @@ async fn test_agent_crud_flow() {
         )
         .await
         .unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["ok"].as_bool().unwrap());
 }
@@ -242,7 +284,9 @@ async fn test_list_providers_endpoint() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["providers"].is_array());
     assert!(json["providers"].as_array().unwrap().len() >= 5);
@@ -262,7 +306,9 @@ async fn test_list_channels_endpoint() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["channels"].is_array());
     let channels = json["channels"].as_array().unwrap();
@@ -289,7 +335,9 @@ async fn test_gallery_list_endpoint() {
         .unwrap();
 
     assert_eq!(resp.status(), StatusCode::OK);
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json["ok"].as_bool().unwrap());
     assert!(json["skills"].is_array());

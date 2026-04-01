@@ -38,9 +38,9 @@ impl SqliteStore {
     }
 
     fn db(&self) -> std::result::Result<std::sync::MutexGuard<'_, Connection>, BizClawError> {
-        self.conn.lock().map_err(|e| {
-            BizClawError::Database(format!("SQLite mutex poisoned: {e}"))
-        })
+        self.conn
+            .lock()
+            .map_err(|e| BizClawError::Database(format!("SQLite mutex poisoned: {e}")))
     }
 }
 
@@ -958,7 +958,10 @@ mod tests {
         let unread = store.unread_messages(&team.id, "lead").await.unwrap();
         assert_eq!(unread.len(), 1);
 
-        store.mark_read(std::slice::from_ref(&msg.id)).await.unwrap();
+        store
+            .mark_read(std::slice::from_ref(&msg.id))
+            .await
+            .unwrap();
         let unread = store.unread_messages(&team.id, "lead").await.unwrap();
         assert!(unread.is_empty());
     }

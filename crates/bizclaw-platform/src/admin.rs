@@ -230,12 +230,28 @@ impl AdminServer {
             // ── SME TEMPLATES ─────────────────────────────────────────
             .route("/api/admin/templates", get(list_templates_handler))
             // ── OAUTH: Social Connect (protected endpoints) ──────────────
-            .route("/api/oauth/status/{tenant_id}", get(crate::oauth::oauth_status))
-            .route("/api/oauth/disconnect/{provider}", delete(crate::oauth::oauth_disconnect))
+            .route(
+                "/api/oauth/status/{tenant_id}",
+                get(crate::oauth::oauth_status),
+            )
+            .route(
+                "/api/oauth/disconnect/{provider}",
+                delete(crate::oauth::oauth_disconnect),
+            )
             // ── SOCIAL AUTOMATION: Content Pipeline + Auto-Reply ───────
-            .route("/api/social/status/{tenant_id}", get(crate::social_automation::social_status))
-            .route("/api/social/pipeline/{tenant_id}", get(crate::social_automation::get_pipeline_config).post(crate::social_automation::update_pipeline_config))
-            .route("/api/social/pipeline/{tenant_id}/trigger", post(crate::social_automation::trigger_pipeline))
+            .route(
+                "/api/social/status/{tenant_id}",
+                get(crate::social_automation::social_status),
+            )
+            .route(
+                "/api/social/pipeline/{tenant_id}",
+                get(crate::social_automation::get_pipeline_config)
+                    .post(crate::social_automation::update_pipeline_config),
+            )
+            .route(
+                "/api/social/pipeline/{tenant_id}/trigger",
+                post(crate::social_automation::trigger_pipeline),
+            )
             // ── MAMA AI: Orchestrator + Cost-Aware Provider Routing ───
             .route("/api/mama/providers", get(crate::mama::list_providers))
             .route("/api/mama/plan", post(crate::mama::create_plan))
@@ -247,7 +263,10 @@ impl AdminServer {
             .route("/api/mama/workflows", get(crate::mama::list_workflows))
             .route("/api/mama/workflows/run", post(crate::mama::run_workflow))
             .route("/api/mama/teams", get(crate::mama::list_teams))
-            .route("/api/mama/team/{channel}", get(crate::mama::team_for_channel))
+            .route(
+                "/api/mama/team/{channel}",
+                get(crate::mama::team_for_channel),
+            )
             // ── MAMA AI: Execute + Budget + Health + Dashboard (Phase 2+3) ──
             .route("/api/mama/execute", post(crate::mama::execute_plan))
             .route("/api/mama/budget", get(crate::mama::budget_summary))
@@ -286,10 +305,20 @@ impl AdminServer {
             // Pay2S webhook — public (Pay2S POSTs here, bearer auth inside)
             .route("/api/billing/pay2s-webhook", post(pay2s_webhook_handler))
             // OAuth2 callbacks — public (Google/FB redirect here)
-            .route("/api/oauth/connect/{provider}", get(crate::oauth::oauth_connect))
-            .route("/api/oauth/callback/{provider}", get(crate::oauth::oauth_callback))
+            .route(
+                "/api/oauth/connect/{provider}",
+                get(crate::oauth::oauth_connect),
+            )
+            .route(
+                "/api/oauth/callback/{provider}",
+                get(crate::oauth::oauth_callback),
+            )
             // Facebook/Instagram webhook — public (Meta calls here)
-            .route("/api/social/fb-webhook", get(crate::social_automation::fb_webhook_verify).post(crate::social_automation::fb_webhook_handler))
+            .route(
+                "/api/social/fb-webhook",
+                get(crate::social_automation::fb_webhook_verify)
+                    .post(crate::social_automation::fb_webhook_handler),
+            )
             .route("/", get(admin_dashboard_page));
 
         // SPA fallback — serve dashboard HTML for all non-API paths
@@ -431,7 +460,8 @@ impl AdminServer {
                     }
                 }
             }
-            db.log_event("platform_shutdown", "system", "platform", Some("graceful")).ok();
+            db.log_event("platform_shutdown", "system", "platform", Some("graceful"))
+                .ok();
             tracing::info!("✅ All tenants stopped. Platform shutting down.");
         };
 
@@ -497,9 +527,7 @@ async fn platform_security_headers(
 
 /// Public health endpoint for Docker HEALTHCHECK, load balancers, and monitoring.
 /// Returns database connectivity, uptime, tenant counts, and version.
-async fn health_check_handler(
-    State(state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+async fn health_check_handler(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let uptime_secs = state.startup_time.elapsed().as_secs();
 
     // Check SQLite connectivity
@@ -543,9 +571,7 @@ async fn health_check_handler(
 ///
 /// GET /api/admin/keys/status
 /// Response: { "llm": { "configured": true, "source": "env", "provider": "openai", "masked": "sk-***83d" }, ... }
-async fn key_status_handler(
-    State(_state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+async fn key_status_handler(State(_state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     use bizclaw_core::config::{BizClawConfig, mask_key};
 
     // Load current config (hot-reload aware)
@@ -567,15 +593,22 @@ async fn key_status_handler(
     }).unwrap_or(serde_json::json!({ "configured": false }));
 
     // WhatsApp (first instance)
-    let wa_status = config.channel.whatsapp.first().map(|wa| {
-        let (ok, src, masked) = wa.key_status();
-        serde_json::json!({ "configured": ok, "source": src, "masked": masked })
-    }).unwrap_or(serde_json::json!({ "configured": false }));
+    let wa_status = config
+        .channel
+        .whatsapp
+        .first()
+        .map(|wa| {
+            let (ok, src, masked) = wa.key_status();
+            serde_json::json!({ "configured": ok, "source": src, "masked": masked })
+        })
+        .unwrap_or(serde_json::json!({ "configured": false }));
 
     // Zalo OA — check env var first
     let zalo_status = {
         let zalo = config.channel.zalo.first();
-        let env_token = std::env::var("BIZCLAW_ZALO_OA_ACCESS_TOKEN").ok().filter(|s| !s.is_empty());
+        let env_token = std::env::var("BIZCLAW_ZALO_OA_ACCESS_TOKEN")
+            .ok()
+            .filter(|s| !s.is_empty());
         if let Some(token) = env_token {
             serde_json::json!({ "configured": true, "source": "env", "masked": mask_key(&token) })
         } else if let Some(z) = zalo {
@@ -647,11 +680,14 @@ async fn pay2s_webhook_handler(
 
     // 1. Verify Authorization (Bearer token)
     let auth_header = headers.get("Authorization").and_then(|h| h.to_str().ok());
-    let token = db.get_platform_config("pay2s_api_key")
+    let token = db
+        .get_platform_config("pay2s_api_key")
         .unwrap_or_else(|| std::env::var("BIZCLAW_PAY2S_API_KEY").unwrap_or_default());
-    
+
     if token.is_empty() || auth_header != Some(&format!("Bearer {}", token)) {
-        tracing::warn!("🚫 Pay2S webhook auth failed or API KEY not configured in Admin Settings / Environment");
+        tracing::warn!(
+            "🚫 Pay2S webhook auth failed or API KEY not configured in Admin Settings / Environment"
+        );
         return (
             axum::http::StatusCode::UNAUTHORIZED,
             Json(serde_json::json!({ "success": false, "message": "Invalid token" })),
@@ -666,11 +702,17 @@ async fn pay2s_webhook_handler(
 
         // [SECURITY: REPLAY ATTACK PREVENTION]
         // Parse date (assumed "YYYY-MM-DD HH:MM:SS"). Reject if older than 48 hours.
-        if let Ok(tx_date) = chrono::NaiveDateTime::parse_from_str(&tx.transactionDate, "%Y-%m-%d %H:%M:%S") {
+        if let Ok(tx_date) =
+            chrono::NaiveDateTime::parse_from_str(&tx.transactionDate, "%Y-%m-%d %H:%M:%S")
+        {
             let tx_utc = tx_date.and_utc();
             let now = chrono::Utc::now();
             if now.signed_duration_since(tx_utc).num_hours() > 48 {
-                tracing::error!("🚨 SECURITY ALERT: Rejected ancient Pay2S replay attack date {} (Tx ID: {})", tx.transactionDate, tx.id);
+                tracing::error!(
+                    "🚨 SECURITY ALERT: Rejected ancient Pay2S replay attack date {} (Tx ID: {})",
+                    tx.transactionDate,
+                    tx.id
+                );
                 continue; // Ignore replay
             }
         }
@@ -682,14 +724,17 @@ async fn pay2s_webhook_handler(
             Ok(true) => {
                 tracing::info!(
                     "💳 Pay2S webhook received: id={}, amount={}, content='{}'",
-                    tx.id, tx.transferAmount, tx.content
+                    tx.id,
+                    tx.transferAmount,
+                    tx.content
                 );
 
                 // Auto plan activation match
                 let content_upper = tx.content.to_uppercase();
                 let match_str = if content_upper.contains("BIZCLAW") {
                     &content_upper
-                } else if content_upper.contains("BC") { // Fallback shorter prefix
+                } else if content_upper.contains("BC") {
+                    // Fallback shorter prefix
                     &content_upper
                 } else {
                     ""
@@ -709,7 +754,7 @@ async fn pay2s_webhook_handler(
                         let new_plan = if amount >= 7_999_000 {
                             "business" // ~8tr/tháng
                         } else if amount >= 4_999_000 {
-                            "pro"      // ~5tr/tháng
+                            "pro" // ~5tr/tháng
                         } else {
                             ""
                         };
@@ -719,7 +764,10 @@ async fn pay2s_webhook_handler(
                                 if let Ok(()) = db.update_tenant_plan(&tenant.id, new_plan) {
                                     tracing::info!(
                                         "✅ Auto plan activated via Pay2S: tenant={} ({}), plan={}, amount={}đ",
-                                        tenant.slug, tenant.id, new_plan, amount
+                                        tenant.slug,
+                                        tenant.id,
+                                        new_plan,
+                                        amount
                                     );
                                     let _ = db.complete_payment(&tx_ref, &tenant.id);
                                     let _ = db.log_event(
@@ -733,11 +781,18 @@ async fn pay2s_webhook_handler(
                                     );
                                 }
                             } else {
-                                tracing::warn!("⚠️ Pay2S payment ref '{}' did not match any tenant", tenant_ref);
+                                tracing::warn!(
+                                    "⚠️ Pay2S payment ref '{}' did not match any tenant",
+                                    tenant_ref
+                                );
                                 let _ = db.fail_payment(&tx_ref, "unmatched");
                             }
                         } else {
-                            tracing::info!("💰 Pay2S payment {}đ received (ref: {}) — below plan threshold", amount, tenant_ref);
+                            tracing::info!(
+                                "💰 Pay2S payment {}đ received (ref: {}) — below plan threshold",
+                                amount,
+                                tenant_ref
+                            );
                             let _ = db.fail_payment(&tx_ref, "amount_too_small");
                         }
                     }
@@ -753,7 +808,10 @@ async fn pay2s_webhook_handler(
     }
 
     // Always 200 OK so Pay2S stops retrying
-    (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true })))
+    (
+        axum::http::StatusCode::OK,
+        Json(serde_json::json!({ "success": true })),
+    )
 }
 
 /// SePay Webhook Integration ──────────────────────────────────────
@@ -820,17 +878,20 @@ async fn sepay_webhook_handler(
     let db = state.db.lock().await;
 
     // 2. Verify authorization (API key from Admin Settings or Env var)
-    let expected_key = db.get_platform_config("sepay_api_key")
+    let expected_key = db
+        .get_platform_config("sepay_api_key")
         .unwrap_or_else(|| std::env::var("BIZCLAW_SEPAY_API_KEY").unwrap_or_default());
 
     if expected_key.is_empty() {
-        tracing::error!("🚨 SECURITY ALERT: BIZCLAW_SEPAY_API_KEY is completely missing in Admin Configs! Dropping all SePay webhooks!");
+        tracing::error!(
+            "🚨 SECURITY ALERT: BIZCLAW_SEPAY_API_KEY is completely missing in Admin Configs! Dropping all SePay webhooks!"
+        );
         return (
             axum::http::StatusCode::UNAUTHORIZED,
             Json(serde_json::json!({ "error": "System not configured" })),
         );
     }
-    
+
     let auth_header = headers
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
@@ -858,12 +919,21 @@ async fn sepay_webhook_handler(
 
     // [SECURITY: REPLAY ATTACK PREVENTION]
     // Parse SePay ISO date/datetime. Reject if older than 48 hours.
-    if let Ok(tx_date) = chrono::NaiveDateTime::parse_from_str(&payload.transaction_date, "%Y-%m-%d %H:%M:%S") {
+    if let Ok(tx_date) =
+        chrono::NaiveDateTime::parse_from_str(&payload.transaction_date, "%Y-%m-%d %H:%M:%S")
+    {
         let tx_utc = tx_date.and_utc();
         let now = chrono::Utc::now();
         if now.signed_duration_since(tx_utc).num_hours() > 48 {
-            tracing::error!("🚨 SECURITY ALERT: Rejected ancient SePay replay attack date {} (Tx ID: {})", payload.transaction_date, payload.id);
-            return (axum::http::StatusCode::OK, Json(serde_json::json!({ "success": true, "message": "Ignored obsolete" })));
+            tracing::error!(
+                "🚨 SECURITY ALERT: Rejected ancient SePay replay attack date {} (Tx ID: {})",
+                payload.transaction_date,
+                payload.id
+            );
+            return (
+                axum::http::StatusCode::OK,
+                Json(serde_json::json!({ "success": true, "message": "Ignored obsolete" })),
+            );
         }
     }
 
@@ -871,7 +941,12 @@ async fn sepay_webhook_handler(
     let tx_ref = format!("sepay_{}", payload.id);
 
     // Check if already processed
-    match db.record_payment("sepay", &tx_ref, payload.transfer_amount as u64, &payload.content) {
+    match db.record_payment(
+        "sepay",
+        &tx_ref,
+        payload.transfer_amount as u64,
+        &payload.content,
+    ) {
         Ok(true) => {
             // New payment -> Write to PG if it exists (for dashboard)
             if let Some(pg) = &state.pg_db {
@@ -894,7 +969,11 @@ async fn sepay_webhook_handler(
 
             // 5. Auto plan activation
             let content_upper = payload.content.to_uppercase();
-            let ref_upper = payload.reference_code.as_deref().unwrap_or("").to_uppercase();
+            let ref_upper = payload
+                .reference_code
+                .as_deref()
+                .unwrap_or("")
+                .to_uppercase();
             let match_str = if content_upper.contains("BIZCLAW") || content_upper.contains("BC") {
                 &content_upper
             } else if ref_upper.contains("BIZCLAW") || ref_upper.contains("BC") {
@@ -917,7 +996,7 @@ async fn sepay_webhook_handler(
                     let new_plan = if amount >= 7_999_000 {
                         "business" // ~8tr/tháng
                     } else if amount >= 4_999_000 {
-                        "pro"      // ~5tr/tháng
+                        "pro" // ~5tr/tháng
                     } else {
                         "" // Amount too low
                     };
@@ -927,7 +1006,10 @@ async fn sepay_webhook_handler(
                             if let Ok(()) = db.update_tenant_plan(&tenant.id, new_plan) {
                                 tracing::info!(
                                     "✅ Auto plan activated via SePay: tenant={} ({}), plan={}, amount={}đ",
-                                    tenant.slug, tenant.id, new_plan, amount
+                                    tenant.slug,
+                                    tenant.id,
+                                    new_plan,
+                                    amount
                                 );
                                 let _ = db.complete_payment(&tx_ref, &tenant.id);
                                 let _ = db.log_event(
@@ -941,18 +1023,28 @@ async fn sepay_webhook_handler(
                                 );
                             }
                         } else {
-                            tracing::warn!("⚠️ SePay payment ref '{}' did not match any tenant", tenant_ref);
+                            tracing::warn!(
+                                "⚠️ SePay payment ref '{}' did not match any tenant",
+                                tenant_ref
+                            );
                             let _ = db.fail_payment(&tx_ref, "unmatched");
                         }
                     } else {
-                        tracing::info!("💰 SePay payment {}đ received (ref: {}) — below plan threshold", amount, tenant_ref);
+                        tracing::info!(
+                            "💰 SePay payment {}đ received (ref: {}) — below plan threshold",
+                            amount,
+                            tenant_ref
+                        );
                         let _ = db.fail_payment(&tx_ref, "amount_too_small");
                     }
                 }
             }
         }
         Ok(false) => {
-            tracing::info!("SePay: duplicate webhook id={}, returning success", payload.id);
+            tracing::info!(
+                "SePay: duplicate webhook id={}, returning success",
+                payload.id
+            );
             return (
                 axum::http::StatusCode::OK,
                 Json(serde_json::json!({ "success": true, "message": "already_processed" })),
@@ -990,30 +1082,36 @@ async fn set_billing_config_handler(
     Json(req): Json<BillingConfigReq>,
 ) -> Json<serde_json::Value> {
     let db = state.db.lock().await;
-    
+
     if let Some(sepay) = req.sepay_api_key {
         if let Err(e) = db.set_platform_config("sepay_api_key", &sepay) {
-            return Json(serde_json::json!({"ok": false, "error": format!("Failed to save SePay config: {}", e)}));
+            return Json(
+                serde_json::json!({"ok": false, "error": format!("Failed to save SePay config: {}", e)}),
+            );
         }
     }
-    
+
     if let Some(pay2s) = req.pay2s_api_key {
         if let Err(e) = db.set_platform_config("pay2s_api_key", &pay2s) {
-            return Json(serde_json::json!({"ok": false, "error": format!("Failed to save Pay2S config: {}", e)}));
+            return Json(
+                serde_json::json!({"ok": false, "error": format!("Failed to save Pay2S config: {}", e)}),
+            );
         }
     }
-    
+
     Json(serde_json::json!({"ok": true}))
 }
 
 /// GET /api/billing/status — billing overview for dashboard.
-async fn billing_status_handler(
-    State(state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+async fn billing_status_handler(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let (sepay_configured, pay2s_configured) = {
         let db = state.db.lock().await;
-        let sepay = db.get_platform_config("sepay_api_key").unwrap_or_else(|| std::env::var("BIZCLAW_SEPAY_API_KEY").unwrap_or_default());
-        let pay2s = db.get_platform_config("pay2s_api_key").unwrap_or_else(|| std::env::var("BIZCLAW_PAY2S_API_KEY").unwrap_or_default());
+        let sepay = db
+            .get_platform_config("sepay_api_key")
+            .unwrap_or_else(|| std::env::var("BIZCLAW_SEPAY_API_KEY").unwrap_or_default());
+        let pay2s = db
+            .get_platform_config("pay2s_api_key")
+            .unwrap_or_else(|| std::env::var("BIZCLAW_PAY2S_API_KEY").unwrap_or_default());
         (!sepay.is_empty(), !pay2s.is_empty())
     };
 
@@ -1038,20 +1136,22 @@ async fn billing_status_handler(
             "SELECT sepay_id, gateway, transfer_amount, content, reference_code, transaction_date \
              FROM sepay_transactions \
              WHERE transfer_type = 'in' \
-             ORDER BY sepay_id DESC LIMIT 10"
+             ORDER BY sepay_id DESC LIMIT 10",
         )
         .fetch_all(pg.pool())
         .await
         {
             recent_transactions = serde_json::json!(
-                rows.iter().map(|r| serde_json::json!({
-                    "id": r.0,
-                    "gateway": r.1,
-                    "amount": r.2,
-                    "content": r.3,
-                    "reference_code": r.4,
-                    "date": r.5,
-                })).collect::<Vec<_>>()
+                rows.iter()
+                    .map(|r| serde_json::json!({
+                        "id": r.0,
+                        "gateway": r.1,
+                        "amount": r.2,
+                        "content": r.3,
+                        "reference_code": r.4,
+                        "date": r.5,
+                    }))
+                    .collect::<Vec<_>>()
             );
         }
     }

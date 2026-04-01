@@ -7,10 +7,10 @@
 //!
 //! Designed for SME Đà Lạt verticals: Tourism, F&B, Specialty Products.
 
+use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -114,13 +114,7 @@ pub async fn fb_webhook_handler(
                     match field {
                         "feed" | "comments" => {
                             if let Some(value) = change.value {
-                                process_comment_event(
-                                    &state,
-                                    &page_id,
-                                    &value,
-                                    platform,
-                                )
-                                .await;
+                                process_comment_event(&state, &page_id, &value, platform).await;
                             }
                         }
                         "messages" | "messaging" => {
@@ -180,25 +174,23 @@ async fn process_comment_event(
     }
 
     let comment = IncomingComment {
-        comment_id: value["comment_id"]
-            .as_str()
-            .unwrap_or_default()
-            .to_string(),
+        comment_id: value["comment_id"].as_str().unwrap_or_default().to_string(),
         post_id: value["post_id"].as_str().unwrap_or_default().to_string(),
         page_id: page_id.to_string(),
         sender_name: value["from"]["name"].as_str().unwrap_or("").to_string(),
         sender_id: value["from"]["id"].as_str().unwrap_or("").to_string(),
         message: value["message"].as_str().unwrap_or("").to_string(),
-        created_time: value["created_time"]
-            .as_str()
-            .unwrap_or("")
-            .to_string(),
+        created_time: value["created_time"].as_str().unwrap_or("").to_string(),
         platform: platform.to_string(),
     };
 
     // Skip if comment is from the page itself (avoid self-reply loops)
     if comment.sender_id == comment.page_id {
-        tracing::debug!("Skipping self-comment on {} post {}", platform, comment.post_id);
+        tracing::debug!(
+            "Skipping self-comment on {} post {}",
+            platform,
+            comment.post_id
+        );
         return;
     }
 
@@ -244,11 +236,12 @@ async fn find_tenant_by_page_id(state: &AdminState, page_id: &str) -> Option<Str
         for tenant in tenants {
             let fb_page_key = "social_fb_page_id";
             if let Ok(Some(stored_page_id)) = db.get_config(&tenant.id, fb_page_key)
-                && stored_page_id == page_id {
-                    // Cache for future lookups
-                    let _ = db.set_config("__social_pages__", &config_key, &tenant.id);
-                    return Some(tenant.id.clone());
-                }
+                && stored_page_id == page_id
+            {
+                // Cache for future lookups
+                let _ = db.set_config("__social_pages__", &config_key, &tenant.id);
+                return Some(tenant.id.clone());
+            }
         }
     }
 
@@ -325,7 +318,10 @@ async fn generate_comment_reply(
     let api_key = match api_key {
         Some(k) if !k.is_empty() => k,
         _ => {
-            tracing::warn!("No LLM API key for tenant {} — cannot auto-reply", tenant_id);
+            tracing::warn!(
+                "No LLM API key for tenant {} — cannot auto-reply",
+                tenant_id
+            );
             return None;
         }
     };
@@ -338,12 +334,8 @@ async fn generate_comment_reply(
     let provider = std::env::var("BIZCLAW_LLM_PROVIDER").unwrap_or_else(|_| "anthropic".into());
 
     let reply = match provider.as_str() {
-        "anthropic" => {
-            call_anthropic(&http, &api_key, &system_prompt, &user_prompt).await
-        }
-        _ => {
-            call_openai(&http, &api_key, &system_prompt, &user_prompt).await
-        }
+        "anthropic" => call_anthropic(&http, &api_key, &system_prompt, &user_prompt).await,
+        _ => call_openai(&http, &api_key, &system_prompt, &user_prompt).await,
     };
 
     match reply {
@@ -677,23 +669,15 @@ async fn run_content_pipeline(
     for platform in &config.platforms {
         match platform.as_str() {
             "facebook" => {
-                if let Ok(Some(tokens_json)) =
-                    db.get_config(tenant_id, "oauth_facebook_tokens")
+                if let Ok(Some(tokens_json)) = db.get_config(tenant_id, "oauth_facebook_tokens")
                     && let Ok(tokens) =
                         serde_json::from_str::<crate::oauth::OAuthTokens>(&tokens_json)
-                        && let Ok(Some(page_id)) =
-                            db.get_config(tenant_id, "social_fb_page_id")
-                        {
-                            drop(db);
-                            auto_post_facebook(
-                                &http,
-                                &tokens.access_token,
-                                &page_id,
-                                &post_content,
-                            )
-                            .await;
-                            return; // Simplified: post to first platform only for now
-                        }
+                    && let Ok(Some(page_id)) = db.get_config(tenant_id, "social_fb_page_id")
+                {
+                    drop(db);
+                    auto_post_facebook(&http, &tokens.access_token, &page_id, &post_content).await;
+                    return; // Simplified: post to first platform only for now
+                }
                 tracing::warn!(
                     "Facebook not configured for tenant {} — skipping",
                     tenant_id

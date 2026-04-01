@@ -104,10 +104,7 @@ fn test_full_pipeline_persist_and_query() {
     // Query back
     let today = Utc::now().format("%Y-%m-%d").to_string();
     let queried = store.query_tree_for_day(&today).expect("query tree");
-    assert!(
-        !queried.is_empty(),
-        "should find persisted nodes for today"
-    );
+    assert!(!queried.is_empty(), "should find persisted nodes for today");
     // Should include Day, Session, and App nodes at minimum
     let levels: Vec<_> = queried.iter().map(|n| &n.level).collect();
     assert!(levels.contains(&&TreeLevel::Day));
@@ -124,13 +121,43 @@ fn test_multi_session_clustering() {
 
     let events = vec![
         // Session 1
-        make_event("test", EventType::Keyboard { text: "session 1".into() }, 0),
-        make_event("test", EventType::Keyboard { text: "still s1".into() }, 10),
+        make_event(
+            "test",
+            EventType::Keyboard {
+                text: "session 1".into(),
+            },
+            0,
+        ),
+        make_event(
+            "test",
+            EventType::Keyboard {
+                text: "still s1".into(),
+            },
+            10,
+        ),
         // 60 second gap → session 2
-        make_event("test", EventType::Keyboard { text: "session 2".into() }, 70),
-        make_event("test", EventType::Keyboard { text: "still s2".into() }, 80),
+        make_event(
+            "test",
+            EventType::Keyboard {
+                text: "session 2".into(),
+            },
+            70,
+        ),
+        make_event(
+            "test",
+            EventType::Keyboard {
+                text: "still s2".into(),
+            },
+            80,
+        ),
         // 60 second gap → session 3
-        make_event("test", EventType::Keyboard { text: "session 3".into() }, 140),
+        make_event(
+            "test",
+            EventType::Keyboard {
+                text: "session 3".into(),
+            },
+            140,
+        ),
     ];
 
     let tree = org.organize(&events);
@@ -149,19 +176,25 @@ fn test_events_in_range() {
             id: "e1".into(),
             timestamp: now - Duration::hours(2),
             source: "test".into(),
-            event_type: EventType::Keyboard { text: "early".into() },
+            event_type: EventType::Keyboard {
+                text: "early".into(),
+            },
         },
         CatchMeEvent {
             id: "e2".into(),
             timestamp: now - Duration::hours(1),
             source: "test".into(),
-            event_type: EventType::Keyboard { text: "middle".into() },
+            event_type: EventType::Keyboard {
+                text: "middle".into(),
+            },
         },
         CatchMeEvent {
             id: "e3".into(),
             timestamp: now,
             source: "test".into(),
-            event_type: EventType::Keyboard { text: "recent".into() },
+            event_type: EventType::Keyboard {
+                text: "recent".into(),
+            },
         },
     ];
 

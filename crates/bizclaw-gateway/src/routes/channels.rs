@@ -6,9 +6,9 @@
 use axum::{Json, extract::State};
 use std::sync::Arc;
 
-use super::mask_secret;
-use super::internal_error;
 use super::api_webhooks::spawn_telegram_polling;
+use super::internal_error;
+use super::mask_secret;
 use crate::server::AppState;
 
 /// Update channel config.
@@ -626,7 +626,16 @@ pub async fn agent_bind_channels(
         serde_json::Map::new()
     };
 
-    bindings.insert(name.clone(), serde_json::json!(channels));
+    let mut obj = serde_json::Map::new();
+    obj.insert("channels".into(), body["channels"].clone());
+    if let Some(rag) = body.get("rag_collection") {
+        obj.insert("rag_collection".into(), rag.clone());
+    }
+    if let Some(sql) = body.get("sql_connection") {
+        obj.insert("sql_connection".into(), sql.clone());
+    }
+
+    bindings.insert(name.clone(), serde_json::Value::Object(obj));
 
     if let Ok(json) = serde_json::to_string_pretty(&serde_json::Value::Object(bindings.clone())) {
         let _ = std::fs::write(&bindings_path, json);

@@ -391,8 +391,6 @@ pub struct AuthUser {
     pub role_str: String,
 }
 
-
-
 /// RBAC middleware — require Admin role for sensitive operations.
 /// Apply this to routes that manage system config, API keys, providers, plan limits.
 async fn require_role_admin(
