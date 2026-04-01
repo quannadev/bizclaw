@@ -27,6 +27,7 @@
 //! + MCP server tools (dynamic)
 
 pub mod api_connector;
+pub mod auto_message;
 pub mod browser;
 pub mod bundle_provisioner;
 pub mod calendar;
@@ -132,6 +133,8 @@ impl ToolRegistry {
         reg.register(Box::new(db_schema::DbSchemaTool::new()));
         reg.register(Box::new(api_connector::ApiConnectorTool::new()));
         reg.register(Box::new(document_reader::DocumentReaderTool::new()));
+        // Auto Message (Zalo/Messenger UI Automation)
+        reg.register(Box::new(auto_message::AutoMessageTool::new()));
         // Social Posting (Facebook, Telegram Channel, Webhook)
         reg.register(Box::new(social_post::SocialPostTool::new()));
         // Media Extractor (TikTok, IG, YT, X)
