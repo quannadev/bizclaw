@@ -569,6 +569,16 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             "/api/v1/knowledge/upload",
             post(super::routes::knowledge_upload_file),
         )
+        // Campaigns write
+        .route("/api/v1/campaigns", post(super::routes::create_campaign))
+        .route(
+            "/api/v1/campaigns/{id}",
+            axum::routing::delete(super::routes::delete_campaign),
+        )
+        .route(
+            "/api/v1/campaigns/{id}/run",
+            post(super::routes::run_campaign),
+        )
         // Workflows write
         .route("/api/v1/workflows", post(super::routes::workflows_create))
         .route("/api/v1/workflows/run", post(super::routes::workflows_run))
@@ -747,6 +757,8 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             get(super::routes::brain_scan_models),
         )
         .route("/api/v1/zalo/qr", post(super::routes::zalo_qr_code))
+        // Campaigns read
+        .route("/api/v1/campaigns", get(super::routes::list_campaigns))
         // Scheduler read
         .route(
             "/api/v1/scheduler/tasks",
