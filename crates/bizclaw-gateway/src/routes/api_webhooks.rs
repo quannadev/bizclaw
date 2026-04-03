@@ -9,8 +9,9 @@ use std::sync::Arc;
 
 // Re-export provider functions for backward compat
 pub use super::providers::{
-    brain_scan_models, create_provider, delete_provider, fetch_provider_models, list_channels,
-    list_providers, ollama_models, update_provider,
+    brain_delete_model, brain_download_model, brain_download_status, brain_scan_models,
+    create_provider, delete_provider, fetch_provider_models, list_channels, list_providers,
+    ollama_models, update_provider,
 };
 
 /// Webhook inbound — receives external messages, routes to bound agent, replies.
@@ -417,7 +418,59 @@ pub async fn dispatch_to_channel_agent(
         }
     }
 
+    // ── MAMA Orchestrator Routing ──
+    // Step 1: Check if channel has a specific agent binding (manual override)
     let target = resolve_agent_for_channel(&state, channel).await;
+
+    // Step 2: Try MAMA routing — send to "mama" for intent classification
+    // MAMA returns [ROUTE:agent-name] — we parse that and delegate to the right sub-agent
+    let has_mama = {
+        let orch = state.orchestrator.lock().await;
+        orch.list_agents().iter().any(|a| a["name"].as_str() == Some("mama"))
+    };
+
+    if has_mama && target.is_none() {
+        let mut orch = state.orchestrator.lock().await;
+        match orch.send_to("mama", content).await {
+            Ok(mama_response) => {
+                // Parse [ROUTE:agent-name] from MAMA's response
+                if let Some(start) = mama_response.find("[ROUTE:") {
+                    let after = &mama_response[start + 7..];
+                    if let Some(end) = after.find(']') {
+                        let routed_agent = after[..end].trim().to_string();
+                        tracing::info!(
+                            "👑 MAMA routed '{}' → agent '{}' (channel={})",
+                            if content.len() > 60 { &content[..60] } else { content },
+                            routed_agent,
+                            channel
+                        );
+                        // Delegate to the routed agent for the actual response
+                        match orch.send_to(&routed_agent, content).await {
+                            Ok(agent_reply) => return Some(agent_reply),
+                            Err(e) => {
+                                tracing::warn!(
+                                    "👑 MAMA routed to '{}' but it failed: {}. Trying sales-bot fallback.",
+                                    routed_agent, e
+                                );
+                                // Fallback: try sales-bot
+                                if let Ok(fb) = orch.send_to("sales-bot", content).await {
+                                    return Some(fb);
+                                }
+                            }
+                        }
+                    }
+                }
+                // If MAMA didn't return [ROUTE:...], use its response directly (graceful degradation)
+                tracing::info!("👑 MAMA responded directly (no routing tag)");
+                return Some(mama_response);
+            }
+            Err(e) => {
+                tracing::warn!("👑 MAMA agent error: {}. Falling back to channel/default.", e);
+            }
+        }
+    }
+
+    // Step 3: Fallback — channel-specific agent or default agent
     let mut orch = state.orchestrator.lock().await;
 
     if let Some(agent_name) = target {
@@ -562,6 +615,31 @@ pub async fn auto_connect_channels(state: Arc<AppState>) {
                     agent_name
                 );
                 connected += 1;
+            }
+            "zalo_bot" if !agent_name.is_empty() => {
+                let bot_token = cfg["bot_token"].as_str().unwrap_or("").to_string();
+                let secret_token = cfg["secret_token"].as_str().unwrap_or("").to_string();
+                let webhook_url = cfg["webhook_url"].as_str().unwrap_or("").to_string();
+                if !bot_token.is_empty() {
+                    if webhook_url.is_empty() {
+                        // Polling mode (dev/local)
+                        let s = state.clone();
+                        let an = agent_name.to_string();
+                        let iid = instance_id.to_string();
+                        tokio::spawn(async move {
+                            spawn_zalo_bot_polling(s, an, bot_token, secret_token, iid).await;
+                        });
+                    } else {
+                        // Webhook mode — messages arrive at /api/v1/webhook/zalo-bot
+                        tracing::info!(
+                            "[zalo-bot] Instance '{}' bound to agent '{}' — webhook mode at {}",
+                            inst["name"].as_str().unwrap_or(instance_id),
+                            agent_name,
+                            webhook_url
+                        );
+                    }
+                    connected += 1;
+                }
             }
             _ => {}
         }
@@ -1235,3 +1313,244 @@ pub async fn spawn_zalo_personal_listener(
         }
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// ZALO BOT PLATFORM — Official Bot API (token-based, like Telegram)
+// ═══════════════════════════════════════════════════════════════════════
+
+/// POST /api/v1/webhook/zalo-bot — Receive messages from Zalo Bot Platform.
+/// Validates X-Bot-Api-Secret-Token header against configured secret.
+pub async fn zalo_bot_webhook(
+    State(state): State<Arc<AppState>>,
+    headers: axum::http::HeaderMap,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    // Find the zalo_bot channel instance
+    let instances = load_channel_instances(&state);
+    let bot_instance = instances.iter().find(|i| {
+        i["channel_type"].as_str() == Some("zalo_bot")
+            && i["enabled"].as_bool() == Some(true)
+            && !i["agent_name"].as_str().unwrap_or("").is_empty()
+    });
+
+    let (agent_name, secret_token) = match bot_instance {
+        Some(inst) => {
+            let agent = inst["agent_name"].as_str().unwrap_or("").to_string();
+            let secret = inst["config"]["secret_token"]
+                .as_str()
+                .unwrap_or("")
+                .to_string();
+            (agent, secret)
+        }
+        None => {
+            return Json(serde_json::json!({
+                "ok": false,
+                "error": "No Zalo Bot channel bound to an agent. Create one in Dashboard → Channels."
+            }));
+        }
+    };
+
+    // Validate secret token
+    if !secret_token.is_empty() {
+        let header_token = headers
+            .get("x-bot-api-secret-token")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        if header_token != secret_token {
+            tracing::warn!("[zalo-bot] Invalid secret token from webhook");
+            return Json(serde_json::json!({"ok": false, "error": "Unauthorized"}));
+        }
+    }
+
+    // Parse the update
+    let update: bizclaw_channels::zalo_bot::ZaloBotWebhookPayload =
+        match serde_json::from_value(body.clone()) {
+            Ok(u) => u,
+            Err(e) => {
+                tracing::warn!("[zalo-bot] Invalid webhook payload: {e}");
+                return Json(serde_json::json!({"ok": false, "error": "Invalid payload"}));
+            }
+        };
+
+    if let Some(msg) =
+        bizclaw_channels::zalo_bot::ZaloBotChannel::parse_webhook_update(&update.result)
+    {
+        let chat_id = msg.thread_id.clone();
+        let sender = msg.sender_name.clone().unwrap_or_default();
+        let text = msg.content.clone();
+
+        tracing::info!(
+            "[zalo-bot] {} ({}) → agent '{}': {}",
+            sender,
+            msg.sender_id,
+            agent_name,
+            safe_truncate(&text, 100)
+        );
+
+        // Get bot token for replying
+        let bot_token = bot_instance
+            .and_then(|i| i["config"]["bot_token"].as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let state_clone = state.clone();
+        let agent_name_clone = agent_name.clone();
+        tokio::spawn(async move {
+            // Send typing indicator
+            let reply_bot = bizclaw_channels::zalo_bot::ZaloBotChannel::new(
+                bizclaw_channels::zalo_bot::ZaloBotConfig {
+                    bot_token: bot_token.clone(),
+                    ..Default::default()
+                },
+            );
+            let _ = reply_bot.send_typing(&chat_id).await;
+
+            // Route to agent
+            let response =
+                dispatch_to_channel_agent(state_clone.clone(), "zalo_bot", Some(&chat_id), &text)
+                    .await
+                    .unwrap_or_default();
+            if response.is_empty() {
+                return;
+            }
+
+            // Reply via Zalo Bot API
+            if let Err(e) = reply_bot.send_message(&chat_id, &response).await {
+                tracing::error!("[zalo-bot] Reply failed: {e}");
+            }
+        });
+    }
+
+    Json(serde_json::json!({"ok": true}))
+}
+
+/// Spawn a Zalo Bot polling loop (like Telegram polling) for dev/local use.
+pub async fn spawn_zalo_bot_polling(
+    state: Arc<AppState>,
+    agent_name: String,
+    bot_token: String,
+    secret_token: String,
+    instance_id: String,
+) {
+    let bot = bizclaw_channels::zalo_bot::ZaloBotChannel::new(
+        bizclaw_channels::zalo_bot::ZaloBotConfig {
+            bot_token: bot_token.clone(),
+            secret_token: secret_token.clone(),
+            ..Default::default()
+        },
+    );
+
+    // Verify bot token
+    match bot.get_me().await {
+        Ok(info) => {
+            tracing::info!(
+                "[zalo-bot] {} connected → agent '{}' (instance: {})",
+                info.account_name,
+                agent_name,
+                instance_id
+            );
+        }
+        Err(e) => {
+            tracing::error!(
+                "[zalo-bot] Bot token invalid for instance '{}': {}",
+                instance_id,
+                e
+            );
+            return;
+        }
+    }
+
+    // Delete any existing webhook to enable polling
+    let _ = bot.delete_webhook().await;
+
+    let state_clone = state.clone();
+    let agent_name_clone = agent_name.clone();
+
+    tokio::spawn(async move {
+        let poll_bot = bizclaw_channels::zalo_bot::ZaloBotChannel::new(
+            bizclaw_channels::zalo_bot::ZaloBotConfig {
+                bot_token: bot_token.clone(),
+                ..Default::default()
+            },
+        );
+
+        loop {
+            match poll_bot.get_updates().await {
+                Ok(updates) => {
+                    for update in updates {
+                        if let Some(msg) =
+                            bizclaw_channels::zalo_bot::ZaloBotChannel::parse_webhook_update(
+                                &update,
+                            )
+                        {
+                            let chat_id = msg.thread_id.clone();
+                            let sender = msg.sender_name.clone().unwrap_or_default();
+                            let text = msg.content.clone();
+
+                            // Handoff check
+                            let lower = text.to_lowercase();
+                            if lower.contains("gặp nhân viên")
+                                || lower.contains("gap nhan vien")
+                                || lower.contains("chuyển khách")
+                            {
+                                tracing::info!(
+                                    "📞 Handoff hotword detected in Zalo Bot: '{}'",
+                                    text
+                                );
+                                let req = crate::routes::api_handoff::HandoffRequestPayload {
+                                    customer: sender.clone(),
+                                    channel: Some("Zalo Bot".to_string()),
+                                    reason: Some(
+                                        "Khách hàng yêu cầu hỗ trợ từ nhân viên qua Zalo Bot"
+                                            .to_string(),
+                                    ),
+                                    message: Some(text.clone()),
+                                };
+                                let _ = crate::routes::api_handoff::execute_handoff(
+                                    state_clone.clone(),
+                                    req,
+                                )
+                                .await;
+
+                                let reply =
+                                    crate::routes::api_handoff::load_handoff_settings(&state_clone)
+                                        .greeting;
+                                let _ = poll_bot.send_message(&chat_id, &reply).await;
+                                continue;
+                            }
+
+                            tracing::info!(
+                                "[zalo-bot] {} → agent '{}': {}",
+                                sender,
+                                agent_name_clone,
+                                safe_truncate(&text, 100)
+                            );
+                            let _ = poll_bot.send_typing(&chat_id).await;
+
+                            // Route to agent
+                            let response = {
+                                let mut orch = state_clone.orchestrator.lock().await;
+                                match orch.send_to(&agent_name_clone, &text).await {
+                                    Ok(r) => r,
+                                    Err(e) => format!("⚠️ Agent error: {e}"),
+                                }
+                            };
+
+                            if let Err(e) = poll_bot.send_message(&chat_id, &response).await {
+                                tracing::error!("[zalo-bot] Reply failed: {e}");
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "[zalo-bot] Polling error for '{}': {e}",
+                        agent_name_clone
+                    );
+                    tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                }
+            }
+        }
+    });
+}
+

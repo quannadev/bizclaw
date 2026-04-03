@@ -2,7 +2,7 @@
 // BizClaw — Campaigns Page (Broadcast / Mass Messaging)
 // Phase 1: SME Vietnam — Zalo, Telegram, Messenger Broadcasts
 // ═══════════════════════════════════════════════════════════════
-const { html, useState, useEffect, useCallback } = window.__preact;
+const { h, html, useState, useEffect, useCallback } = window;
 const { authFetch, t } = window;
 
 // ── Campaign Status Badge ──

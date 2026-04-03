@@ -556,6 +556,7 @@ pub const ALL_CHANNEL_NAMES: &[(&str, &str)] = &[
     ("whatsapp", "WhatsApp Cloud API"),
     ("zalo_personal", "Zalo Personal API"),
     ("zalo_official", "Zalo Official Account"),
+    ("zalo_bot", "Zalo Bot Platform (Token-based)"),
     // New (16+)
     ("slack", "Slack Bot (Events API + Socket Mode)"),
     ("line", "LINE Messaging API"),

@@ -32,11 +32,20 @@ pub struct WorkingHours {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TriggerRouting {
+    pub notify_channels: Vec<String>,
+    pub assignee_group: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HandoffSettings {
     pub enabled: bool,
     pub auto_handoff: bool,
     pub notify_channels: Vec<String>,
+    pub assignee_group: Option<String>,
     pub triggers: Vec<String>,
+    #[serde(default)]
+    pub trigger_configs: std::collections::HashMap<String, TriggerRouting>,
     pub greeting: String,
     pub resume_greeting: String,
     pub timeout_minutes: i64,
@@ -50,7 +59,9 @@ impl Default for HandoffSettings {
             enabled: true,
             auto_handoff: true,
             notify_channels: vec!["zalo".into(), "telegram".into()],
+            assignee_group: Some("general".into()),
             triggers: vec!["low_confidence".into(), "complaint".into(), "explicit_request".into()],
+            trigger_configs: std::collections::HashMap::new(),
             greeting: "Dạ em xin phép chuyển cuộc trò chuyện cho đồng nghiệp hỗ trợ anh/chị tốt hơn ạ. Vui lòng đợi trong giây lát! 🙏".into(),
             resume_greeting: "AI Assistant đã quay lại phục vụ anh/chị! Nếu cần gặp nhân viên, cứ nhắn \"gặp nhân viên\" nhé 😊".into(),
             timeout_minutes: 30,

@@ -1,7 +1,8 @@
 // HandoffPage — Human Handoff Configuration & Live Queue
 // When AI can't handle → auto-escalate to human with full context
 const { h, html, useState, useEffect, useContext, useCallback, useRef, useMemo } = window;
-import { t, authFetch, authHeaders, StatsCard } from '/static/dashboard/shared.js';
+const { authFetch, t, AppContext } = window;
+import { StatsCard } from '/static/dashboard/shared.js';
 
 const HANDOFF_TRIGGERS = [
   { id: 'low_confidence', label: 'AI độ tin cậy thấp (<60%)', icon: '🤔', desc: 'Khi AI không chắc chắn câu trả lời' },
@@ -21,6 +22,7 @@ function HandoffPage({ lang }) {
     auto_handoff: true,
     notify_channels: ['zalo', 'telegram'],
     triggers: ['low_confidence', 'complaint', 'explicit_request'],
+    trigger_configs: {},
     greeting: 'Dạ em xin phép chuyển cuộc trò chuyện cho đồng nghiệp hỗ trợ anh/chị tốt hơn ạ. Vui lòng đợi trong giây lát! 🙏',
     resume_greeting: 'AI Assistant đã quay lại phục vụ anh/chị! Nếu cần gặp nhân viên, cứ nhắn "gặp nhân viên" nhé 😊',
     timeout_minutes: 30,
@@ -194,21 +196,63 @@ function HandoffPage({ lang }) {
           </div>
           <p style="font-size:12px;color:var(--text2);margin:0 0 12px">Chọn các tình huống AI cần tự động chuyển cho người thật:</p>
           <div style="display:grid;gap:6px">
-            ${HANDOFF_TRIGGERS.map(trigger => html`
-              <div key=${trigger.id} onClick=${() => toggleTrigger(trigger.id)}
-                style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;cursor:pointer;transition:all 0.2s;
-                  border:1px solid ${settings.triggers.includes(trigger.id) ? 'var(--accent)' : 'var(--border)'};
-                  background:${settings.triggers.includes(trigger.id) ? 'var(--accent)' + '0a' : 'var(--bg2)'}">
-                <span style="font-size:18px">${trigger.icon}</span>
-                <div style="flex:1">
-                  <div style="font-size:12px;font-weight:600;color:var(--text)">${trigger.label}</div>
-                  <div style="font-size:10px;color:var(--text2)">${trigger.desc}</div>
+            ${HANDOFF_TRIGGERS.map(trigger => {
+              const isEnabled = settings.triggers.includes(trigger.id);
+              return html`
+              <div key=${trigger.id}
+                style="border-radius:8px;transition:all 0.2s;margin-bottom:6px;overflow:hidden;
+                  border:1px solid ${isEnabled ? 'var(--accent)' : 'var(--border)'};
+                  background:${isEnabled ? 'var(--accent)' + '0a' : 'var(--bg2)'}">
+                
+                <div onClick=${() => toggleTrigger(trigger.id)}
+                  style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer">
+                  <span style="font-size:18px">${trigger.icon}</span>
+                  <div style="flex:1">
+                    <div style="font-size:12px;font-weight:600;color:var(--text)">${trigger.label}</div>
+                    <div style="font-size:10px;color:var(--text2)">${trigger.desc}</div>
+                  </div>
+                  <div style="width:20px;height:20px;border-radius:4px;border:2px solid ${isEnabled ? 'var(--accent)' : 'var(--border)'};background:${isEnabled ? 'var(--accent)' : 'transparent'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">
+                    ${isEnabled ? '✓' : ''}
+                  </div>
                 </div>
-                <div style="width:20px;height:20px;border-radius:4px;border:2px solid ${settings.triggers.includes(trigger.id) ? 'var(--accent)' : 'var(--border)'};background:${settings.triggers.includes(trigger.id) ? 'var(--accent)' : 'transparent'};display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700">
-                  ${settings.triggers.includes(trigger.id) ? '✓' : ''}
-                </div>
+
+                ${isEnabled ? html`
+                  <div style="padding:10px 14px;border-top:1px solid rgba(var(--accent-rgb), 0.2);background:var(--bg)">
+                    <div style="font-size:11px;font-weight:600;margin-bottom:6px;color:var(--text2)">Kênh nhận thông báo ca này:</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      ${['zalo', 'telegram', 'slack', 'email'].map(ch => {
+                        const icons = {zalo:'💙', telegram:'✈️', slack:'💬', email:'📧'};
+                        const labels = {zalo:'Zalo OA', telegram:'Telegram', slack:'Slack', email:'Email'};
+                        const tConfigs = settings.trigger_configs || {};
+                        const actCfg = tConfigs[trigger.id] || {notify_channels:['zalo','telegram'], assignee_group:'general'};
+                        const active = (actCfg.notify_channels||[]).includes(ch);
+                        return html`<button key=${ch} type="button" class="btn btn-sm ${active?'':'btn-outline'}" 
+                          style="font-size:10px;padding:4px 8px;${active?'background:var(--accent);color:#fff;border-color:var(--accent)':''}" 
+                          onClick=${(e)=>{
+                            e.stopPropagation();
+                            const newChannels = active ? (actCfg.notify_channels||[]).filter(c=>c!==ch) : [...(actCfg.notify_channels||[]),ch];
+                            setSettings(s => ({...s, trigger_configs: {...(s.trigger_configs||{}), [trigger.id]: { ...actCfg, notify_channels: newChannels}}}));
+                        }}>${icons[ch]||'📡'} ${labels[ch]||ch}</button>`;
+                      })}
+                    </div>
+                    
+                    <div style="font-size:11px;font-weight:600;margin-top:12px;margin-bottom:6px;color:var(--text2)">Phân nhóm tiếp nhận:</div>
+                    <select
+                      style="font-size:12px;padding:6px 10px;width:100%;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:6px;cursor:pointer"
+                      value=${actCfg.assignee_group || 'general'}
+                      onChange=${(e) => {
+                        e.stopPropagation();
+                        setSettings(s => ({...s, trigger_configs: {...(s.trigger_configs||{}), [trigger.id]: { ...actCfg, assignee_group: e.target.value}}}));
+                      }}>
+                      <option value="general">👥 Mặc định (Tất cả bộ phận)</option>
+                      <option value="sales">💰 Phòng Kinh Doanh (Sales)</option>
+                      <option value="support">🛠 Chăm Sóc Khách Hàng (CSKH)</option>
+                      <option value="management">🚨 Ban Quản Lý (Khẩn cấp)</option>
+                    </select>
+                  </div>
+                ` : ''}
               </div>
-            `)}
+            `})}
           </div>
         </div>
 

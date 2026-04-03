@@ -41,7 +41,7 @@ async function loadPage(pageId) {
     channels:      { file: 'channels.js',      export: 'ChannelsPage' },
     tools:         { file: 'tools.js',         export: 'ToolsPage' },
     mcp:           { file: 'mcp.js',           export: 'McpPage' },
-    agents:        { file: 'agents.js',        export: 'AgentsPage' },
+    agents:        { file: 'agents.js?v=2',        export: 'AgentsPage' },
     knowledge:     { file: 'knowledge.js',     export: 'KnowledgePage' },
     kanban:        { file: 'kanban.js',        export: 'KanbanPage' },
     brain:         { file: 'settings.js',      export: 'SettingsPage' }, // brain → settings
@@ -57,9 +57,9 @@ async function loadPage(pageId) {
     plugins:       { file: 'plugins.js',       export: 'PluginsPage' },
     gallery:       { file: 'gallery.js',       export: 'GalleryPage' },
     dbassistant:   { file: 'db_assistant.js',  export: 'DbAssistantPage' },
-    campaigns:     { file: 'campaigns.js',     export: 'CampaignsPage' },
+    campaigns:     { file: 'campaigns.js?v=2',     export: 'CampaignsPage' },
     products:      { file: 'products.js',      export: 'ProductsPage' },
-    handoff:       { file: 'handoff.js',        export: 'HandoffPage' },
+    handoff:       { file: 'handoff.js?v=2',        export: 'HandoffPage' },
     paymentlinks:  { file: 'payment_links.js',  export: 'PaymentLinksPage' },
   };
 

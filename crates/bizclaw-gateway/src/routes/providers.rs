@@ -492,3 +492,150 @@ pub async fn brain_scan_models(State(state): State<Arc<AppState>>) -> Json<serde
         "scan_dirs": scan_dirs.iter().filter(|d| d.exists()).map(|d| d.display().to_string()).collect::<Vec<_>>(),
     }))
 }
+
+/// Delete a downloaded GGUF model file.
+pub async fn brain_delete_model(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(filename): axum::extract::Path<String>,
+) -> Json<serde_json::Value> {
+    let config_dir = state
+        .config_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."));
+    let models_dir = config_dir.join("models");
+    let target = models_dir.join(&filename);
+
+    if !target.exists() {
+        return Json(serde_json::json!({"ok": false, "error": "Model not found"}));
+    }
+
+    match std::fs::remove_file(&target) {
+        Ok(_) => Json(serde_json::json!({"ok": true, "message": format!("Deleted {}", filename)})),
+        Err(e) => Json(serde_json::json!({"ok": false, "error": format!("Failed to delete: {e}")})),
+    }
+}
+
+/// Trigger background download of a model.
+pub async fn brain_download_model(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let model = body["model"].as_str().unwrap_or("").to_string();
+    if model.is_empty() {
+        return Json(serde_json::json!({"ok": false, "error": "Model parameter is required"}));
+    }
+
+    let (url, filename) = match model.as_str() {
+        "tinyllama-1.1b" | "tinyllama" => (
+            "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+            "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
+        ),
+        "phi-2" => (
+            "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf",
+            "phi-2.Q4_K_M.gguf",
+        ),
+        "llama-3.2-1b" | "llama3.2" => (
+            "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+            "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+        ),
+        "gemma4-e2b" | "gemma-4-e2b" => (
+            "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf",
+            "gemma-4-E2B-it-Q4_K_M.gguf",
+        ),
+        "gemma4-e4b" | "gemma-4-e4b" => (
+            "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
+            "gemma-4-E4B-it-Q4_K_M.gguf",
+        ),
+        "gemma4-26b" | "gemma-4-26b" | "gemma4-moe" => (
+            "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/gemma-4-26B-A4B-it-Q4_K_M.gguf",
+            "gemma-4-26B-A4B-it-Q4_K_M.gguf",
+        ),
+        other if other.starts_with("http") => (other, "custom-model.gguf"),
+        _ => return Json(serde_json::json!({"ok": false, "error": "Unknown model identifier"})),
+    };
+
+    let config_dir = state
+        .config_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."));
+    let models_dir = config_dir.join("models");
+    let _ = std::fs::create_dir_all(&models_dir);
+    let dest = models_dir.join(filename);
+    let status_file = models_dir.join(format!(".dl_{}.json", filename));
+
+    if dest.exists() && dest.metadata().map(|m| m.len()).unwrap_or(0) > 10 * 1024 * 1024 {
+        return Json(serde_json::json!({"ok": true, "message": "Model already downloaded", "status": "completed"}));
+    }
+
+    if status_file.exists() {
+        return Json(serde_json::json!({"ok": true, "message": "Download already in progress", "status": "downloading"}));
+    }
+
+    // Initialize status file
+    let _ = std::fs::write(&status_file, r#"{"progress":0, "total":0}"#);
+
+    // Spawn download task
+    let url = url.to_string();
+    tokio::spawn(async move {
+        tracing::info!("⬇️ Starting background download: {}", url);
+        let client = reqwest::Client::new();
+        if let Ok(resp) = client.get(&url).send().await {
+            let total = resp.content_length().unwrap_or(0);
+            if let Ok(mut file) = tokio::fs::File::create(&dest).await {
+                use futures::StreamExt;
+                use tokio::io::AsyncWriteExt;
+                let mut stream = resp.bytes_stream();
+                let mut downloaded: u64 = 0;
+                let mut last_pct = 0;
+                while let Some(chunk) = stream.next().await {
+                    if let Ok(chunk) = chunk {
+                        if file.write_all(&chunk).await.is_ok() {
+                            downloaded += chunk.len() as u64;
+                            if total > 0 {
+                                let pct = (downloaded as f64 / total as f64 * 100.0) as u32;
+                                if pct > last_pct {
+                                    last_pct = pct;
+                                    let status = format!(r#"{{"progress":{}, "total":{}, "percent":{}}}"#, downloaded, total, pct);
+                                    let _ = std::fs::write(&status_file, status);
+                                }
+                            }
+                        }
+                    }
+                }
+                let _ = file.flush().await;
+            }
+        }
+        // Remove status file when done
+        let _ = std::fs::remove_file(&status_file);
+        tracing::info!("✅ Download complete: {}", dest.display());
+    });
+
+    Json(serde_json::json!({"ok": true, "message": "Download started", "status": "downloading"}))
+}
+
+/// Poll download status for a model.
+pub async fn brain_download_status(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(filename): axum::extract::Path<String>,
+) -> Json<serde_json::Value> {
+    let config_dir = state
+        .config_path
+        .parent()
+        .unwrap_or(std::path::Path::new("."));
+    let models_dir = config_dir.join("models");
+    let status_file = models_dir.join(format!(".dl_{}.json", filename));
+
+    if let Ok(content) = std::fs::read_to_string(&status_file) {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+            return Json(serde_json::json!({"ok": true, "status": "downloading", "progress": json}));
+        }
+    }
+
+    let dest = models_dir.join(&filename);
+    if dest.exists() && dest.metadata().map(|m| m.len()).unwrap_or(0) > 10 * 1024 * 1024 {
+        return Json(serde_json::json!({"ok": true, "status": "completed"}));
+    }
+
+    Json(serde_json::json!({"ok": true, "status": "not_started"}))
+}
+

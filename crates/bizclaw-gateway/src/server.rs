@@ -569,11 +569,11 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             "/api/v1/knowledge/upload",
             post(super::routes::knowledge_upload_file),
         )
-        // Campaigns write
         .route("/api/v1/campaigns", post(super::routes::create_campaign))
         .route(
             "/api/v1/campaigns/{id}",
-            axum::routing::delete(super::routes::delete_campaign),
+            axum::routing::delete(super::routes::delete_campaign)
+                .put(super::routes::update_campaign),
         )
         .route(
             "/api/v1/campaigns/{id}/run",
@@ -766,6 +766,18 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route(
             "/api/v1/brain/models",
             get(super::routes::brain_scan_models),
+        )
+        .route(
+            "/api/v1/brain/models/download",
+            post(super::routes::brain_download_model),
+        )
+        .route(
+            "/api/v1/brain/models/status/{filename}",
+            get(super::routes::brain_download_status),
+        )
+        .route(
+            "/api/v1/brain/models/{filename}",
+            axum::routing::delete(super::routes::brain_delete_model),
         )
         .route("/api/v1/zalo/qr", post(super::routes::zalo_qr_code))
         // Campaigns read
@@ -997,6 +1009,11 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route(
             "/api/v1/webhook/zalo-oa",
             post(super::routes::zalo_oa_webhook),
+        )
+        // Zalo Bot Platform webhook — public, auth via X-Bot-Api-Secret-Token
+        .route(
+            "/api/v1/webhook/zalo-bot",
+            post(super::routes::zalo_bot_webhook),
         )
         // Facebook Messenger webhook — public, auth via HMAC + verify token
         .route(

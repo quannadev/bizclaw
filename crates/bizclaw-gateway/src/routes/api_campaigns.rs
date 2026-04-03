@@ -150,3 +150,22 @@ pub async fn run_campaign(
     
     Json(serde_json::json!({ "status": "running" }))
 }
+
+pub async fn update_campaign(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(req): Json<CreateCampaignRequest>,
+) -> Json<serde_json::Value> {
+    let conn = match state.db.lock_conn() {
+        Ok(c) => c,
+        Err(e) => return Json(serde_json::json!({"error": format!("DB error: {e}")}))
+    };
+    let channels_json = serde_json::to_string(&req.channels).unwrap_or_default();
+
+    conn.execute(
+        "UPDATE campaigns SET name = ?1, channels = ?2, segment = ?3, message = ?4, status = ?5, schedule_at = ?6 WHERE id = ?7",
+        params![req.name, channels_json, req.segment, req.message, req.status, req.schedule_at, id],
+    ).unwrap();
+
+    Json(serde_json::json!({ "id": id, "status": "updated" }))
+}

@@ -202,8 +202,23 @@ function AgentsPage({ config, lang }) {
       </div>
     `}
 
-    <div class="card">${loading?html`<div style="text-align:center;padding:20px;color:var(--text2)">Loading...</div>`:agents.length===0?html`<div style="text-align:center;padding:30px;color:var(--text2)"><div style="font-size:48px;margin-bottom:12px">🤖</div><p>Default agent: <strong>${config?.agent_name||'BizClaw'}</strong></p><p style="margin-top:8px">Provider: <span class="badge badge-blue">${config?.default_provider||'—'}</span></p></div>`:html`
+    <div class="card">${loading?html`<div style="text-align:center;padding:20px;color:var(--text2)">Loading...</div>`:html`
       <table><thead><tr><th>Agent</th><th>Vai trò</th><th>Provider</th><th>Model</th><th>Channels</th><th>Messages</th><th>Status</th><th style="text-align:right">Thao tác</th></tr></thead><tbody>
+        
+        <!-- Pinned: Default Agent (AI Mama / Orchestrator) -->
+        <tr style="background:var(--bg2)">
+          <td><strong>${config?.agent_name||'BizClaw'} 👑</strong><div style="font-size:11px;color:var(--text2)">AI Mama tổng quản (Orchestrator). Nhận tin nhắn và điều phối.</div></td>
+          <td><span class="badge badge-purple">Orchestrator</span></td>
+          <td>${config?.default_provider||'—'}</td>
+          <td><span class="badge badge-blue">${config?.default_model||'Mặc định'}</span></td>
+          <td><span class="badge" style="font-size:10px">📡 Toàn hệ thống</span></td>
+          <td>—</td>
+          <td><span class="badge badge-green">Core Active</span></td>
+          <td style="text-align:right">
+            <a href="/brain" class="btn btn-outline btn-sm" title="Sửa file não bộ (SOUL.md)">🧠 Cấu hình não bộ</a>
+          </td>
+        </tr>
+
         ${agents.map(a=>html`<tr key=${a.name||a.id}>
           <td><strong>${a.name}</strong>${a.description?html`<div style="font-size:11px;color:var(--text2)">${a.description}</div>`:''}</td>
           <td><span class="badge">${a.role||'—'}</span></td>

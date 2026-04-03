@@ -14,3 +14,4 @@ pub mod webhook;
 pub mod whatsapp;
 pub mod xiaozhi;
 pub mod zalo;
+pub mod zalo_bot;
