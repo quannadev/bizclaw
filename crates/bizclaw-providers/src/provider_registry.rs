@@ -284,10 +284,23 @@ static OLLAMA_MODELS: &[ModelDef] = &[
         context_length: 128000,
         max_output_tokens: Some(4096),
     },
+    // 🔥 Gemma 4 — multimodal + reasoning + voice (E2B/E4B) from Google DeepMind
     ModelDef {
-        id: "gemma3",
-        name: "Gemma 3 4B (Google)",
+        id: "gemma4:e2b",
+        name: "Gemma 4 E2B (Voice+Vision, On-Device)",
         context_length: 128000,
+        max_output_tokens: Some(8192),
+    },
+    ModelDef {
+        id: "gemma4:e4b",
+        name: "Gemma 4 E4B (Voice+Vision Pro)",
+        context_length: 128000,
+        max_output_tokens: Some(8192),
+    },
+    ModelDef {
+        id: "gemma4:26b-a4b",
+        name: "Gemma 4 26B-A4B MoE (Active 4B)",
+        context_length: 256000,
         max_output_tokens: Some(8192),
     },
     ModelDef {
@@ -310,6 +323,19 @@ static LLAMACPP_MODELS: &[ModelDef] = &[
         id: "Qwen3.5-4B.Q4_K_M",
         name: "⭐🧠 Qwen3.5-4B-Neo Q4_K_M (Brain)",
         context_length: 32768,
+        max_output_tokens: Some(8192),
+    },
+    // 🔥 Gemma 4 GGUF — multimodal + reasoning + agent
+    ModelDef {
+        id: "gemma-4-E4B-it-Q4_K_M",
+        name: "🔊 Gemma 4 E4B Q4_K_M (Voice+Vision)",
+        context_length: 128000,
+        max_output_tokens: Some(8192),
+    },
+    ModelDef {
+        id: "gemma-4-26B-A4B-it-Q4_K_M",
+        name: "🔥 Gemma 4 26B-A4B MoE Q4_K_M",
+        context_length: 256000,
         max_output_tokens: Some(8192),
     },
     ModelDef {

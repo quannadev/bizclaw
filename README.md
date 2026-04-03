@@ -16,7 +16,7 @@
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-743%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v1.0.7-purple)]()
+[![Version](https://img.shields.io/badge/version-v1.1.2-purple)]()
 [![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
 [![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
 
@@ -341,8 +341,8 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 | Thiết bị | RAM | Model khuyên dùng |
 |----------|-----|-------------------|
 | 🍓 Raspberry Pi 4 | 2-4GB | `qwen3:0.6b`, `tinyllama` |
-| 💻 Laptop | 8GB+ | `qwen3`, `llama3.2` |
-| 📱 Android | 4GB+ | GGUF via llama.cpp |
+| 💻 Laptop | 8GB+ | `gemma4:e4b`, `llama3.2` |
+| 📱 Android | 4GB+ | Gemma 4 E2B/E4B Voice+Vision GGUF |
 
 ---
 
@@ -370,7 +370,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.0.7 (Signed Release — 33MB)</b></a><br>
+  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.1.2 (Signed Release)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
@@ -554,7 +554,7 @@ llm:
 
 | Metric | Value |
 |--------|-------|
-| **Version** | v1.0.7 |
+| **Version** | v1.1.2 |
 | **Language** | 100% Rust + Kotlin (Android) |
 | **Crates** | 21 |
 | **Lines of Code** | 82,141 |
@@ -637,4 +637,4 @@ MIT License — xem chi tiết tại [LICENSE](LICENSE).
 
 ---
 
-**BizClaw** v1.0.7 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
+**BizClaw** v1.1.2 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶

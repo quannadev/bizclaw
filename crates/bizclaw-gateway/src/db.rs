@@ -449,7 +449,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["GROQ_API_KEY"]"#,
-                r#"["llama-3.3-70b-versatile","llama-3.1-8b-instant","gemma2-9b-it","mixtral-8x7b-32768"]"#,
+                r#"["llama-3.3-70b-versatile","llama-3.1-8b-instant","gemma2-9b-it","gemma-4-e4b-it","mixtral-8x7b-32768"]"#,
             ),
             (
                 "openrouter",
@@ -521,7 +521,7 @@ impl GatewayDb {
                 "/models",
                 "none",
                 r#"[]"#,
-                r#"["llama3.2","qwen3","phi-4","gemma2","deepseek-r1"]"#,
+                r#"["llama3.2","qwen3","gemma4:e4b","gemma4:26b-a4b","phi-4","deepseek-r1"]"#,
             ),
             (
                 "llamacpp",

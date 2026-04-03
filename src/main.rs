@@ -336,10 +336,24 @@ async fn main() -> Result<()> {
                             "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
                             "Llama-3.2-1B-Instruct-Q4_K_M.gguf",
                         ),
+                        // 🔥 Gemma 4 — multimodal + voice/audio + reasoning
+                        "gemma4-e2b" | "gemma-4-e2b" => (
+                            "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf",
+                            "gemma-4-E2B-it-Q4_K_M.gguf",
+                        ),
+                        "gemma4-e4b" | "gemma-4-e4b" => (
+                            "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
+                            "gemma-4-E4B-it-Q4_K_M.gguf",
+                        ),
+                        "gemma4-26b" | "gemma-4-26b" | "gemma4-moe" => (
+                            "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/gemma-4-26B-A4B-it-Q4_K_M.gguf",
+                            "gemma-4-26B-A4B-it-Q4_K_M.gguf",
+                        ),
                         other if other.starts_with("http") => (other, "custom-model.gguf"),
                         _ => {
                             println!("❌ Unknown model: {model}");
                             println!("   Available: tinyllama-1.1b, phi-2, llama-3.2-1b");
+                            println!("   🔥 Gemma 4: gemma4-e2b, gemma4-e4b, gemma4-26b");
                             println!("   Or provide a direct URL to a .gguf file");
                             return Ok(());
                         }
@@ -432,6 +446,10 @@ async fn main() -> Result<()> {
                     println!("  - tinyllama-1.1b  (~638 MB, recommended for Pi)");
                     println!("  - phi-2           (~1.6 GB)");
                     println!("  - llama-3.2-1b    (~750 MB)");
+                    println!("  🔥 Gemma 4 (multimodal + voice + reasoning):");
+                    println!("  - gemma4-e2b      (~1.5 GB, on-device voice+vision)");
+                    println!("  - gemma4-e4b      (~2.8 GB, voice+vision pro)");
+                    println!("  - gemma4-26b      (~14 GB, MoE powerhouse, GPU server)");
                     println!("\n  Use: bizclaw brain download <model-name>");
                 }
                 BrainAction::Test { prompt } => {

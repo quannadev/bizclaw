@@ -354,12 +354,23 @@ val RECOMMENDED_MODELS = listOf(
         quantization = "Q4_K_M",
         chatTemplate = "chatml",
     ),
+    // 🔥 Gemma 4 — Google DeepMind multimodal + voice/audio native
+    // E2B/E4B support ASR, audio transcription, image, video — perfect for meetings
     DownloadableModel(
-        name = "Gemma 2 2B Instruct Q4_K_M",
-        description = "Google Gemma 2 — compact and capable",
-        url = "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf",
-        sizeBytes = 1_600_000_000L,
-        paramCount = "2B",
+        name = "🔊⭐ Gemma 4 E2B Q4_K_M (Voice+Vision)",
+        description = "Google Gemma 4 — đa mô thức + VOICE: nhận diện giọng nói, ảnh, video. Tối ưu on-device, 128K context, 140+ ngôn ngữ. Lý tưởng cho meeting/cuộc họp (4GB+ RAM)",
+        url = "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf",
+        sizeBytes = 1_500_000_000L,
+        paramCount = "E2B",
+        quantization = "Q4_K_M",
+        chatTemplate = "gemma",
+    ),
+    DownloadableModel(
+        name = "🔊🧠 Gemma 4 E4B Q4_K_M (Voice+Vision Pro)",
+        description = "Google Gemma 4 E4B — mạnh hơn E2B: voice/audio/video/image, 128K context, reasoning mode, function calling. Cho máy flagship/tablet (8GB+ RAM)",
+        url = "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
+        sizeBytes = 2_800_000_000L,
+        paramCount = "E4B",
         quantization = "Q4_K_M",
         chatTemplate = "gemma",
     ),
