@@ -130,13 +130,21 @@ class BizClawLLM {
             ggufReader.load(modelPath)
             val modelContextSize = ggufReader.getContextSize() ?: DefaultParams.contextSize
             val modelChatTemplate = ggufReader.getChatTemplate() ?: DefaultParams.chatTemplate
+            
+            // CRITICAL: Clamp context size to prevent massive KV Cache OOM
+            // DeepMind's Gemma has native 128k context. If we allocate 128k on Android, it crashes instantly out of memory.
+            var finalContextSize = params.contextSize ?: modelContextSize
+            if (finalContextSize > 4096L) {
+                Log.w(TAG, "⚠️ Clamping GGUF context size from $finalContextSize down to 4096 to prevent LMK OOM crash!")
+                finalContextSize = 4096L
+            }
 
             nativePtr = loadModel(
                 modelPath,
                 params.minP,
                 params.temperature,
                 params.storeChats,
-                params.contextSize ?: modelContextSize,
+                finalContextSize,
                 params.chatTemplate ?: modelChatTemplate,
                 params.numThreads,
                 params.useMmap,
@@ -360,7 +368,7 @@ val RECOMMENDED_MODELS = listOf(
         name = "🔊⭐ Gemma 4 E2B Q4_K_M (Voice+Vision)",
         description = "Google Gemma 4 — đa mô thức + VOICE: nhận diện giọng nói, ảnh, video. Tối ưu on-device, 128K context, 140+ ngôn ngữ. Lý tưởng cho meeting/cuộc họp (4GB+ RAM)",
         url = "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-Q4_K_M.gguf",
-        sizeBytes = 1_500_000_000L,
+        sizeBytes = 3_106_731_136L, // Actual remote file is 3.1GB
         paramCount = "E2B",
         quantization = "Q4_K_M",
         chatTemplate = "gemma",
