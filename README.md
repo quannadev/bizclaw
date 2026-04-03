@@ -129,7 +129,6 @@ curl -sSL https://bizclaw.vn/install.sh | sudo bash -s -- \
 | Hạng mục | Chi tiết |
 |----------|----------|
 | **🔌 18 Providers** | OpenAI, Anthropic, Gemini, DeepSeek, Groq, OpenRouter, Together, MiniMax, xAI (Grok), Mistral, BytePlus ModelArk, Cohere, Perplexity, DashScope/Qwen, Ollama, llama.cpp, Brain Engine, CLIProxy, vLLM |
-
 | **💬 10 Channels** | CLI, Telegram, Discord, Email (IMAP/SMTP), Webhook, WhatsApp, Zalo (Personal + OA), **🎙️ Xiaozhi ESP32 Voice** |
 | **🛠️ 29 Tools** | Shell, File, Edit File, Glob, Grep, Web Search, HTTP, Config Manager, Plan, Group Summarizer, **Zalo Tool** (13 actions), Calendar, Doc Reader, **DB Schema** (auto-discover tables/columns), **DB Query** (MySQL/PostgreSQL/SQLite read-only), **API Connector** (safe WRITE via pre-configured endpoints), **Custom Tool** (agent self-creates) |
 | **🔗 MCP** | Model Context Protocol — kết nối MCP servers bên ngoài, mở rộng tools không giới hạn |
@@ -476,13 +475,11 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 | `bizclaw-channels` | 10 channel types (Zalo OA, Telegram, Discord, Xiaozhi Voice...) | 6,892 | 29 | ✅ Production |
 | `bizclaw-gateway` | HTTP + WS + Dashboard (20+ pages) | 11,144 | 49 | ✅ Production |
 | `bizclaw-db` | Database layer (SQLite + PostgreSQL) | 1,974 | 15 | ✅ Production |
-
 | `bizclaw-brain` | GGUF inference + SIMD (Qwen3.5-4B-Neo) | 3,287 | 23 | ✅ Production |
 | `bizclaw-workflows` | Workflow orchestration (6 step types, 23 templates) | 2,888 | 31 | ✅ Production |
 | `bizclaw-scheduler` | Scheduled tasks + Retry + Notifications | 2,907 | 24 | ✅ Production |
 | `bizclaw-hands` | Autonomous Hands (7 types) | 1,557 | 15 | ✅ Production |
 | `bizclaw-skills` | Skill registry + gating | 1,766 | 28 | ✅ Production |
-
 | `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor | 1,897 | 33 | ✅ Production |
 | `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | 799 | 11 | ✅ Production |
 | `bizclaw-ffi` | Android FFI layer (UniFFI) | 343 | 12 | ✅ Production |
