@@ -16,7 +16,7 @@
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-743%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v1.1.2-purple)]()
+[![Version](https://img.shields.io/badge/version-v1.1.3-purple)]()
 [![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
 [![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
 
@@ -158,7 +158,7 @@ curl -sSL https://bizclaw.vn/install.sh | sudo bash -s -- \
 | **📚 Knowledge RAG** | Hybrid search (FTS5 + Vector). Multi-model embedding, Nudges, MCP server, Signal Logger (OpenClaw-RL), Folder Watcher, DOCX/PDF parser |
 | **🔀 Middleware Pipeline** | Composable before/after-model hooks: Guardrail, Summarization, DanglingToolCall, SubagentLimit, Memory |
 | **📄 File Upload Pipeline** | Auto-detect file path → convert PDF/DOCX/XLSX/PPTX/CSV/Code → inject Markdown vào context |
-| **📦 Context Summarizer** | Nén context thông minh: trích xuất key facts (decisions, file paths, flow) thay vì truncate |
+| **📦 λ-Memory Essence** | Nén context thông minh qua Hash Recall Marker chống OOM, tích hợp Safe Context Clamp (8192 tokens) tối ưu hoàn hảo cho Gemma 4 trên 5-8GB RAM |
 | **🖐️ Autonomous Hands** | Agent chạy background 24/7 — Research, Analytics, Content, Monitoring, Security. Tự retry, tự report |
 | **🔄 Workflows** | 23 workflow templates có sẵn. Multi-step pipeline: Sequential, FanOut, Collect, Conditional, Loop, Transform |
 | **⏰ Scheduler** | Cron, interval, one-time tasks. Agent tự chạy background, gửi kết quả qua Telegram/Zalo/Email/Webhook |
@@ -341,7 +341,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 | Thiết bị | RAM | Model khuyên dùng |
 |----------|-----|-------------------|
 | 🍓 Raspberry Pi 4 | 2-4GB | `qwen3:0.6b`, `tinyllama` |
-| 💻 Laptop | 8GB+ | `gemma4:e4b`, `llama3.2` |
+| 💻 Laptop / VPS | 5-8GB+ | `gemma4` (Chạy mượt nhờ Safe Context Clamp 8192) |
 | 📱 Android | 4GB+ | Gemma 4 E2B/E4B Voice+Vision GGUF |
 
 ---
@@ -370,7 +370,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.1.2 (Signed Release)</b></a><br>
+  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.1.3 (Signed Release)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
@@ -554,7 +554,7 @@ llm:
 
 | Metric | Value |
 |--------|-------|
-| **Version** | v1.1.2 |
+| **Version** | v1.1.3 |
 | **Language** | 100% Rust + Kotlin (Android) |
 | **Crates** | 21 |
 | **Lines of Code** | 82,141 |
@@ -564,7 +564,7 @@ llm:
 | **Dashboard Pages** | 20+ (27 lazy-loaded modules) |
 | **Agent Templates** | 51 |
 | **Security** | Vault, Approval Gates, Prompt Injection Scanner, RBAC, AES-256-CBC, SSRF Protection, Audit Trail, Prometheus |
-| **Last Updated** | 2026-03-29 |
+| **Last Updated** | 2026-04-03 |
 
 ---
 
@@ -637,4 +637,4 @@ MIT License — xem chi tiết tại [LICENSE](LICENSE).
 
 ---
 
-**BizClaw** v1.1.2 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
+**BizClaw** v1.1.3 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
