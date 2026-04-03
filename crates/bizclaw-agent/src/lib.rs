@@ -172,7 +172,7 @@ impl Agent {
                 message_count: 1,
                 estimated_tokens: 0,
                 utilization_pct: 0.0,
-                max_context: 128000,
+                max_context: 8192, // Safe default for local Gemma 4
                 last_tool_rounds: 0,
                 compacted: false,
                 session_id: "default".to_string(),
@@ -277,7 +277,7 @@ impl Agent {
                 message_count: 1,
                 estimated_tokens: 0,
                 utilization_pct: 0.0,
-                max_context: 128000,
+                max_context: 8192, // Safe default for local Gemma 4
                 last_tool_rounds: 0,
                 compacted: false,
                 session_id: "default".to_string(),
@@ -334,7 +334,15 @@ impl Agent {
     /// Uses Think-Act-Observe loop with Quality Gate evaluation.
     pub async fn process(&mut self, user_message: &str) -> Result<String> {
         let mut compacted = false;
-        let max_context = self.config.brain.context_length as usize;
+        let mut max_context = self.config.brain.context_length as usize;
+
+        // CRITICAL FOR SINGLE-TENANT (5-8GB RAM): 
+        // Clamp context dynamically for Gemma 4 or local models. If unlimited (0) or too large (>8192), 
+        // clamp to 8192 to guarantee stability without OOMing the VPS.
+        if max_context == 0 || max_context > 8192 {
+            max_context = 8192;
+            tracing::debug!("⚠️ Clamping max context to 8192 to ensure Gemma 4 stability on 5-8GB RAM");
+        }
 
         // Knowledge RAG
         if let Some(kb_ctx) = self.search_knowledge(user_message).await {
@@ -834,9 +842,10 @@ impl Agent {
         let old_messages = &self.conversation[1..];
         let summary_text = crate::context_summarizer::rule_based_summarize(old_messages);
 
+        let hash_marker = uuid::Uuid::new_v4().to_string();
         let summary = format!(
-            "[Compacted: {} earlier messages]\n{}\n[End of compacted context]",
-            old_count, summary_text
+            "[λ-Memory Essence ({} msgs)]\n{}\n[Recall Hash: {}]\n[End Essence]",
+            old_count, summary_text, hash_marker
         );
 
         // Rebuild: system (already at [0]) + summary + recent

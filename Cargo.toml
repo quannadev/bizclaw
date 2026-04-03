@@ -37,7 +37,7 @@ manual_let_else = "warn"     # Use let-else for cleaner early returns
 # unsafe_code = "deny"       # Uncomment when SIMD module is gated behind feature flag
 
 [workspace.package]
-version = "1.1.2"
+version = "1.1.3"
 edition = "2024"
 authors = ["BizClaw Team"]
 license = "MIT OR Apache-2.0"
