@@ -1319,6 +1319,28 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
         orchestrator.agent_count()
     );
 
+    // ── P1.2 FIX: Inject shared Knowledge Base into ALL agents ──
+    // Without this, agents responding via Telegram/Zalo had no RAG context
+    // and would hallucinate product prices and information.
+    let knowledge_arc_for_agents =
+        Arc::new(tokio::sync::Mutex::new(knowledge));
+    {
+        for agent_name in orchestrator
+            .list_agents()
+            .iter()
+            .filter_map(|a| a["name"].as_str().map(|s| s.to_string()))
+            .collect::<Vec<_>>()
+        {
+            if let Some(agent) = orchestrator.get_agent_mut(&agent_name) {
+                agent.set_knowledge(knowledge_arc_for_agents.clone());
+            }
+        }
+        tracing::info!(
+            "📚 Knowledge Base injected into {} agent(s)",
+            orchestrator.agent_count()
+        );
+    }
+
     // Wrap orchestrator in Arc for shared access
     let orchestrator_arc = Arc::new(tokio::sync::Mutex::new(orchestrator));
 
@@ -1441,7 +1463,7 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
         agent: Arc::new(tokio::sync::Mutex::new(agent)),
         orchestrator: orchestrator_arc.clone(),
         scheduler,
-        knowledge: Arc::new(tokio::sync::Mutex::new(knowledge)),
+        knowledge: knowledge_arc_for_agents.clone(),
         telegram_bots: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         db: gateway_db,
         orch_store,

@@ -417,19 +417,50 @@ pub async fn dispatch_to_channel_agent(
             return Some(crate::routes::api_handoff::load_handoff_settings(&state).greeting);
         }
     }
+    // ── P1.1 FIX: Compute session key for per-thread conversation isolation ──
+    let session_key = match thread_id {
+        Some(t_id) => format!("{}:{}", channel, t_id),
+        None => format!("{}:anon", channel),
+    };
 
-    // ── MAMA Orchestrator Routing ──
-    // Step 1: Check if channel has a specific agent binding (manual override)
+    // ── P1.3 FIX: Hybrid Intent Router ──
+    // Step 1: Try keyword-based fast-path (0ms, handles ~80% of messages)
+    let fast_routed = fast_route_by_keyword(content);
+
+    // Step 2: Check if channel has a specific agent binding (manual override)
     let target = resolve_agent_for_channel(&state, channel).await;
 
-    // Step 2: Try MAMA routing — send to "mama" for intent classification
-    // MAMA returns [ROUTE:agent-name] — we parse that and delegate to the right sub-agent
+    // Step 3a: If keyword router matched → skip MAMA LLM entirely (fast path)
+    if let Some(routed_agent) = fast_routed {
+        if target.is_none() {
+            let mut orch = state.orchestrator.lock().await;
+            // Set session for thread isolation
+            if let Some(agent) = orch.get_agent_mut(&routed_agent) {
+                agent.set_session(&session_key);
+            }
+            tracing::info!(
+                "⚡ Fast-route '{}' → '{}' (keyword match, session={})",
+                if content.len() > 50 { &content[..50] } else { content },
+                routed_agent,
+                session_key
+            );
+            match orch.send_to(&routed_agent, content).await {
+                Ok(reply) => return Some(reply),
+                Err(e) => {
+                    tracing::warn!("⚡ Fast-routed agent '{}' failed: {}", routed_agent, e);
+                    // Fall through to MAMA or default
+                }
+            }
+        }
+    }
+
+    // Step 3b: Ambiguous message → try MAMA LLM routing (slow path)
     let has_mama = {
         let orch = state.orchestrator.lock().await;
         orch.list_agents().iter().any(|a| a["name"].as_str() == Some("mama"))
     };
 
-    if has_mama && target.is_none() {
+    if has_mama && target.is_none() && fast_routed.is_none() {
         let mut orch = state.orchestrator.lock().await;
         match orch.send_to("mama", content).await {
             Ok(mama_response) => {
@@ -439,20 +470,24 @@ pub async fn dispatch_to_channel_agent(
                     if let Some(end) = after.find(']') {
                         let routed_agent = after[..end].trim().to_string();
                         tracing::info!(
-                            "👑 MAMA routed '{}' → agent '{}' (channel={})",
-                            if content.len() > 60 { &content[..60] } else { content },
+                            "👑 MAMA routed → '{}' (session={})",
                             routed_agent,
-                            channel
+                            session_key
                         );
-                        // Delegate to the routed agent for the actual response
+                        // Set session for thread isolation before delegating
+                        if let Some(agent) = orch.get_agent_mut(&routed_agent) {
+                            agent.set_session(&session_key);
+                        }
                         match orch.send_to(&routed_agent, content).await {
                             Ok(agent_reply) => return Some(agent_reply),
                             Err(e) => {
                                 tracing::warn!(
-                                    "👑 MAMA routed to '{}' but it failed: {}. Trying sales-bot fallback.",
+                                    "👑 MAMA routed to '{}' but failed: {}. Fallback to sales-bot.",
                                     routed_agent, e
                                 );
-                                // Fallback: try sales-bot
+                                if let Some(agent) = orch.get_agent_mut("sales-bot") {
+                                    agent.set_session(&session_key);
+                                }
                                 if let Ok(fb) = orch.send_to("sales-bot", content).await {
                                     return Some(fb);
                                 }
@@ -460,20 +495,23 @@ pub async fn dispatch_to_channel_agent(
                         }
                     }
                 }
-                // If MAMA didn't return [ROUTE:...], use its response directly (graceful degradation)
+                // MAMA didn't return [ROUTE:...] — use its response directly
                 tracing::info!("👑 MAMA responded directly (no routing tag)");
                 return Some(mama_response);
             }
             Err(e) => {
-                tracing::warn!("👑 MAMA agent error: {}. Falling back to channel/default.", e);
+                tracing::warn!("👑 MAMA error: {}. Falling back.", e);
             }
         }
     }
 
-    // Step 3: Fallback — channel-specific agent or default agent
+    // Step 4: Fallback — channel-specific agent or default agent
     let mut orch = state.orchestrator.lock().await;
 
     if let Some(agent_name) = target {
+        if let Some(agent) = orch.get_agent_mut(&agent_name) {
+            agent.set_session(&session_key);
+        }
         match orch.send_to(&agent_name, content).await {
             Ok(r) => return Some(r),
             Err(e) => {
@@ -486,10 +524,74 @@ pub async fn dispatch_to_channel_agent(
         }
     }
 
+    // Last resort: default agent with session isolation
+    if let Some(default_name) = orch.default_agent_name().map(|s| s.to_string()) {
+        if let Some(agent) = orch.get_agent_mut(&default_name) {
+            agent.set_session(&session_key);
+        }
+    }
     match orch.send(content).await {
         Ok(r) => Some(r),
         Err(e) => Some(format!("⚠️ Agent error: {e}")),
     }
+}
+
+/// P1.3: Keyword-based fast intent router.
+/// Returns agent name if keywords match with high confidence.
+/// Returns None for ambiguous messages (routed to MAMA LLM).
+fn fast_route_by_keyword(content: &str) -> Option<&'static str> {
+    let lower = content.to_lowercase();
+
+    // ── Sales signals ──
+    if lower.contains("giá") || lower.contains("bao nhiêu")
+        || lower.contains("mua") || lower.contains("đặt hàng")
+        || lower.contains("báo giá") || lower.contains("order")
+        || lower.contains("thanh toán") || lower.contains("chuyển khoản")
+        || lower.contains("tư vấn") || lower.contains("sản phẩm")
+        || lower.contains("catalogue") || lower.contains("bảng giá")
+    {
+        return Some("sales-bot");
+    }
+
+    // ── Support signals ──
+    if lower.contains("lỗi") || lower.contains("hỏng") || lower.contains("không được")
+        || lower.contains("crash") || lower.contains("bug") || lower.contains("sửa")
+        || lower.contains("hướng dẫn") || lower.contains("cài đặt")
+        || lower.contains("trợ giúp") || lower.contains("help")
+        || lower.contains("ticket") || lower.contains("khiếu nại")
+    {
+        return Some("support-bot");
+    }
+
+    // ── Marketing signals ──
+    if lower.contains("viết bài") || lower.contains("content")
+        || lower.contains("quảng cáo") || lower.contains("marketing")
+        || lower.contains("facebook") || lower.contains("tiktok")
+        || lower.contains("social") || lower.contains("chiến dịch")
+        || lower.contains("email marketing") || lower.contains("seo")
+    {
+        return Some("marketing-bot");
+    }
+
+    // ── Analyst signals ──
+    if lower.contains("báo cáo") || lower.contains("thống kê")
+        || lower.contains("doanh thu") || lower.contains("kpi")
+        || lower.contains("dashboard") || lower.contains("phân tích")
+        || lower.contains("forecast") || lower.contains("report")
+    {
+        return Some("analyst-bot");
+    }
+
+    // ── Coder signals ──
+    if lower.contains("code") || lower.contains("debug")
+        || lower.contains("api") || lower.contains("deploy")
+        || lower.contains("lập trình") || lower.contains("review code")
+    {
+        return Some("coder-bot");
+    }
+
+    // Ambiguous — let MAMA LLM decide
+    None
 }
 
 // ── Fallback: if no telegram instances, check config.toml for bot_token ──

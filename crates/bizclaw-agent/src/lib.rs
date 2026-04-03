@@ -107,6 +107,12 @@ pub struct Agent {
     prompt_cache: PromptCache,
     /// Current session ID for memory isolation
     session_id: String,
+    /// Per-session conversation cache — isolates each customer/thread's context.
+    /// Key: session_id (e.g. "telegram:chat_12345"), Value: conversation messages.
+    /// Max 50 sessions cached; LRU eviction when exceeded.
+    session_conversations: std::collections::HashMap<String, Vec<Message>>,
+    /// System prompt message — kept separately so each session starts with it.
+    system_prompt_message: Message,
     /// Knowledge base for RAG (optional, shared with gateway)
     knowledge:
         Option<std::sync::Arc<tokio::sync::Mutex<Option<bizclaw_knowledge::KnowledgeStore>>>>,
@@ -146,7 +152,8 @@ impl Agent {
 
         let prompt_cache = PromptCache::new(&system_prompt, &tools);
 
-        let conversation = vec![Message::system(&system_prompt)];
+        let sys_msg = Message::system(&system_prompt);
+        let conversation = vec![sys_msg.clone()];
 
         Ok(Self {
             config,
@@ -158,6 +165,8 @@ impl Agent {
             conversation,
             prompt_cache,
             session_id: "default".to_string(),
+            session_conversations: std::collections::HashMap::new(),
+            system_prompt_message: sys_msg,
             knowledge: None,
             last_stats: ContextStats {
                 message_count: 1,
@@ -244,7 +253,8 @@ impl Agent {
 
         let prompt_cache = PromptCache::new(&system_prompt, &tools);
 
-        let conversation = vec![Message::system(&system_prompt)];
+        let sys_msg = Message::system(&system_prompt);
+        let conversation = vec![sys_msg.clone()];
 
         Ok(Self {
             config,
@@ -256,6 +266,8 @@ impl Agent {
             conversation,
             prompt_cache,
             session_id: "default".to_string(),
+            session_conversations: std::collections::HashMap::new(),
+            system_prompt_message: sys_msg,
             knowledge: None,
             daily_log,
             loop_detector: loop_detector::LoopDetector::new(),
@@ -281,8 +293,33 @@ impl Agent {
         self.knowledge = Some(kb);
     }
 
-    /// Set the current session ID for memory isolation.
+    /// Switch to a different session (thread/customer conversation).
+    /// Saves the current conversation and restores the target session's conversation.
+    /// Each session gets isolated conversation history.
     pub fn set_session(&mut self, session_id: &str) {
+        if self.session_id == session_id {
+            return; // Already in this session
+        }
+
+        // Save current conversation to cache
+        if self.session_id != "default" || self.conversation.len() > 1 {
+            self.session_conversations
+                .insert(self.session_id.clone(), std::mem::take(&mut self.conversation));
+        }
+
+        // LRU eviction: keep max 50 sessions
+        if self.session_conversations.len() > 50 {
+            if let Some(oldest_key) = self.session_conversations.keys().next().cloned() {
+                self.session_conversations.remove(&oldest_key);
+            }
+        }
+
+        // Restore target session or create fresh
+        self.conversation = self
+            .session_conversations
+            .remove(session_id)
+            .unwrap_or_else(|| vec![self.system_prompt_message.clone()]);
+
         self.session_id = session_id.to_string();
         self.last_stats.session_id = session_id.to_string();
     }
