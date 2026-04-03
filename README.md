@@ -11,7 +11,6 @@
 
 > **BizClaw** là nền tảng AI Agent self-hosted, viết hoàn toàn bằng Rust. Chạy trên bất kỳ thiết bị nào từ 512MB RAM — từ Raspberry Pi bỏ túi đến laptop cá nhân. Không cần cloud, không cần server. Dự án được xây dựng để **tự học**, **thử nghiệm AI** và **vibe coding** 🎶
 
-> ⚠️ **Lưu ý**: Nền tảng mã nguồn mở này được thiết kế với mục đích học tập và nghiên cứu. Để sử dụng ổn định cho môi trường Production / Doanh nghiệp, vui lòng sử dụng [OpenClaw](https://github.com/openclaw/openclaw). Xin cảm ơn!
 
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -32,25 +31,6 @@
 | 🎙️ **IoT Enthusiast** | Kết nối ESP32 Xiaozhi (~$5) làm AI voice assistant vật lý |
 
 > 🔒 **Không telemetry. Không tracking. Không tạo tài khoản trên server trung gian.** Dữ liệu chat, API Keys mã hoá AES-256 trên ổ cứng của bạn.
-
----
-
-## 🧪 Dùng Thử Demo — Trải nghiệm ngay không cần cài đặt
-
-> **Mục đích**: Học tập, nghiên cứu và thử nghiệm. Demo server chạy trên VPS thật để cộng đồng trải nghiệm toàn bộ tính năng trước khi tự host.
-
-| Thông tin | Giá trị |
-|-----------|---------|
-| 🌐 **Demo Dashboard** | [https://apps.bizclaw.vn](https://apps.bizclaw.vn) |
-| 🏠 **Landing Page** | [https://bizclaw.vn](https://bizclaw.vn) |
-| 📧 **Email** | `admin@bizclaw.vn` |
-| 🔑 **Password** | `BizClaw@Demo2026` |
-
-> ⚠️ **Lưu ý quan trọng:**
-> - Đây là tài khoản **Admin** dùng chung cho cộng đồng — bạn sẽ thấy toàn bộ Dashboard, Agents, Providers, Channels, Knowledge Base, Scheduler...
-> - **Không nhập API Key thật** vào demo server — hãy dùng Ollama (local, miễn phí) hoặc key test.
-> - Demo server được **reset định kỳ** — dữ liệu tạo trên demo không được lưu trữ vĩnh viễn.
-> - Muốn trải nghiệm đầy đủ với dữ liệu riêng? [Tự cài đặt](#-cài-đặt--5-cách) trên máy cá nhân (5 phút).
 
 ---
 
@@ -149,7 +129,7 @@ curl -sSL https://bizclaw.vn/install.sh | sudo bash -s -- \
 | Hạng mục | Chi tiết |
 |----------|----------|
 | **🔌 18 Providers** | OpenAI, Anthropic, Gemini, DeepSeek, Groq, OpenRouter, Together, MiniMax, xAI (Grok), Mistral, BytePlus ModelArk, Cohere, Perplexity, DashScope/Qwen, Ollama, llama.cpp, Brain Engine, CLIProxy, vLLM |
-| **🌐 WebAuth** | Dùng AI miễn phí qua browser session (Gemini, Claude, ChatGPT, DeepSeek, Grok) — không cần API key |
+
 | **💬 10 Channels** | CLI, Telegram, Discord, Email (IMAP/SMTP), Webhook, WhatsApp, Zalo (Personal + OA), **🎙️ Xiaozhi ESP32 Voice** |
 | **🛠️ 29 Tools** | Shell, File, Edit File, Glob, Grep, Web Search, HTTP, Config Manager, Plan, Group Summarizer, **Zalo Tool** (13 actions), Calendar, Doc Reader, **DB Schema** (auto-discover tables/columns), **DB Query** (MySQL/PostgreSQL/SQLite read-only), **API Connector** (safe WRITE via pre-configured endpoints), **Custom Tool** (agent self-creates) |
 | **🔗 MCP** | Model Context Protocol — kết nối MCP servers bên ngoài, mở rộng tools không giới hạn |
@@ -496,13 +476,13 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 | `bizclaw-channels` | 10 channel types (Zalo OA, Telegram, Discord, Xiaozhi Voice...) | 6,892 | 29 | ✅ Production |
 | `bizclaw-gateway` | HTTP + WS + Dashboard (20+ pages) | 11,144 | 49 | ✅ Production |
 | `bizclaw-db` | Database layer (SQLite + PostgreSQL) | 1,974 | 15 | ✅ Production |
-| `bizclaw-webauth` | Free LLM access via browser session (Gemini, Claude, ChatGPT) | 2,888 | 22 | ✅ Production |
+
 | `bizclaw-brain` | GGUF inference + SIMD (Qwen3.5-4B-Neo) | 3,287 | 23 | ✅ Production |
 | `bizclaw-workflows` | Workflow orchestration (6 step types, 23 templates) | 2,888 | 31 | ✅ Production |
 | `bizclaw-scheduler` | Scheduled tasks + Retry + Notifications | 2,907 | 24 | ✅ Production |
 | `bizclaw-hands` | Autonomous Hands (7 types) | 1,557 | 15 | ✅ Production |
 | `bizclaw-skills` | Skill registry + gating | 1,766 | 28 | ✅ Production |
-| `bizclaw-platform` | Multi-tenant SaaS (billing, onboarding) | 8,780 | 15 | ✅ Production |
+
 | `bizclaw-orchestrator` | Agent Team, Token Budget, Heartbeat Monitor | 1,897 | 33 | ✅ Production |
 | `bizclaw-mcp` | MCP client (JSON-RPC 2.0) | 799 | 11 | ✅ Production |
 | `bizclaw-ffi` | Android FFI layer (UniFFI) | 343 | 12 | ✅ Production |
@@ -556,9 +536,9 @@ llm:
 |--------|-------|
 | **Version** | v1.1.3 |
 | **Language** | 100% Rust + Kotlin (Android) |
-| **Crates** | 21 |
-| **Lines of Code** | 82,141 |
-| **Tests** | 743 passing (21/21 crates ✅ Production) |
+| **Crates** | 19 |
+| **Lines of Code** | 70,473 |
+| **Tests** | 706 passing (19/19 crates ✅ Production) |
 | **Workflow Templates** | 23 |
 | **Binary Size** | bizclaw ~12MB, Android APK ~33MB |
 | **Dashboard Pages** | 20+ (27 lazy-loaded modules) |
