@@ -76,7 +76,7 @@ class MeetingAssistantUseCase(
             Log.d(TAG, "Sending prompt to Gemma 4 (Size: \${prompt.length})...")
             
             // Call local engine
-            val newInsight = picoLMEngine.generateTextSync(prompt, maxTokens = 256)
+            val newInsight = picoLMEngine.getResponse(prompt)
             
             // Push to flow
             _meetingInsight.value = newInsight
