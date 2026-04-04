@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 3. Atomic thread locks to prevent duplicate JNI calls.
  */
 class MeetingAssistantUseCase(
-    private val picoLMEngine: PicoLMEngine
+    private val bizClawLLM: BizClawLLM
 ) {
     private val isLlmBusy = AtomicBoolean(false)
     private val TAG = "MeetingAssistant"
@@ -76,7 +76,7 @@ class MeetingAssistantUseCase(
             Log.d(TAG, "Sending prompt to Gemma 4 (Size: \${prompt.length})...")
             
             // Call local engine
-            val newInsight = picoLMEngine.getResponse(prompt)
+            val newInsight = bizClawLLM.getResponse(prompt)
             
             // Push to flow
             _meetingInsight.value = newInsight
