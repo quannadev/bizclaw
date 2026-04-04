@@ -26,3 +26,6 @@ app/build/outputs/apk/*
 !app/build/outputs/apk/debug/
 app/build/outputs/apk/debug/*
 !app/build/outputs/apk/debug/app-debug.apk
+!app/build/outputs/apk/release/
+app/build/outputs/apk/release/*
+!app/build/outputs/apk/release/app-release.apk
