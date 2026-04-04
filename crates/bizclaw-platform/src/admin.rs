@@ -793,9 +793,26 @@ async fn pay2s_webhook_handler(
                                         )),
                                     );
                                 }
+                            } else if let Ok(Some(cloud_id)) = db.find_cloud_tenant_by_ref(&tenant_ref) {
+                                tracing::info!("✅ Auto cloud plan activated via Pay2S: cloud={}, amount={}đ", cloud_id, amount);
+                                let _ = db.complete_payment(&tx_ref, &cloud_id);
+                                if let Ok(tenants) = db.cloud_list_tenants() {
+                                    if let Some(ct) = tenants.iter().find(|t| t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)) {
+                                        let cplan = ct.get("plan").and_then(|v| v.as_str()).unwrap_or("starter").to_string();
+                                        let cname = ct.get("name").and_then(|v| v.as_str()).unwrap_or("Tenant").to_string();
+                                        let _ = db.cloud_update_tenant_status(&cloud_id, "active");
+                                        let _ = db.log_event("cloud_plan_activated", "pay2s", &cloud_id, Some(&format!("Auto-activated Cloud VPS plan '{}' via Pay2S payment {}đ", cplan, amount)));
+                                        
+                                        let state_clone = state.clone();
+                                        let tid = cloud_id.clone();
+                                        tokio::spawn(async move {
+                                            crate::vsphere::provision_tenant_vm(state_clone, tid, cname, cplan).await;
+                                        });
+                                    }
+                                }
                             } else {
                                 tracing::warn!(
-                                    "⚠️ Pay2S payment ref '{}' did not match any tenant",
+                                    "⚠️ Pay2S payment ref '{}' did not match any local or cloud tenant",
                                     tenant_ref
                                 );
                                 let _ = db.fail_payment(&tx_ref, "unmatched");
@@ -1054,9 +1071,26 @@ async fn sepay_webhook_handler(
                                     )),
                                 );
                             }
+                        } else if let Ok(Some(cloud_id)) = db.find_cloud_tenant_by_ref(&tenant_ref) {
+                            tracing::info!("✅ Auto cloud plan activated via SePay: cloud={}, amount={}đ", cloud_id, amount);
+                            let _ = db.complete_payment(&tx_ref, &cloud_id);
+                            if let Ok(tenants) = db.cloud_list_tenants() {
+                                if let Some(ct) = tenants.iter().find(|t| t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)) {
+                                    let cplan = ct.get("plan").and_then(|v| v.as_str()).unwrap_or("starter").to_string();
+                                    let cname = ct.get("name").and_then(|v| v.as_str()).unwrap_or("Tenant").to_string();
+                                    let _ = db.cloud_update_tenant_status(&cloud_id, "active");
+                                    let _ = db.log_event("cloud_plan_activated", "sepay", &cloud_id, Some(&format!("Auto-activated Cloud VPS plan '{}' via SePay payment {}đ", cplan, amount)));
+                                    
+                                    let state_clone = state.clone();
+                                    let tid = cloud_id.clone();
+                                    tokio::spawn(async move {
+                                        crate::vsphere::provision_tenant_vm(state_clone, tid, cname, cplan).await;
+                                    });
+                                }
+                            }
                         } else {
                             tracing::warn!(
-                                "⚠️ SePay payment ref '{}' did not match any tenant",
+                                "⚠️ SePay payment ref '{}' did not match any local or cloud tenant",
                                 tenant_ref
                             );
                             let _ = db.fail_payment(&tx_ref, "unmatched");

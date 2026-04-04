@@ -536,6 +536,20 @@ impl PlatformDb {
         }
     }
 
+    /// Find a cloud tenant by ID or subdomain (for SePay reference matching).
+    pub fn find_cloud_tenant_by_ref(&self, reference: &str) -> Result<Option<String>> {
+        let reference_lower = reference.to_lowercase();
+        match self.conn.query_row(
+            "SELECT id FROM cloud_tenants WHERE LOWER(id)=?1 OR LOWER(subdomain) LIKE ?2",
+            params![reference_lower, format!("%{}%", reference_lower)],
+            |row| row.get::<_, String>(0),
+        ) {
+            Ok(id) => Ok(Some(id)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(BizClawError::Memory(format!("Find cloud tenant: {e}"))),
+        }
+    }
+
     /// Regenerate pairing code.
     pub fn reset_pairing_code(&self, id: &str) -> Result<String> {
         let code = format!("{:06}", rand_code());
