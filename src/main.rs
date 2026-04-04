@@ -635,9 +635,6 @@ async fn main() -> Result<()> {
                 bizclaw_hands::registry::HandRegistry::with_defaults(),
             ));
             bizclaw_hands::runner::HandRunner::new(registry, 60).spawn();
-            tokio::spawn(async move {
-                bizclaw_platform::oauth::start_token_refresh_worker(None).await;
-            });
 
             // Start configured channels in background
             // ═══════════════════════════════════════════

@@ -34,3 +34,5 @@ bizclaw-security.workspace = true
 bizclaw-tools.workspace = true
 jsonwebtoken = "9"
 hex = "0.4"
+rand.workspace = true
+urlencoding.workspace = true

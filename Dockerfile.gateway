@@ -1,0 +1,31 @@
+# ── BizClaw Gateway (Single-Tenant) ──────────────────────
+# Build: docker build -f Dockerfile.gateway -t bizclaw-gateway .
+# Run:   docker run -p 3000:3000 -v ~/.bizclaw:/root/.bizclaw bizclaw-gateway serve
+
+FROM rust:1.85-bookworm AS builder
+
+WORKDIR /src
+COPY . .
+
+# Build only the gateway binary — excludes platform code
+RUN cargo build --release --bin bizclaw \
+    && strip /src/target/release/bizclaw
+
+# ── Runtime ──────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates libssl3 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /src/target/release/bizclaw /usr/bin/bizclaw
+
+# Default data directory
+RUN mkdir -p /root/.bizclaw
+VOLUME /root/.bizclaw
+
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s CMD curl -sf http://localhost:3000/api/v1/info || exit 1
+
+ENTRYPOINT ["bizclaw"]
+CMD ["serve", "--port", "3000"]

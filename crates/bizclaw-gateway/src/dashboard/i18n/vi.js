@@ -14,6 +14,7 @@ export const vi = {
   // Sidebar group labels
   'nav.group_ops':'VẬN HÀNH','nav.group_biz':'KINH DOANH',
   'nav.group_intel':'TRÍ TUỆ','nav.group_cfg':'CẤU HÌNH',
+  'nav.group_cloud':'CLOUD SAAS','nav.cloud':'Cloud Panel',
   // Orchestration
   'orch.title':'Điều phối','orch.subtitle':'Ủy quyền, Chuyển giao, Vòng lặp đánh giá, Liên kết quyền, LLM Traces',
   'orch.delegations':'Ủy quyền','orch.links':'Liên kết quyền','orch.traces':'LLM Traces',

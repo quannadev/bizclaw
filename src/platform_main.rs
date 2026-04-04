@@ -210,6 +210,7 @@ async fn main() -> Result<()> {
     };
 
     // Build admin state
+    let ai_gw = bizclaw_platform::ai_gateway::AiGatewayState::new();
     let state = Arc::new(bizclaw_platform::admin::AdminState {
         db: tokio::sync::Mutex::new(db),
         manager: tokio::sync::Mutex::new(bizclaw_platform::TenantManager::new(&data_dir)),
@@ -221,6 +222,7 @@ async fn main() -> Result<()> {
         register_attempts: std::sync::Mutex::new(std::collections::HashMap::new()),
         pg_db,
         startup_time: std::time::Instant::now(),
+        ai_gateway: Some(Arc::new(ai_gw)),
     });
 
     // Start server

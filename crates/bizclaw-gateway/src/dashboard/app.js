@@ -61,6 +61,7 @@ async function loadPage(pageId) {
     products:      { file: 'products.js',      export: 'ProductsPage' },
     handoff:       { file: 'handoff.js?v=2',        export: 'HandoffPage' },
     paymentlinks:  { file: 'payment_links.js',  export: 'PaymentLinksPage' },
+    cloud:         { file: 'cloud.js',          export: 'CloudPage' },
   };
 
   const mapping = PAGE_MAP[pageId];

@@ -31,12 +31,8 @@ function PaymentLinksPage({ lang }) {
   const [form, setForm] = useState({ amount: 0, description: '', customer: '', order_id: '' });
   const [generatedLinks, setGeneratedLinks] = useState([]);
 
-  // Transaction history (demo)
-  const [transactions, setTransactions] = useState([
-    { id: 'tx1', order_id: 'BC240401001', customer: 'Nguyễn Văn A', amount: 450000, status: 'paid', time: '10:23', channel: 'Zalo', bank: 'MB' },
-    { id: 'tx2', order_id: 'BC240401002', customer: 'Trần Thị B', amount: 1200000, status: 'paid', time: '11:05', channel: 'Messenger', bank: 'TCB' },
-    { id: 'tx3', order_id: 'BC240401003', customer: 'Lê Hoàng C', amount: 890000, status: 'pending', time: '11:28', channel: 'Telegram', bank: '' },
-  ]);
+  // Transaction history (real data will be fetched from API later)
+  const [transactions, setTransactions] = useState([]);
 
   const todayRevenue = transactions.filter(t => t.status === 'paid').reduce((s, t) => s + t.amount, 0);
   const paidCount = transactions.filter(t => t.status === 'paid').length;

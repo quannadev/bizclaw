@@ -1,6 +1,7 @@
 //! # BizClaw Gateway
 //! HTTP/WebSocket gateway API with embedded web dashboard.
 
+pub mod cloud;
 pub mod dashboard;
 pub mod db;
 pub mod openai_compat;

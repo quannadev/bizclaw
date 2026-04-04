@@ -16,6 +16,7 @@ function AgentsPage({ config, lang }) {
   const [sqlConns, setSqlConns] = useState([]);
   const [customAgentProv, setCustomAgentProv] = useState(false);
   const [customAgentModel, setCustomAgentModel] = useState(false);
+  const [localModels, setLocalModels] = useState([]);
 
   const load = async () => {
     try {
@@ -49,6 +50,7 @@ function AgentsPage({ config, lang }) {
       if (sqlData.connections) {
         setSqlConns(sqlData.connections || []);
       }
+      try { const rm=await authFetch('/api/v1/brain/models'); const dm=await rm.json(); setLocalModels(dm.models||[]); } catch(e) {}
     } catch(e){ console.error('AgentsPage load error:', e); }
     setLoading(false);
   };
@@ -161,7 +163,11 @@ function AgentsPage({ config, lang }) {
                 <option value="">— Chọn Model —</option>
                 ${(()=>{
                   const prov=providersList.find(p=>p.name===form.provider);
-                  return (prov?.models||[]).map(m=>html`<option key=${m} value=${m}>${m}</option>`);
+                  let models=prov?.models||[];
+                  if(form.provider==='brain' && localModels.length>0) {
+                    models = localModels.map(m=>m.name);
+                  }
+                  return models.map(m=>html`<option key=${m} value=${m}>${m}</option>`);
                 })()}
                 <option value="__custom__">✏️ Nhập thủ công...</option>
               </select>

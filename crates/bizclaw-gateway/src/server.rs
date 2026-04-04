@@ -4,7 +4,7 @@ use axum::extract::DefaultBodyLimit;
 use axum::{
     Json, Router,
     extract::State,
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
 };
 use bizclaw_core::config::{BizClawConfig, GatewayConfig};
 use bizclaw_db::DataStore;
@@ -89,6 +89,15 @@ async fn hub_page() -> axum::response::Response {
         .header("Content-Type", "text/html; charset=utf-8")
         .header("Cache-Control", "public, max-age=300")
         .body(axum::body::Body::from(super::dashboard::hub_html()))
+        .expect("static response")
+}
+
+/// Serve the public Landing page at /landing (sales + pricing, no auth).
+async fn landing_page() -> axum::response::Response {
+    axum::response::Response::builder()
+        .header("Content-Type", "text/html; charset=utf-8")
+        .header("Cache-Control", "public, max-age=300")
+        .body(axum::body::Body::from(super::dashboard::landing_html()))
         .expect("static response")
 }
 
@@ -968,6 +977,7 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             "/api/v1/social/pipeline",
             get(super::routes::api_social::get_pipeline_config),
         )
+
         // WebSocket (chat)
         .route("/ws", get(super::ws::ws_handler));
 
@@ -984,6 +994,7 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
     let public = Router::new()
         .route("/", get(dashboard_page))
         .route("/hub", get(hub_page))
+        .route("/landing", get(landing_page))
         .route("/legacy", get(legacy_dashboard_page))
         .route("/static/dashboard/{*path}", get(dashboard_static))
         .route("/health", get(super::routes::health_check))

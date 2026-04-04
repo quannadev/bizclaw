@@ -18,6 +18,7 @@ function SettingsPage({ config, lang }) {
   const [providersList, setProvidersList] = useState([]);
   const [customProvider, setCustomProvider] = useState(false);
   const [customModel, setCustomModel] = useState(false);
+  const [localModels, setLocalModels] = useState([]);
   // Compliance state (Easy AI Model)
   const [compliance, setCompliance] = useState({
     pdpa: false, data_residency: 'vietnam', audit_log: true,
@@ -65,6 +66,7 @@ function SettingsPage({ config, lang }) {
       // Load brain health + files (non-critical, fail silently)
       try { const r=await authFetch('/api/v1/health'); setBrainHealth(await r.json()); } catch(e) {}
       try { const r2=await authFetch('/api/v1/brain/files'); const d2=await r2.json(); setBrainFiles(d2.files||[]); } catch(e) {}
+      try { const rm=await authFetch('/api/v1/brain/models'); const dm=await rm.json(); setLocalModels(dm.models||[]); } catch(e) {}
       clearTimeout(loadTimeout);
       setLoading(false);
     })();
@@ -188,7 +190,10 @@ function SettingsPage({ config, lang }) {
                   }}>
                     ${(()=>{
                       const prov=providersList.find(p=>p.name===form.provider);
-                      const models=prov?.models||[];
+                      let models=prov?.models||[];
+                      if(form.provider==='brain' && localModels.length>0) {
+                        models = localModels.map(m=>m.name);
+                      }
                       if(models.length===0) return html`<option value=${form.model||''}>${form.model||'— Chọn model —'}</option>`;
                       return models.map(m=>html`<option key=${m} value=${m}>${m}</option>`);
                     })()}
@@ -262,7 +267,13 @@ function SettingsPage({ config, lang }) {
                   <option value="remote">🌐 Remote — Server LLM riêng</option>
                 </select></label>
                 ${brainForm.mode==='remote' && html`<label>Endpoint URL<input style="${inp}" value=${brainForm.endpoint} onInput=${e=>setBrainForm(f=>({...f,endpoint:e.target.value}))} placeholder="http://gpu-server:8080" /></label>`}
-                <label>Model Path (GGUF)<input style="${inp}" value=${brainForm.model_path} onInput=${e=>setBrainForm(f=>({...f,model_path:e.target.value}))} placeholder="/models/qwen2-7b-q4.gguf" /></label>
+                <label>Model Path (GGUF)
+                  <select style="${inp};margin-bottom:4px;cursor:pointer" value=${localModels.find(m=>m.path===brainForm.model_path)?brainForm.model_path:''} onChange=${e=>{if(e.target.value)setBrainForm(f=>({...f,model_path:e.target.value}))}}>
+                    <option value="">✏️ Nhập thủ công bên dưới...</option>
+                    ${localModels.map(m=>html`<option key=${m.path} value=${m.path}>${m.name} (${m.size})</option>`)}
+                  </select>
+                  <input style="${inp};margin-top:0" value=${brainForm.model_path} onInput=${e=>setBrainForm(f=>({...f,model_path:e.target.value}))} placeholder="/models/qwen2-7b-q4.gguf" />
+                </label>
                 <label>Threads<input type="number" style="${inp}" value=${brainForm.threads} onInput=${e=>setBrainForm(f=>({...f,threads:+e.target.value||4}))} min="1" max="32" /></label>
                 <label>Max Tokens<input type="number" style="${inp}" value=${brainForm.max_tokens} onInput=${e=>setBrainForm(f=>({...f,max_tokens:+e.target.value||2048}))} /></label>
                 <label>Context Length<input type="number" style="${inp}" value=${brainForm.context_length} onInput=${e=>setBrainForm(f=>({...f,context_length:+e.target.value||4096}))} /></label>

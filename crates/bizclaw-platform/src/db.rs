@@ -267,6 +267,29 @@ impl PlatformDb {
                 status TEXT NOT NULL DEFAULT 'processing',
                 created_at TEXT DEFAULT (datetime('now', '+7 hours'))
             );
+
+            CREATE TABLE IF NOT EXISTS cloud_tenants (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                phone TEXT,
+                plan TEXT DEFAULT 'free',
+                vmid INTEGER,
+                ip_address TEXT,
+                subdomain TEXT,
+                status TEXT DEFAULT 'provisioning',
+                created_at TEXT DEFAULT (datetime('now', '+7 hours')),
+                expires_at TEXT,
+                pairing_code TEXT,
+                notes TEXT,
+                last_payment TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS cloud_config (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL DEFAULT '',
+                updated_at TEXT DEFAULT (datetime('now', '+7 hours'))
+            );
         ",
             )
             .map_err(|e| BizClawError::Memory(format!("Migration error: {e}")))?;
@@ -1193,6 +1216,118 @@ impl PlatformDb {
             .map_err(|e| BizClawError::Memory(format!("Cleanup usage: {e}")))?;
         Ok(deleted)
     }
+
+    // ═══ Cloud SaaS: Tenant & Config Management ═══
+
+    /// Create a cloud tenant record.
+    #[allow(clippy::too_many_arguments)]
+    pub fn cloud_create_tenant(
+        &self,
+        id: &str,
+        name: &str,
+        email: &str,
+        phone: &str,
+        plan: &str,
+        vmid: u32,
+        ip_address: &str,
+        subdomain: &str,
+        status: &str,
+        created_at: &str,
+        expires_at: &str,
+        pairing_code: &str,
+        notes: &str,
+    ) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO cloud_tenants (id, name, email, phone, plan, vmid, ip_address, subdomain, status, created_at, expires_at, pairing_code, notes)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+            params![id, name, email, phone, plan, vmid as i64, ip_address, subdomain, status, created_at, expires_at, pairing_code, notes],
+        ).map_err(|e| BizClawError::Memory(format!("Create tenant: {e}")))?;
+        Ok(())
+    }
+
+    /// List all cloud tenants.
+    pub fn cloud_list_tenants(&self) -> Result<Vec<serde_json::Value>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, email, phone, plan, vmid, ip_address, subdomain, status, created_at, expires_at, pairing_code, notes, last_payment
+             FROM cloud_tenants ORDER BY created_at DESC"
+        ).map_err(|e| BizClawError::Memory(format!("Prepare: {e}")))?;
+        let tenants = stmt.query_map([], |row| {
+            Ok(serde_json::json!({
+                "id": row.get::<_, String>(0)?,
+                "name": row.get::<_, String>(1)?,
+                "email": row.get::<_, String>(2)?,
+                "phone": row.get::<_, Option<String>>(3)?.unwrap_or_default(),
+                "plan": row.get::<_, String>(4)?,
+                "vmid": row.get::<_, Option<i64>>(5)?.unwrap_or_default(),
+                "ip_address": row.get::<_, Option<String>>(6)?.unwrap_or_default(),
+                "subdomain": row.get::<_, Option<String>>(7)?.unwrap_or_default(),
+                "status": row.get::<_, String>(8)?,
+                "created_at": row.get::<_, String>(9)?,
+                "expires_at": row.get::<_, Option<String>>(10)?.unwrap_or_default(),
+                "pairing_code": row.get::<_, Option<String>>(11)?.unwrap_or_default(),
+                "notes": row.get::<_, Option<String>>(12)?.unwrap_or_default(),
+                "last_payment": row.get::<_, Option<String>>(13)?.unwrap_or_default(),
+            }))
+        }).map_err(|e| BizClawError::Memory(format!("Query: {e}")))?
+        .filter_map(|r| r.ok())
+        .collect();
+        Ok(tenants)
+    }
+
+    /// Update tenant status (provisioning → active → suspended → expired → deleted).
+    pub fn cloud_update_tenant_status(&self, tenant_id: &str, status: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE cloud_tenants SET status = ?1 WHERE id = ?2",
+            params![status, tenant_id],
+        ).map_err(|e| BizClawError::Memory(format!("Update status: {e}")))?;
+        Ok(())
+    }
+
+    /// Delete a cloud tenant record permanently.
+    pub fn cloud_delete_tenant(&self, tenant_id: &str) -> Result<()> {
+        self.conn.execute("DELETE FROM cloud_tenants WHERE id = ?1", params![tenant_id])
+            .map_err(|e| BizClawError::Memory(format!("Delete tenant: {e}")))?;
+        Ok(())
+    }
+
+    /// Update tenant VM info (vmid, ip_address) after Proxmox provisioning completes.
+    pub fn cloud_update_tenant_vm(&self, tenant_id: &str, vmid: u32, ip_address: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE cloud_tenants SET vmid = ?1, ip_address = ?2 WHERE id = ?3",
+            params![vmid as i64, ip_address, tenant_id],
+        ).map_err(|e| BizClawError::Memory(format!("Update VM: {e}")))?;
+        Ok(())
+    }
+
+    /// Get cloud config as JSON object.
+    pub fn cloud_get_config(&self) -> Result<serde_json::Value> {
+        let mut stmt = self.conn.prepare("SELECT key, value FROM cloud_config")
+            .map_err(|e| BizClawError::Memory(format!("Prepare: {e}")))?;
+        let rows = stmt.query_map([], |row| {
+            Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+        }).map_err(|e| BizClawError::Memory(format!("Query: {e}")))?;
+        let mut config = serde_json::Map::new();
+        for (key, value) in rows.flatten() {
+            config.insert(key, serde_json::Value::String(value));
+        }
+        Ok(serde_json::Value::Object(config))
+    }
+
+    /// Save cloud config from a JSON object.
+    pub fn cloud_save_config(&self, config: &serde_json::Value) -> Result<()> {
+        if let Some(obj) = config.as_object() {
+            for (key, value) in obj {
+                let val_str = value.as_str().map(|s| s.to_string())
+                    .unwrap_or_else(|| value.to_string());
+                self.conn.execute(
+                    "INSERT INTO cloud_config (key, value, updated_at) VALUES (?1, ?2, datetime('now'))
+                     ON CONFLICT(key) DO UPDATE SET value = ?2, updated_at = datetime('now')",
+                    params![key, val_str],
+                ).map_err(|e| BizClawError::Memory(format!("Save config: {e}")))?;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn rand_code() -> u32 {
@@ -1503,3 +1638,4 @@ mod tests {
         assert_eq!(deleted, 0);
     }
 }
+

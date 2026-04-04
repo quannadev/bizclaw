@@ -1,0 +1,35 @@
+# ── BizClaw Platform (Cloud SaaS Admin) ──────────────────
+# Build: docker build -f Dockerfile.platform -t bizclaw-platform .
+# Run:   docker run -p 3000:3000 -v ~/.bizclaw:/root/.bizclaw bizclaw-platform
+
+FROM rust:1.85-bookworm AS builder
+
+WORKDIR /src
+COPY . .
+
+# Build only the platform binary — excludes gateway single-tenant code
+RUN cargo build --release --bin bizclaw-platform \
+    && strip /src/target/release/bizclaw-platform
+
+# ── Runtime ──────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates libssl3 curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /src/target/release/bizclaw-platform /usr/bin/bizclaw-platform
+
+# Default data directory
+RUN mkdir -p /root/.bizclaw/tenants
+VOLUME /root/.bizclaw
+
+# Environment variables (override at runtime)
+ENV BIZCLAW_BIND_ALL=1
+ENV BIZCLAW_DOMAIN=cloud.bizclaw.vn
+
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s CMD curl -sf http://localhost:3000/health || exit 1
+
+ENTRYPOINT ["bizclaw-platform"]
+CMD ["--port", "3000"]

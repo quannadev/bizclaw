@@ -24,6 +24,11 @@ pub fn hub_html() -> &'static str {
     include_str!("dashboard/hub.html")
 }
 
+/// Public Landing page — sales & pricing (no auth required).
+pub fn landing_html() -> &'static str {
+    include_str!("landing.html")
+}
+
 /// Static files for the new dashboard (served at /static/dashboard/*).
 /// Returns a HashMap of (path, content, content_type).
 pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static str)> {
@@ -104,6 +109,7 @@ pub fn dashboard_static_files() -> HashMap<&'static str, (&'static str, &'static
         ),
         ("products.js", include_str!("dashboard/pages/products.js")),
         ("handoff.js", include_str!("dashboard/pages/handoff.js")),
+        ("cloud.js", include_str!("dashboard/pages/cloud.js")),
     ];
 
     for (name, content) in pages {

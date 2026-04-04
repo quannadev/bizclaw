@@ -14,6 +14,7 @@ export const en = {
   // Sidebar group labels
   'nav.group_ops':'OPERATIONS','nav.group_biz':'BUSINESS',
   'nav.group_intel':'INTELLIGENCE','nav.group_cfg':'SETTINGS',
+  'nav.group_cloud':'CLOUD SAAS','nav.cloud':'Cloud Panel',
   // Orchestration
   'orch.title':'Orchestration','orch.subtitle':'Delegation, Handoff, Evaluate Loop, Permission Links, LLM Traces',
   'orch.delegations':'Delegations','orch.links':'Permission Links','orch.traces':'LLM Traces',

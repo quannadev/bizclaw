@@ -1526,6 +1526,8 @@ impl GatewayDb {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

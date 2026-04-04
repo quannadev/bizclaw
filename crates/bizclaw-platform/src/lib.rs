@@ -6,6 +6,8 @@
 //! Now with PostgreSQL support, ReMe Memory, Heartbeat/Cron, and Skills.
 
 pub mod admin;
+pub mod ai_gateway;
+pub mod api_cloud;
 pub mod auth;
 pub mod config;
 pub mod db;
@@ -20,6 +22,7 @@ pub mod self_serve;
 pub mod server_provisioner;
 pub mod sheets;
 pub mod tenant;
+pub mod vsphere;
 
 pub use admin::AdminServer;
 pub use db::PlatformDb;

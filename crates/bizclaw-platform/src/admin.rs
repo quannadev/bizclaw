@@ -36,6 +36,8 @@ pub struct AdminState {
     pub pg_db: Option<crate::db_pg::PgDb>,
     /// Startup time for uptime calculation.
     pub startup_time: std::time::Instant,
+    /// AI Gateway for centralized inference (Shared AI Brain).
+    pub ai_gateway: Option<crate::ai_gateway::SharedAiGateway>,
 }
 
 /// JWT auth middleware — validates Authorization: Bearer <token>.
@@ -103,6 +105,11 @@ impl AdminServer {
             .route("/api/admin/ollama/pull", post(ollama_pull_model))
             .route("/api/admin/ollama/delete", post(ollama_delete_model))
             .route("/api/admin/ollama/health", get(ollama_health))
+            // AI Gateway — Shared AI Brain for multi-tenant inference
+            .route("/v1/ai/chat/completions", post(crate::ai_gateway::ai_chat_completions))
+            .route("/api/v1/ai/status", get(crate::ai_gateway::ai_gateway_status))
+            .route("/api/v1/ai/usage", get(crate::ai_gateway::ai_usage_stats))
+            .route("/api/v1/ai/usage/{tenant_id}", get(crate::ai_gateway::ai_tenant_usage))
             // Tenant Config (key-value settings)
             .route("/api/admin/tenants/{id}/configs", get(list_tenant_configs))
             .route("/api/admin/tenants/{id}/configs", post(set_tenant_configs))
@@ -215,6 +222,15 @@ impl AdminServer {
                 get(srv_get_server).delete(srv_delete_server),
             )
             .route("/api/admin/servers/{sid}/health", get(srv_health_check))
+            // ── CLOUD SaaS INTEGRATION ──────────────────────────────────────
+            .route("/api/v1/cloud/tenants", get(crate::api_cloud::cloud_list_tenants).post(crate::api_cloud::cloud_create_tenant))
+            .route("/api/v1/cloud/tenants/{id}", delete(crate::api_cloud::cloud_delete_tenant))
+            .route("/api/v1/cloud/tenants/{id}/suspend", post(crate::api_cloud::cloud_suspend_tenant))
+            .route("/api/v1/cloud/tenants/{id}/resume", post(crate::api_cloud::cloud_resume_tenant))
+            .route("/api/v1/cloud/tenants/{id}/renew", post(crate::api_cloud::cloud_renew_tenant))
+            .route("/api/v1/cloud/stats", get(crate::api_cloud::cloud_stats))
+            .route("/api/v1/cloud/config", get(crate::api_cloud::cloud_get_config).post(crate::api_cloud::cloud_save_config))
+            .route("/api/v1/cloud/test", post(crate::api_cloud::cloud_test_connection))
             .route(
                 "/api/admin/servers/{sid}/command",
                 post(srv_execute_command),
