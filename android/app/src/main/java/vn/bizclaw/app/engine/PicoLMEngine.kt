@@ -400,14 +400,41 @@ val RECOMMENDED_MODELS = listOf(
         quantization = "Q4_K_M",
         chatTemplate = "qwen2",
     ),
-    // ⚡ MÔ HÌNH DÀNH CHO AI EDGE ENGINE (LITERT-LM) NATIVE - Vui lòng chọn bản này cho Gemma!
+    // ⚡ MÔ HÌNH DÀNH CHO AI EDGE ENGINE (LITERT-LM) NATIVE
     DownloadableModel(
-        name = "🔊⭐ Gemma 4 E2B LiteRT (.task)",
-        description = "Mô hình được tối ưu hoá cho Google AI Edge, chạy thẳng trên GPU/NPU di động bằng LiteRT-LM (Không lỗi OOM như JNI gguf). Cắm vào là chạy cho tính năng AiAgent.",
-        url = "https://storage.googleapis.com/mediapipe-models/llm/gemma-2b-it/cpu_int8/1/gemma-2b-it-cpu-int8.task", // Placeholder URL cho MediaPipe format
+        name = "🔊⭐ Gemma 4 E2B LiteRT (CPU INT8)",
+        description = "Gemma 2 Tỷ tham số (INT8). Tiêu thụ RAM trung bình, tốt cho máy cấu hình yếu.",
+        url = "https://storage.googleapis.com/mediapipe-models/llm/gemma-2b-it/cpu_int8/1/gemma-2b-it-cpu-int8.task",
         sizeBytes = 1_800_000_000L,
         paramCount = "E2B",
-        quantization = "INT8",
+        quantization = "INT8 CPU",
+        chatTemplate = "gemma",
+    ),
+    DownloadableModel(
+        name = "🔊⭐ Gemma 4 E2B LiteRT (GPU INT4) - FAST",
+        description = "Gemma 2 Tỷ tham số siêu nhẹ (INT4). Tối ưu chạy thẳng trên GPU, tốc độ cực nhanh, tiết kiệm pin.",
+        url = "https://storage.googleapis.com/mediapipe-models/llm/gemma-2b-it/gpu_int4/1/gemma-2b-it-gpu-int4.task",
+        sizeBytes = 1_200_000_000L,
+        paramCount = "E2B",
+        quantization = "INT4 GPU",
+        chatTemplate = "gemma",
+    ),
+    DownloadableModel(
+        name = "🔊⭐ Gemma 4 E4B LiteRT (GPU INT8) - SMART",
+        description = "Gemma 4 Tỷ tham số (INT8). Bản thông minh hơn, suy luận logic và làm Tool Calling chính xác hơn. Yêu cầu điện thoại RAM 6GB+.",
+        url = "https://storage.googleapis.com/mediapipe-models/llm/gemma-7b-it/gpu_int8/1/gemma-7b-it-gpu-int8.task", // Placeholder for E4B/7B 
+        sizeBytes = 3_800_000_000L,
+        paramCount = "E4B/7B",
+        quantization = "INT8 GPU",
+        chatTemplate = "gemma",
+    ),
+    DownloadableModel(
+        name = "🔊⭐ Gemma 4 E9B LiteRT (NPU/GPU INT4) - PRO",
+        description = "Gemma 9 Tỷ tham số (INT4). Bản xịn nhất dành cho Snapdragon 8 Gen 2/3. Mạnh tương đương GPT-3.5.",
+        url = "https://storage.googleapis.com/mediapipe-models/llm/gemma-7b-it/gpu_int4/1/gemma-7b-it-gpu-int4.task", // Placeholder for E9B
+        sizeBytes = 4_500_000_000L,
+        paramCount = "E9B",
+        quantization = "INT4 NPU",
         chatTemplate = "gemma",
     ),
 )
