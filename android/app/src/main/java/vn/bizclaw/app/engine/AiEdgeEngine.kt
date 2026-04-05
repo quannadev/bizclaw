@@ -48,7 +48,7 @@ class AiEdgeEngine(private val context: Context) {
             engine = Engine(engineConfig).apply { initialize() }
             
             // Khởi tạo Agent Tools (ToolSet từ AgentTools)
-            val tools = listOf(BizClawAgentTools(context))
+            val tools = listOf(com.google.ai.edge.litertlm.tool(BizClawAgentTools(context)))
 
             val conversationConfig = ConversationConfig(
                 tools = tools
