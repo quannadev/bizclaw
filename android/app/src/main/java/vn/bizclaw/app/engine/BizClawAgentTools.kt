@@ -35,6 +35,9 @@ class BizClawAgentTools(private val context: Context) : ToolSet {
             "location" to location,
             "temperature" to "28 độ C",
             "condition" to "Nhiều mây"
+        )
+    }
+
     @Tool(description = "Trả lời tin nhắn Zalo tự động (thông qua Accessibility/Notification)")
     fun replyZalo(
         @ToolParam(description = "Tên người nhận hoặc nội dung định dạng") username: String,
