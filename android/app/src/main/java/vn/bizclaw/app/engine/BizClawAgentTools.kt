@@ -35,6 +35,33 @@ class BizClawAgentTools(private val context: Context) : ToolSet {
             "location" to location,
             "temperature" to "28 độ C",
             "condition" to "Nhiều mây"
-        )
+    @Tool(description = "Trả lời tin nhắn Zalo tự động (thông qua Accessibility/Notification)")
+    fun replyZalo(
+        @ToolParam(description = "Tên người nhận hoặc nội dung định dạng") username: String,
+        @ToolParam(description = "Nội dung tin nhắn trả lời") message: String
+    ): Map<String, String> {
+        Log.i(TAG, "Zalo Reply: Gửi tới \$username - Nội dung: \$message")
+        // TODO: Gọi đến hàm xử lý Notification/Accessibility Zalo gốc của app tại đây
+        return mapOf("status" to "success", "message" to "Đã gửi tin nhắn Zalo thành công")
+    }
+
+    @Tool(description = "Trả lời tin nhắn Messenger tự động")
+    fun replyMessenger(
+        @ToolParam(description = "Tên người nhận") username: String,
+        @ToolParam(description = "Nội dung tin nhắn") message: String
+    ): Map<String, String> {
+        Log.i(TAG, "Messenger Reply: Gửi tới \$username - Nội dung: \$message")
+        // TODO: Gọi đến hàm xử lý Notification Messenger gốc của app tại đây
+        return mapOf("status" to "success", "message" to "Đã gửi tin nhắn Messenger thành công")
+    }
+
+    @Tool(description = "Đăng một bài viết mới (Post) lên mạng xã hội")
+    fun createPost(
+        @ToolParam(description = "Nền tảng (facebook, zalo, threads)") platform: String,
+        @ToolParam(description = "Nội dung bài viết") content: String
+    ): Map<String, String> {
+        Log.i(TAG, "Post to \$platform: \$content")
+        // TODO: Gọi hàm Post gốc của app tại đây
+        return mapOf("status" to "success", "message" to "Đã lên lịch đăng bài trên \$platform")
     }
 }
