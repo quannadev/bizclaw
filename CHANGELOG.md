@@ -1,5 +1,12 @@
 # 📋 Nhật Ký Thay Đổi (Changelog)
 
+## [1.1.7] — 2026-04-05 🚀
+
+### Thêm mới (Android Dual Engine)
+- **🤖 Google AI Edge LiteRT**: Bổ sung AiEdgeEngine xử lý file mô hình .task qua GPU/NPU di động nhằm tối ưu nhiệt độ và tốc độ.
+- **🛠️ Native Tool Calling cho Android**: Thiết lập `BizClawAgentTools` kết nối chuẩn ToolSet của LiteRT cho phép auto-reply Zalo/Messenger tự động không cần Regex.
+- **📦 Đa dạng cấu hình AI**: Cung cấp tải Gemma 4 LiteRT từ các phiên bản `E2B INT4 GPU` siêu nén đến `E9B NPU` siêu bự tuỳ máy.
+
 ## [1.1.6] — 2026-04-04 🚀
 
 ### Thêm mới (Cloud SaaS & Multi-Agent)

@@ -15,7 +15,7 @@
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-743%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v1.1.6-purple)]()
+[![Version](https://img.shields.io/badge/version-v1.1.7-purple)]()
 [![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
 [![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
 
@@ -347,7 +347,7 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.1.6 (Signed Release)</b></a><br>
+  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.1.7 (Signed Release)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
@@ -492,7 +492,7 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 
 | Metric | Value |
 |--------|-------|
-| **Version** | v1.1.6 |
+| **Version** | v1.1.7 |
 | **Language** | 100% Rust + Kotlin (Android) |
 | **Crates** | 19 |
 | **Lines of Code** | 70,473 |
@@ -574,4 +574,4 @@ MIT License — xem chi tiết tại [LICENSE](LICENSE).
 
 ---
 
-**BizClaw** v1.1.6 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
+**BizClaw** v1.1.7 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
