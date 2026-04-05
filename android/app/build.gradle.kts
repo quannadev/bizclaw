@@ -116,6 +116,9 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+    // LiteRT-LM (Google AI Edge) for Gemma 4 & Agent Calling natively without JNI crashes
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.10.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

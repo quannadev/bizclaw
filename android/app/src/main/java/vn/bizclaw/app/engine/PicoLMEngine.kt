@@ -400,4 +400,14 @@ val RECOMMENDED_MODELS = listOf(
         quantization = "Q4_K_M",
         chatTemplate = "qwen2",
     ),
+    // ⚡ MÔ HÌNH DÀNH CHO AI EDGE ENGINE (LITERT-LM) NATIVE - Vui lòng chọn bản này cho Gemma!
+    DownloadableModel(
+        name = "🔊⭐ Gemma 4 E2B LiteRT (.task)",
+        description = "Mô hình được tối ưu hoá cho Google AI Edge, chạy thẳng trên GPU/NPU di động bằng LiteRT-LM (Không lỗi OOM như JNI gguf). Cắm vào là chạy cho tính năng AiAgent.",
+        url = "https://storage.googleapis.com/mediapipe-models/llm/gemma-2b-it/cpu_int8/1/gemma-2b-it-cpu-int8.task", // Placeholder URL cho MediaPipe format
+        sizeBytes = 1_800_000_000L,
+        paramCount = "E2B",
+        quantization = "INT8",
+        chatTemplate = "gemma",
+    ),
 )

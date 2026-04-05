@@ -15,7 +15,7 @@
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-743%20passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-v1.1.3-purple)]()
+[![Version](https://img.shields.io/badge/version-v1.1.6-purple)]()
 [![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
 [![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
 
@@ -347,18 +347,19 @@ ollama pull llama3.2       # 3.8GB — phổ biến nhất
 </p>
 
 <p align="center">
-  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.1.3 (Signed Release)</b></a><br>
+  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/raw/master/android/app/build/outputs/apk/release/app-release.apk"><b>📥 Tải xuống APK v1.1.6 (Signed Release)</b></a><br>
   <i>Chạy trực tiếp mô hình AI trên thiết bị — Không chờ đợi, Không cần server</i>
 </p>
 
 | Mode | Mô tả |
 |------|--------|
-| 📱 LOCAL | llama.cpp on-device, AI điều khiển apps, $0, 100% offline |
+| 📱 LOCAL | Dual-Engine: Google LiteRT & llama.cpp on-device, AI điều khiển apps, $0, 100% offline |
 | 🌐 REMOTE | Kết nối agent từ xa, chat & điều khiển |
 | 🔀 HYBRID | Engine local + agent cloud cùng lúc |
 
 | Tính Năng Nổi Bật | Mô tả |
 |-------------------|-------|
+| 🚀 **Dual-Engine On-Device** | Hỗ trợ song song Google AI Edge LiteRT (chuyên trị Gemma 4/Function Calling) và llama.cpp bản mới nhất (gguf), linh hoạt chạy 100% offline. |
 | 💬 **Auto-Reply** | Tự động trả lời tin nhắn trên Zalo, Messenger, Telegram qua thông báo (chạy nền, không cướp màn hình). |
 | 👑 **Mama Tổng Quản** | Nhắn tin cho chính mình (hoặc cho Mama) trên Zalo để ra lệnh cho AI làm việc thay bạn từ xa. |
 | ⚡ **Flow Runner** | Macro chạy instant — Cross-post Facebook/Zalo/Instagram/Threads cùng lúc. $0, không cần LLM. |
@@ -491,7 +492,7 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 
 | Metric | Value |
 |--------|-------|
-| **Version** | v1.1.3 |
+| **Version** | v1.1.6 |
 | **Language** | 100% Rust + Kotlin (Android) |
 | **Crates** | 19 |
 | **Lines of Code** | 70,473 |
@@ -573,4 +574,4 @@ MIT License — xem chi tiết tại [LICENSE](LICENSE).
 
 ---
 
-**BizClaw** v1.1.3 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶
+**BizClaw** v1.1.6 — *AI riêng, chạy mọi nơi. Dự án vibe coding, tự học AI bằng Rust.* 🎶

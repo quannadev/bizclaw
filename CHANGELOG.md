@@ -1,5 +1,14 @@
 # 📋 Nhật Ký Thay Đổi (Changelog)
 
+## [1.1.6] — 2026-04-04 🚀
+
+### Thêm mới (Cloud SaaS & Multi-Agent)
+- **🤖 Open-Multi-Agent Orchestrator**: Kiến trúc DAG Layer thay thế hệ thống Agent Group cũ (`coordinator.rs`, `task_dag.rs`). Định tuyến task mượt mà hơn và hỗ trợ Human-in-the-loop tự nhiên.
+- **☁️ Auto-Provision VPS qua SePay/Pay2S**: Bồi đắp thêm tính năng nhận dạng `cloud_tenant` trong vòng lặp Webhook. Khi mua plan VPS, Platform tự động `clone` và `boot` máy ảo trên vSphere mà không cần can thiệp tay.
+- **📱 Android PicoLMEngine Safeguards**: Tích hợp Sliding Window Context và Memory Guards (tránh OOM) cho tác vụ suy luận Gemma 4 trên thiết bị. Cập nhật JNI binding `BizClawLLM`.
+- **🛠️ Signed Release APK**: NDK build rules fix tĩnh cho Android Release Build (1.1.6).
+- **🖥️ Landing Page PaaS**: Tích hợp module báo giá Multi-tier (Solo, Growth, Business, Enterprise) và SaaS SMEs SEO templates.
+
 ## [1.0.0] — 2026-03-10 🎉 Bản Chính Thức
 
 ### 🚀 Cột Mốc: Phiên Bản Ổn Định Đầu Tiên

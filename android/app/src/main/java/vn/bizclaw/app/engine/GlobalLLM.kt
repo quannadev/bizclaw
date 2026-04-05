@@ -10,6 +10,7 @@ import kotlinx.coroutines.sync.Mutex
 
 object GlobalLLM {
     val instance: BizClawLLM = BizClawLLM()
+    var aiEdgeEngine: AiEdgeEngine? = null // AI Edge Gemma 4 Engine
     
     /** Mutex to prevent multi-threaded crashes in C++ ggml backend */
     val generateMutex = Mutex()

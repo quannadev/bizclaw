@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 3. Atomic thread locks to prevent duplicate JNI calls.
  */
 class MeetingAssistantUseCase(
-    private val bizClawLLM: BizClawLLM
+    private val useAiEdge: Boolean = true // Mặc định sử dụng Gemma 4 qua LiteRT-LM (AiEdgeEngine)
 ) {
     private val isLlmBusy = AtomicBoolean(false)
     private val TAG = "MeetingAssistant"
@@ -75,8 +75,14 @@ class MeetingAssistantUseCase(
             // 5. Native Interference (JNI cache reused implicitly if implemented in PicoLMEngine)
             Log.d(TAG, "Sending prompt to Gemma 4 (Size: \${prompt.length})...")
             
-            // Call local engine
-            val newInsight = bizClawLLM.getResponse(prompt)
+            // Call local engine (AiEdge LiteRT hoặc llama.cpp cũ)
+            val newInsight = if (useAiEdge && GlobalLLM.aiEdgeEngine?.isLoaded == true) {
+                Log.d(TAG, "Routing inference to AiEdgeEngine (Gemma 4 LiteRT)...")
+                GlobalLLM.aiEdgeEngine!!.getResponse(prompt)
+            } else {
+                Log.d(TAG, "Routing inference to legacy BizClawLLM (llama.cpp JNI)...")
+                GlobalLLM.instance.getResponse(prompt)
+            }
             
             // Push to flow
             _meetingInsight.value = newInsight
