@@ -155,6 +155,7 @@ pub use config::{get_config, get_full_config, update_config};
 pub use channels::{
     agent_bind_channels, agent_channel_bindings, delete_channel_instance, list_channel_instances,
     load_channel_instances, save_channel_instance, save_channel_instances, update_channel,
+    zalo_session_status,
 };
 
 pub use api_rag::*;

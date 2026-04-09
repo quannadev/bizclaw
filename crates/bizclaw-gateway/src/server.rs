@@ -878,6 +878,11 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
             "/api/v1/agents/{name}/telegram",
             get(super::routes::telegram_status),
         )
+        // Zalo session status read
+        .route(
+            "/api/v1/channels/zalo/session",
+            get(super::routes::zalo_session_status),
+        )
         // Brain workspace read
         .route("/api/v1/brain/files", get(super::routes::brain_list_files))
         .route(
@@ -1494,6 +1499,52 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
         // Small delay to let server bind first
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
         super::routes::auto_connect_channels(state_for_channels).await;
+    });
+
+    // 🚀 FLEET MANAGEMENT & TELEMETRY WORKER
+    let ota_state = state_arc.clone();
+    tokio::spawn(async move {
+        let client = reqwest::Client::new();
+        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+        
+        loop {
+            // Get local identifier
+            let node_id = std::env::var("VPS_IP").unwrap_or_else(|_| "unknown-node".to_string());
+            let version = env!("CARGO_PKG_VERSION");
+            
+            let payload = serde_json::json!({
+                "node_id": node_id,
+                "version": version,
+                "uptime_secs": ota_state.start_time.elapsed().as_secs(),
+                "status": "online"
+            });
+            
+            // Telemetry ping to Central Hub (Mắt thần trung tâm)
+            match client.post("https://hub.viagent.vn/api/v1/fleet/telemetry")
+                .timeout(std::time::Duration::from_secs(5))
+                .json(&payload)
+                .send()
+                .await 
+            {
+                Ok(resp) => {
+                    // Check if Platform requested an OTA update
+                    if let Ok(data) = resp.json::<serde_json::Value>().await {
+                        if data["update_triggered"].as_bool().unwrap_or(false) {
+                            tracing::warn!("🔄 OTA Update triggered by Central Hub! Executing update...");
+                            let _ = std::process::Command::new("bash")
+                                .arg("-c")
+                                .arg("cd /opt/bizclaw && git pull origin main && docker-compose -f docker-compose.prod.yml up -d --build")
+                                .spawn();
+                        }
+                    }
+                }
+                Err(_e) => {
+                    // Fail silently, telemetry is non-critical
+                }
+            }
+            // Ping every 60 seconds
+            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+        }
     });
 
     let addr = format!("{}:{}", config.host, config.port);

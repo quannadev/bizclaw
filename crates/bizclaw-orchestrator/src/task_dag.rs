@@ -117,4 +117,9 @@ impl TaskDag {
     pub fn is_all_completed(&self) -> bool {
         self.graph.node_weights().all(|task| task.status == TaskStatus::Completed)
     }
+
+    /// Get total number of tasks in DAG
+    pub fn get_task_count(&self) -> usize {
+        self.graph.node_count()
+    }
 }
