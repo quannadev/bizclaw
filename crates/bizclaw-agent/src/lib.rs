@@ -643,7 +643,7 @@ impl Agent {
     }
 
     /// Search the knowledge base for relevant context.
-    /// Uses hybrid search (keyword + vector) when embeddings are available.
+    /// Uses hybrid search (keyword + vector + TF-IDF boost) when embeddings are available.
     async fn search_knowledge(&self, query: &str) -> Option<String> {
         // IMPORTANT: Get embedding BEFORE acquiring kb lock.
         // rusqlite::Connection is not Send, so the MutexGuard cannot be
@@ -654,12 +654,23 @@ impl Agent {
         let kb_lock = kb_arc.lock().await;
         let kb = kb_lock.as_ref()?;
 
-        // Hybrid search: keyword (BM25) + vector (cosine similarity)
+        // Hybrid search with TF-IDF boost for domain-specific term accuracy
         let emb_ref = query_embedding.as_deref();
-        let results = kb.hybrid_search(query, emb_ref, 3);
+        let (results, telemetry) = kb.hybrid_search_boosted(
+            query,
+            emb_ref,
+            3,
+            &bizclaw_knowledge::SearchFilter::default(),
+        );
+
+        // Log telemetry for RAG observability
+        tracing::info!(
+            "📚 Knowledge RAG: {}",
+            telemetry.summary()
+        );
 
         if results.is_empty() {
-            // Fallback to basic FTS5 search
+            // Fallback to basic FTS5 search (handles: no embeddings, Ollama down)
             let basic = kb.search(query, 3);
             if basic.is_empty() {
                 return None;
@@ -672,6 +683,7 @@ impl Agent {
                 }
                 context.push_str(&entry);
             }
+            tracing::debug!("Knowledge RAG: {} results (FTS5 fallback), {} chars", basic.len(), context.len());
             return Some(context);
         }
 
@@ -685,7 +697,7 @@ impl Agent {
         }
 
         tracing::debug!(
-            "Knowledge RAG: {} results (hybrid), {} chars",
+            "Knowledge RAG: {} results (hybrid+boost), {} chars",
             results.len(),
             context.len()
         );

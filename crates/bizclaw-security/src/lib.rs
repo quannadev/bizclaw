@@ -30,7 +30,7 @@ impl DefaultSecurityPolicy {
 impl SecurityPolicy for DefaultSecurityPolicy {
     async fn check_command(&self, command: &str) -> Result<bool> {
         // Block command chaining/piping/redirection operators — prevent injection like "ls; rm -rf /" or "echo > file"
-        let dangerous_patterns = [";", "&&", "||", "|", "$(", "`", "\n", ">", "<", ">>", "&"];
+        let dangerous_patterns = [";", "&&", "||", "|", "$(", "`", "\n", "\r", "\0", ">", "<", ">>", "&"];
         for pattern in &dangerous_patterns {
             if command.contains(pattern) {
                 tracing::warn!(

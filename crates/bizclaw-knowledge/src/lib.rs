@@ -52,7 +52,7 @@ pub mod docx;
 pub use mcp_server::{McpToolCall, McpToolDef, McpToolResponse};
 pub use multi_embed::{CombineStrategy, MultiModelEmbedder};
 pub use nudges::{Nudge, NudgeConfig, NudgeEngine};
-pub use search::{SearchFilter, SearchResult};
+pub use search::{SearchFilter, SearchResult, SearchTelemetry};
 pub use signals::{InteractionSignal, SignalLogger, SignalType};
 pub use store::{DocumentInfo, KnowledgeStore};
 pub use watcher::{FolderWatcher, IngestResult};

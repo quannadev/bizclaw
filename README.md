@@ -25,9 +25,18 @@
 
 | Đối tượng | Lợi ích |
 |-----------|---------|
+| 🏪 **SME / Doanh nghiệp nhỏ** | "Nhân viên AI" trả lời 24/7, tư vấn tự động, tiết kiệm nhân sự |
 | 💻 **Developer** | Tự học Rust, kiến trúc AI Agent, multi-provider, MCP — bằng cách "vibe coding" thật |
 | 🧑‍🎓 **Người học AI** | Playground local chạy 15+ providers, tự thí nghiệm prompt, RAG, workflow |
 | 📱 **Tinkerer / Maker** | Chạy AI Agent trên Raspberry Pi, Android — biến thiết bị thành trợ lý cá nhân |
+
+### 🏪 Dành cho SME
+
+> **Không cần biết lập trình!** Giao diện tiếng Việt, setup trong 5 phút.
+
+- [📖 Hướng dẫn SME nhanh](docs/sme-quickstart.md) — Bắt đầu trong 5 phút
+- [🏪 Giải pháp theo ngành](docs/sme-workflows.md) — Bán lẻ, F&B, Du lịch, Dịch vụ
+- [📋 README SME](README_SME.md) — Tài liệu dành riêng cho doanh nghiệp
 
 > 🔒 **Không telemetry. Không tracking. Không tạo tài khoản trên server trung gian.** Dữ liệu chat, API Keys mã hoá AES-256 trên ổ cứng của bạn.
 
@@ -551,6 +560,10 @@ cd bizclaw && cargo build --release
 | 🌐 **Website** | [https://bizclaw.vn](https://bizclaw.vn) |
 | 📘 **Fanpage** | [https://www.facebook.com/bizclaw.vn](https://www.facebook.com/bizclaw.vn) |
 | 💻 **GitHub** | [https://github.com/nguyenduchoai/bizclaw-cloud](https://github.com/nguyenduchoai/bizclaw-cloud) |
+| 📖 **SME Docs** | [docs/sme-quickstart.md](docs/sme-quickstart.md) |
+| 📦 **SME Workflows** | [docs/sme-workflows.md](docs/sme-workflows.md) |
+| 💾 **Installation** | [docs/installation.md](docs/installation.md) |
+| 🔌 **API Reference** | [docs/api/endpoints.md](docs/api/endpoints.md) |
 
 ---
 

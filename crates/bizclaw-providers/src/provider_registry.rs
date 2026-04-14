@@ -181,12 +181,26 @@ static MISTRAL_MODELS: &[ModelDef] = &[
     },
 ];
 
-static MINIMAX_MODELS: &[ModelDef] = &[ModelDef {
-    id: "MiniMax-Text-01",
-    name: "MiniMax Text 01",
-    context_length: 1000000,
-    max_output_tokens: Some(8192),
-}];
+static MINIMAX_MODELS: &[ModelDef] = &[
+    ModelDef {
+        id: "MiniMax-M2.7",
+        name: "MiniMax M2.7 (Flagship Reasoning)",
+        context_length: 1000000,
+        max_output_tokens: Some(16384),
+    },
+    ModelDef {
+        id: "MiniMax-M2.7-highspeed",
+        name: "MiniMax M2.7 Highspeed",
+        context_length: 1000000,
+        max_output_tokens: Some(16384),
+    },
+    ModelDef {
+        id: "MiniMax-M2.5",
+        name: "MiniMax M2.5",
+        context_length: 1000000,
+        max_output_tokens: Some(16384),
+    },
+];
 
 static XAI_MODELS: &[ModelDef] = &[
     ModelDef {
@@ -538,7 +552,7 @@ static PROVIDERS: &[ProviderConfig] = &[
     },
     ProviderConfig {
         name: "minimax",
-        base_url: "https://api.minimax.chat/v1",
+        base_url: "https://api.minimax.io/v1",
         chat_path: "/chat/completions",
         models_path: "/models",
         env_keys: &["MINIMAX_API_KEY"],

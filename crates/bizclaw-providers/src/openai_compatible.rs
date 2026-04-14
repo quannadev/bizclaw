@@ -288,7 +288,7 @@ impl Provider for OpenAiCompatibleProvider {
             body["tools"] = Value::Array(tool_defs);
         }
 
-        // Send request
+        tracing::debug!("📤 [{}] Request body: {}", self.name, body);
         let url = format!("{}{}", self.base_url, self.chat_path);
         let req = self
             .client

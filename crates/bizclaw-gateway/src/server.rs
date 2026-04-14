@@ -101,6 +101,26 @@ async fn landing_page() -> axum::response::Response {
         .expect("static response")
 }
 
+/// Serve the NEW Horizontal Menu Dashboard at /new.
+async fn dashboard_new_page() -> axum::response::Response {
+    axum::response::Response::builder()
+        .header("Content-Type", "text/html; charset=utf-8")
+        .header("Cache-Control", "no-store, no-cache, must-revalidate")
+        .header("Pragma", "no-cache")
+        .body(axum::body::Body::from(super::dashboard::dashboard_new_html()))
+        .expect("static response")
+}
+
+/// Serve the Visual Workflow Builder at /workflow-builder.
+async fn workflow_builder_page() -> axum::response::Response {
+    axum::response::Response::builder()
+        .header("Content-Type", "text/html; charset=utf-8")
+        .header("Cache-Control", "no-store, no-cache, must-revalidate")
+        .header("Pragma", "no-cache")
+        .body(axum::body::Body::from(super::dashboard::workflow_builder_html()))
+        .expect("static response")
+}
+
 /// Serve embedded dashboard static files (/static/dashboard/*).
 async fn dashboard_static(
     axum::extract::Path(path): axum::extract::Path<String>,
@@ -1001,6 +1021,8 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         .route("/hub", get(hub_page))
         .route("/landing", get(landing_page))
         .route("/legacy", get(legacy_dashboard_page))
+        .route("/new", get(dashboard_new_page))
+        .route("/workflow-builder", get(workflow_builder_page))
         .route("/static/dashboard/{*path}", get(dashboard_static))
         .route("/health", get(super::routes::health_check))
         // Prometheus metrics — public for scraper access (text/plain)

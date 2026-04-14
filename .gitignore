@@ -43,3 +43,7 @@ Bizino-Dev_Kit-main/
 *.apk
 /dashboard/
 .env.local
+
+# Local Git tokens and credentials
+.git/.git_token
+.git/.gh_token

@@ -119,7 +119,105 @@ export const PAGES = [
   { id: 'settings', icon: '⚙️', label: 'nav.settings' },
 ];
 
+// ═══ NEW HORIZONTAL MENU — Feature Groups (Full Vietnamese) ═══
+export const PAGES_NEW = [
+  // ── Trang chủ ──
+  {
+    id: 'home',
+    label: 'Trang chủ',
+    icon: '🏠',
+    children: [
+      { id: 'dashboard', icon: '📊', label: 'Bảng điều khiển' },
+      { id: 'analytics', icon: '📈', label: 'Phân tích' },
+      { id: 'activity', icon: '⚡', label: 'Hoạt động' },
+    ]
+  },
+  // ── Nhân sự AI ──
+  {
+    id: 'ai-team',
+    label: 'Nhân sự AI',
+    icon: '🤖',
+    children: [
+      { id: 'agents', icon: '🤖', label: 'Đội nhóm' },
+      { id: 'teams', icon: '👥', label: 'Nhóm Agent' },
+      { id: 'skills', icon: '💼', label: 'Kỹ năng' },
+      { id: 'brain', icon: '🧠', label: 'Bộ nhớ AI' },
+      { id: 'gallery', icon: '📦', label: 'Mẫu Agent' },
+    ]
+  },
+  // ── Kênh liên lạc ──
+  {
+    id: 'channels',
+    label: 'Kênh liên lạc',
+    icon: '📱',
+    children: [
+      { id: 'channels', icon: '📱', label: 'Tất cả kênh' },
+      { id: 'webhooks', icon: '🪝', label: 'Webhook' },
+      { id: 'mcp', icon: '🔗', label: 'Máy chủ MCP' },
+    ]
+  },
+  // ── Tự động hóa ──
+  {
+    id: 'automation',
+    label: 'Tự động hóa',
+    icon: '🔄',
+    children: [
+      { id: 'workflows', icon: '🔄', label: 'Quy trình' },
+      { id: 'scheduler', icon: '⏰', label: 'Lịch trình' },
+      { id: 'hands', icon: '🤚', label: 'Tay Robot' },
+    ]
+  },
+  // ── Vận hành ──
+  {
+    id: 'operations',
+    label: 'Vận hành',
+    icon: '💬',
+    children: [
+      { id: 'chat', icon: '💬', label: 'Trò chuyện' },
+      { id: 'handoff', icon: '🤝', label: 'Chuyển giao' },
+      { id: 'campaigns', icon: '📢', label: 'Chiến dịch' },
+      { id: 'knowledge', icon: '📚', label: 'Tri thức' },
+    ]
+  },
+  // ── Cấu hình ──
+  {
+    id: 'system',
+    label: 'Cấu hình',
+    icon: '🔧',
+    children: [
+      { id: 'settings', icon: '⚙️', label: 'Cài đặt' },
+      { id: 'providers', icon: '🔌', label: 'Nhà cung cấp' },
+      { id: 'tools', icon: '🛠️', label: 'Công cụ' },
+      { id: 'apikeys', icon: '🔑', label: 'API Keys' },
+      { id: 'plugins', icon: '🧩', label: 'Plugin' },
+      { id: 'configfile', icon: '📝', label: 'Tệp cấu hình' },
+    ]
+  },
+  // ── Trợ giúp ──
+  {
+    id: 'help',
+    label: 'Trợ giúp',
+    icon: '❓',
+    children: [
+      { id: 'wiki', icon: '📖', label: 'Tài liệu' },
+      { id: 'usage', icon: '📊', label: 'Sử dụng' },
+      { id: 'cost', icon: '💰', label: 'Chi phí' },
+    ]
+  },
+];
+
 // Make shared functions available globally (for backward compat with page modules)
 window.authFetch = authFetch;
 window.authHeaders = authHeaders;
 window.t = t;
+
+// ═══ SME MODE PAGES — Simplified navigation for non-technical users ═══
+export const SME_PAGES = [
+  { id: 'sme', icon: '🏠', label: 'nav.dashboard' },
+  { id: 'agents', icon: '🤖', label: 'nav.agents' },
+  { id: 'workflows', icon: '🔄', label: 'nav.workflows' },
+  { id: 'analytics', icon: '📊', label: 'nav.analytics' },
+  { id: 'settings', icon: '⚙️', label: 'nav.settings' },
+];
+
+window.SME_PAGES = SME_PAGES;
