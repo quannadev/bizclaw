@@ -181,6 +181,7 @@ impl Provider for OpenAiCompatibleProvider {
         }
 
         let is_anthropic = self.name == "anthropic" || self.base_url.contains("anthropic");
+        let is_minimax = self.name == "minimax" || self.base_url.contains("minimax");
 
         // ═══ PRE-FLIGHT: Skip tools for known-incapable models ═══
         // If we've already detected this model can't handle tools, don't send them.
@@ -261,6 +262,22 @@ impl Provider for OpenAiCompatibleProvider {
             tracing::debug!(
                 "🧊 Anthropic prompt caching enabled (system blocks with cache_control)"
             );
+        } else if is_minimax {
+            // MiniMax does not support "system" role — convert to "user" role
+            let msgs: Vec<Value> = messages
+                .iter()
+                .map(|msg| {
+                    if msg.role == bizclaw_core::types::Role::System {
+                        json!({
+                            "role": "user",
+                            "content": msg.content
+                        })
+                    } else {
+                        serde_json::to_value(msg).unwrap_or_default()
+                    }
+                })
+                .collect();
+            body["messages"] = Value::Array(msgs);
         } else {
             body["messages"] = serde_json::to_value(messages).unwrap_or_default();
         }

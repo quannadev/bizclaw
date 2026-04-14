@@ -134,7 +134,7 @@ async fn social_automation_worker(state: Arc<AppState>, config: PipelineConfig) 
                     let ig_user_id = inst["config"]["ig_user_id"].as_str().unwrap_or_default();
                     let token = inst["config"]["access_token"].as_str().unwrap_or_default();
                     if !token.is_empty() && !ig_user_id.is_empty() {
-                        let mut tool = SocialPostTool::new();
+                        let tool = SocialPostTool::new();
                         let payload = serde_json::json!({
                             "action": "post",
                             "platform": "instagram",
@@ -151,7 +151,7 @@ async fn social_automation_worker(state: Arc<AppState>, config: PipelineConfig) 
                     let api_params = inst["config"]["api_params"].as_str().unwrap_or_default();
                     let parts: Vec<&str> = api_params.split(',').collect();
                     if parts.len() >= 4 {
-                        let mut tool = SocialPostTool::new();
+                        let tool = SocialPostTool::new();
                         let payload = serde_json::json!({
                             "action": "post",
                             "platform": "twitter",

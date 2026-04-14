@@ -4,7 +4,7 @@ use axum::extract::DefaultBodyLimit;
 use axum::{
     Json, Router,
     extract::State,
-    routing::{delete, get, post, put},
+    routing::{get, post, put},
 };
 use bizclaw_core::config::{BizClawConfig, GatewayConfig};
 use bizclaw_db::DataStore;

@@ -167,7 +167,7 @@ impl VSphereClient {
     ) -> Result<String, String> {
         let url = format!("{}/api/vcenter/vm", self.base_url);
 
-        let mut placement = serde_json::json!({
+        let placement = serde_json::json!({
             "folder": spec.folder,
             "resource_pool": spec.resource_pool,
             "datastore": spec.datastore,

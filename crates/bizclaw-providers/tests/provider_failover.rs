@@ -36,36 +36,31 @@ fn test_all_providers_registered() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 2. MINIMAX — New models correctly registered
+// 2. MINIMAX — Models correctly registered
 // ═══════════════════════════════════════════════════════════════════
 
 #[test]
 fn test_minimax_models_expanded() {
     let config = provider_registry::get_provider_config("minimax").unwrap();
 
-    // Must have 3 models: Text-01, M1, ABAB 7
+    // Must have 3 models: M2.7, M2.7-highspeed, M2.5
     assert_eq!(
         config.default_models.len(),
         3,
-        "MiniMax should have 3 models (Text-01, M1, ABAB 7), got {}",
+        "MiniMax should have 3 models (M2.7, M2.7-highspeed, M2.5), got {}",
         config.default_models.len()
     );
 
     // Verify specific model IDs
     let model_ids: Vec<&str> = config.default_models.iter().map(|m| m.id).collect();
-    assert!(model_ids.contains(&"MiniMax-Text-01"), "Missing MiniMax-Text-01");
-    assert!(model_ids.contains(&"MiniMax-M1"), "Missing MiniMax-M1 (Reasoning)");
-    assert!(model_ids.contains(&"abab7-chat-preview"), "Missing abab7-chat-preview");
+    assert!(model_ids.contains(&"MiniMax-M2.7"), "Missing MiniMax-M2.7");
+    assert!(model_ids.contains(&"MiniMax-M2.7-highspeed"), "Missing MiniMax-M2.7-highspeed");
+    assert!(model_ids.contains(&"MiniMax-M2.5"), "Missing MiniMax-M2.5");
 
-    // Verify context lengths
-    let text01 = config.default_models.iter().find(|m| m.id == "MiniMax-Text-01").unwrap();
-    assert_eq!(text01.context_length, 1_000_000, "Text-01 should have 1M context");
-
-    let m1 = config.default_models.iter().find(|m| m.id == "MiniMax-M1").unwrap();
-    assert_eq!(m1.context_length, 1_000_000, "M1 should have 1M context");
-
-    let abab7 = config.default_models.iter().find(|m| m.id == "abab7-chat-preview").unwrap();
-    assert_eq!(abab7.context_length, 245_760, "ABAB 7 should have 245K context");
+    // Verify context lengths (all have 1M context)
+    for model in config.default_models {
+        assert_eq!(model.context_length, 1_000_000, "{} should have 1M context", model.id);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -76,7 +71,7 @@ fn test_minimax_models_expanded() {
 fn test_minimax_provider_config() {
     let config = provider_registry::get_provider_config("minimax").unwrap();
 
-    assert_eq!(config.base_url, "https://api.minimax.chat/v1");
+    assert_eq!(config.base_url, "https://api.minimax.io/v1");
     assert_eq!(config.chat_path, "/chat/completions");
     assert_eq!(config.auth_style, provider_registry::AuthStyle::Bearer);
     assert!(config.env_keys.contains(&"MINIMAX_API_KEY"));

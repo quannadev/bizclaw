@@ -9,7 +9,6 @@ use bizclaw_core::traits::Tool;
 use bizclaw_core::types::{ToolDefinition, ToolResult};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use rusqlite::Connection;
 
 /// A single buffered message from a Zalo group.
@@ -165,7 +164,7 @@ impl Tool for GroupSummarizerTool {
                 
                 let mut messages: Vec<BufferedMessage> = Vec::new();
                 if !group_id.is_empty() {
-                    let mut rows = stmt.query_map(rusqlite::params![group_id, time_str], |row| {
+                    let rows = stmt.query_map(rusqlite::params![group_id, time_str], |row| {
                         Ok(BufferedMessage {
                             sender_name: row.get::<_, Option<String>>(0)?.unwrap_or_else(|| row.get::<_, String>(1).unwrap_or_default()),
                             content: row.get(2)?,
@@ -178,7 +177,7 @@ impl Tool for GroupSummarizerTool {
                         if let Ok(m) = r { messages.push(m); }
                     }
                 } else {
-                    let mut rows = stmt.query_map(rusqlite::params![time_str], |row| {
+                    let rows = stmt.query_map(rusqlite::params![time_str], |row| {
                         Ok(BufferedMessage {
                             sender_name: row.get::<_, Option<String>>(0)?.unwrap_or_else(|| row.get::<_, String>(1).unwrap_or_default()),
                             content: row.get(2)?,

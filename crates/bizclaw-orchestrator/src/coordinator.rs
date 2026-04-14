@@ -30,7 +30,7 @@ impl Coordinator {
         tracing::info!("Coordinator started for goal: {}", goal);
 
         // Call the LLM callback to dynamically decompose the task
-        let mut dag = self.decompose_goal_into_tasks(goal, &llm_callback).await?;
+        let dag = self.decompose_goal_into_tasks(goal, &llm_callback).await?;
 
         // Shared graph for asynchronous execution
         let shared_dag = Arc::new(RwLock::new(dag));

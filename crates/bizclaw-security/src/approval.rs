@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApprovalError {
@@ -63,7 +63,7 @@ pub struct AuditLog {
 }
 
 #[derive(Debug, Clone)]
-struct AuditEntry {
+pub(crate) struct AuditEntry {
     timestamp: chrono::DateTime<chrono::Utc>,
     action_id: ApprovalId,
     action_type: String,
@@ -118,7 +118,7 @@ impl AuditLog {
         }
     }
 
-    pub async fn get_entries(&self) -> Vec<AuditEntry> {
+    pub(crate) async fn get_entries(&self) -> Vec<AuditEntry> {
         self.entries.lock().await.clone()
     }
 }
@@ -129,43 +129,32 @@ impl Default for AuditLog {
     }
 }
 
-trait Callable: Send + Sync {
+trait _Callable: Send + Sync {
     fn caller_identity(&self) -> &str;
 }
 
-struct StaticCaller {
+struct _StaticCaller {
     identity: String,
 }
 
-impl Callable for StaticCaller {
+impl _Callable for _StaticCaller {
     fn caller_identity(&self) -> &str {
         &self.identity
     }
 }
 
-trait IdentityVerifier: Send + Sync {
+trait _IdentityVerifier: Send + Sync {
     fn verify(&self, caller: &str) -> bool;
 }
 
-struct SimpleVerifier {
+struct _SimpleVerifier {
     allowed: Vec<String>,
 }
 
-impl IdentityVerifier for SimpleVerifier {
+impl _IdentityVerifier for _SimpleVerifier {
     fn verify(&self, caller: &str) -> bool {
         self.allowed.contains(&caller.to_string())
     }
-}
-
-fn verify_caller(caller: &str, allowed: &[String]) -> ApprovalResult<()> {
-    if !allowed.contains(&caller.to_string()) {
-        error!(
-            "UNAUTHORIZED APPROVAL ATTEMPT: caller='{}' not in approved list",
-            caller
-        );
-        return Err(ApprovalError::Unauthorized(caller.to_string()));
-    }
-    Ok(())
 }
 
 pub trait CallerIdentity: Send + Sync {

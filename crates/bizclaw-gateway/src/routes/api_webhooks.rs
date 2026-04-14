@@ -1496,7 +1496,7 @@ pub async fn zalo_bot_webhook(
             .to_string();
 
         let state_clone = state.clone();
-        let agent_name_clone = agent_name.clone();
+        let _agent_name_clone = agent_name.clone();
         tokio::spawn(async move {
             // Send typing indicator
             let reply_bot = bizclaw_channels::zalo_bot::ZaloBotChannel::new(

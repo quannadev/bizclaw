@@ -2,7 +2,6 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use bizclaw_core::error::{BizClawError, Result};
 
 use rusqlite::params;
 use serde::{Deserialize, Serialize};

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use bizclaw_core::error::{BizClawError, Result};
 use bizclaw_core::traits::Tool;
 use bizclaw_core::types::{ToolDefinition, ToolResult};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::process::Command;
 
 #[derive(Debug, Deserialize)]

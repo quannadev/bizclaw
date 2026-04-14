@@ -6,7 +6,7 @@
 use petgraph::graph::{NodeIndex, DiGraph};
 use petgraph::algo;
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TaskStatus {

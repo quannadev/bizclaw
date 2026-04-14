@@ -157,7 +157,7 @@ pub async fn provision_tenant(
     pve: &ProxmoxClient,
     config: &CloudConfig,
     tenant_name: &str,
-    tenant_email: &str,
+    _tenant_email: &str,
     plan: &TenantPlan,
 ) -> Result<ProvisionResult, PveError> {
     let tenant_id = generate_tenant_id(tenant_name);
