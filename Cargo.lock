@@ -574,6 +574,7 @@ dependencies = [
 name = "bizclaw-brain"
 version = "1.1.7"
 dependencies = [
+ "async-trait",
  "bizclaw-core",
  "byteorder",
  "half",
