@@ -125,16 +125,16 @@ docker-compose -f docker-compose.standalone.yml up -d
 BizClaw kết nối tất cả các kênh quan trọng cho SME Việt:
 
 ```
-┌─────────────────────────────────────────────────┐
-│                 BizClaw Platform                 │
-│                                                   │
-│  💬 Zalo OA    →  Tin nhắn, Quảng cáo, OA      │
-│  📱 TikTok    →  Video, Shop, Content         │
-│  🛒 Shopee    →  Quản lý đơn hàng           │
-│  💬 Telegram   →  Hỗ trợ khách hàng          │
-│  📧 Email     →  Email marketing              │
-│  🌐 Web       →  Chat widget                 │
-└─────────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────┐
+  │                 BizClaw Platform                 │
+  │                                                   │
+  │  💬 Zalo OA    →  Tin nhắn, Quảng cáo, OA      │
+  │  📱 TikTok    →  Video, Shop, Content         │
+  │  🛒 Shopee    →  Quản lý đơn hàng           │
+  │  💬 Telegram   →  Hỗ trợ khách hàng          │
+  │  📧 Email     →  Email marketing              │
+  │  🌐 Web       →  Chat widget                 │
+  └─────────────────────────────────────────────────┘
 ```
 
 ---
@@ -159,14 +159,14 @@ Agent chạy 24/7, tự retry, tự báo cáo:
 Tạo đội ngũ agent với vai trò khác nhau:
 
 ```
-┌─────────────────── Orchestrator ───────────────────┐
-│                                                     │
-│  🧑‍💼 Agent "Research"  │ Gemini/flash    │ Web     │
-│  📊 Agent "Analyst"   │ DeepSeek/chat   │ Reports │
-│  ✍️ Agent "Writer"    │ Claude          │ Content │
-│  📞 Agent "Support"    │ GPT-4o          │ Chat    │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+  ┌─────────────────── Orchestrator ───────────────────┐
+  │                                                     │
+  │  🧑‍💼 Agent "Research"  │ Gemini/flash    │ Web     │
+  │  📊 Agent "Analyst"   │ DeepSeek/chat   │ Reports │
+  │  ✍️ Agent "Writer"    │ Claude          │ Content │
+  │  📞 Agent "Support"    │ GPT-4o          │ Chat    │
+  │                                                     │
+  └─────────────────────────────────────────────────────┘
 ```
 
 ---
