@@ -155,7 +155,13 @@ impl SkillManifest {
                     Value::Bool(b) => Some(b.to_string()),
                     _ => None,
                 })
-                .unwrap_or_default()
+                .unwrap_or_else(|| {
+                    if key == "version" {
+                        "1.0.0".to_string()
+                    } else {
+                        String::new()
+                    }
+                })
         }
 
         fn get_vec_str(map: &serde_yaml::Mapping, key: &str) -> Vec<String> {

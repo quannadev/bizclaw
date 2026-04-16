@@ -465,7 +465,7 @@ mod tests {
             approval_required_tools: vec!["shell".into(), "http_request".into()],
             auto_approve_timeout_secs: 60,
         };
-        let gate = ApprovalGate::new(config);
+        let gate = ApprovalGate::with_approved_callers(config, vec!["admin@test.com".to_string()]);
 
         // Check requires_approval
         assert!(gate.requires_approval("shell"));

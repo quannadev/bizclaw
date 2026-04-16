@@ -46,6 +46,7 @@ fn test_app() -> Router {
         activity_tx,
         activity_log: Arc::new(Mutex::new(Vec::new())),
         rate_limiter: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
+        paused_threads: Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new())),
     });
 
     Router::new()

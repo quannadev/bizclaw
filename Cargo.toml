@@ -25,6 +25,12 @@ members = [
     "crates/bizclaw-skills",
     "crates/bizclaw-webauth",
     "crates/bizclaw-catchme",
+    "crates/bizclaw-ecommerce",
+    "crates/bizclaw-content",
+    "crates/bizclaw-office",
+    "crates/bizclaw-i18n",
+    "crates/bizclaw-social",
+    "crates/bizclaw-media",
 ]
 
 # ── Workspace-wide lint policy ──────────────────────────
@@ -96,6 +102,8 @@ tokio-tungstenite = { version = "0.24", features = ["native-tls"] }
 axum = { version = "0.8", features = ["ws"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["cors", "trace"] }
+# URL parsing
+url = "2"
 # Email
 lettre = { version = "0.11", features = ["tokio1-native-tls", "builder"] }
 async-imap = { version = "0.11", default-features = false, features = ["runtime-tokio"] }

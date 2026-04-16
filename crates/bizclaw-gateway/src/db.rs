@@ -401,7 +401,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["OPENAI_API_KEY"]"#,
-                r#"["gpt-4.1","gpt-4.1-mini","gpt-4.1-nano","gpt-4o","gpt-4o-mini","o3","o3-mini","o4-mini"]"#,
+                r#"["o3-mini","gpt-4o","gpt-4o-mini","o1","o1-mini"]"#,
             ),
             (
                 "anthropic",
@@ -413,7 +413,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["ANTHROPIC_API_KEY"]"#,
-                r#"["claude-sonnet-4-20250514","claude-opus-4-20250514","claude-3.5-haiku-20241022"]"#,
+                r#"["claude-3-5-sonnet-latest","claude-3-5-haiku-latest","claude-3-opus-latest"]"#,
             ),
             (
                 "gemini",
@@ -425,7 +425,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["GEMINI_API_KEY","GOOGLE_API_KEY"]"#,
-                r#"["gemini-2.5-pro-preview-06-05","gemini-2.5-flash-preview-05-20","gemini-2.0-flash","gemini-2.0-flash-lite"]"#,
+                r#"["gemini-2.0-flash-exp","gemini-1.5-pro","gemini-1.5-flash"]"#,
             ),
             (
                 "deepseek",
@@ -449,7 +449,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["GROQ_API_KEY"]"#,
-                r#"["llama-3.3-70b-versatile","llama-3.1-8b-instant","gemma2-9b-it","gemma-4-e4b-it","mixtral-8x7b-32768"]"#,
+                r#"["deepseek-r1-distill-llama-70b","llama-3.3-70b-versatile","llama-3.1-8b-instant"]"#,
             ),
             (
                 "openrouter",
@@ -461,7 +461,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["OPENROUTER_API_KEY","OPENAI_API_KEY"]"#,
-                r#"["openai/gpt-4.1","anthropic/claude-sonnet-4","google/gemini-2.5-flash-preview","deepseek/deepseek-r1"]"#,
+                r#"["deepseek/deepseek-chat","deepseek/deepseek-r1","openai/gpt-4o","anthropic/claude-3.5-sonnet"]"#,
             ),
             (
                 "together",
@@ -480,12 +480,12 @@ impl GatewayDb {
                 "MiniMax",
                 "🔮",
                 "cloud",
-                "https://api.minimaxi.chat/v1",
+                "https://api.minimax.io/v1",
                 "/chat/completions",
                 "/models",
                 "bearer",
                 r#"["MINIMAX_API_KEY"]"#,
-                r#"["MiniMax-Text-01","MiniMax-M1","abab6.5s-chat","abab6.5-chat","abab5.5-chat"]"#,
+                r#"["MiniMax-Text-01","MiniMax-M2.7","MiniMax-M2.5"]"#,
             ),
             (
                 "xai",
@@ -497,7 +497,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["XAI_API_KEY"]"#,
-                r#"["grok-3","grok-3-mini","grok-3-fast","grok-2"]"#,
+                r#"["grok-3","grok-3-mini","grok-2-1212"]"#,
             ),
             (
                 "mistral",
@@ -509,7 +509,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["MISTRAL_API_KEY"]"#,
-                r#"["mistral-large-latest","mistral-medium-latest","mistral-small-latest","codestral-latest","open-mistral-nemo"]"#,
+                r#"["mistral-large-latest","pixtral-12b-latest","mistral-medium-latest"]"#,
             ),
             (
                 "ollama",
@@ -521,7 +521,7 @@ impl GatewayDb {
                 "/models",
                 "none",
                 r#"[]"#,
-                r#"["llama3.2","qwen3","gemma4:e4b","gemma4:26b-a4b","phi-4","deepseek-r1"]"#,
+                r#"["llama3.3","qwen2.5:32b","gemma4:e4b","deepseek-r1:32b"]"#,
             ),
             (
                 "llamacpp",
@@ -545,7 +545,7 @@ impl GatewayDb {
                 "",
                 "none",
                 r#"[]"#,
-                r#"["tinyllama-1.1b","phi-2","llama-3.2-1b"]"#,
+                r#"["qwen3.5-4b-neo","gemma-4-e2b-it"]"#,
             ),
             (
                 "cliproxy",
@@ -581,7 +581,7 @@ impl GatewayDb {
                 "/models",
                 "bearer",
                 r#"["ARK_API_KEY","VOLC_ACCESSKEY"]"#,
-                r#"["seed-2-0-mini-260215","seed-1-8-251228","deepseek-v3-2-251201","doubao-1-5-pro-256k-250115","doubao-1-5-pro-32k-250115","glm-4-7-251222"]"#,
+                r#"["seed-2-0-mini-260215","seed-1-8-251228","deepseek-v3-2-251201"]"#,
             ),
         ];
 

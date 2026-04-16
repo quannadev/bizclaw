@@ -301,14 +301,22 @@ pub async fn fetch_provider_models(
     match req.send().await {
         Ok(resp) if resp.status().is_success() => {
             if let Ok(body) = resp.json::<serde_json::Value>().await {
-                let models: Vec<String> = body["data"]
-                    .as_array()
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|m| m["id"].as_str().map(String::from))
-                            .collect()
-                    })
-                    .unwrap_or_default();
+                let models: Vec<String> = if let Some(arr) = body["data"].as_array() {
+                    // OpenAI / Anthropic format
+                    arr.iter()
+                        .filter_map(|m| m["id"].as_str().map(String::from))
+                        .collect()
+                } else if let Some(arr) = body["models"].as_array() {
+                    // Gemini / Google format
+                    arr.iter()
+                        .filter_map(|m| {
+                            let name = m["name"].as_str()?;
+                            Some(name.strip_prefix("models/").unwrap_or(name).to_string())
+                        })
+                        .collect()
+                } else {
+                    vec![]
+                };
                 if !models.is_empty() {
                     // Cache in DB
                     if let Err(e) = state.db.update_provider_models(&name, &models) {
