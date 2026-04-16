@@ -47,6 +47,8 @@ async function loadPage(pageId) {
     dbassistant:   { file: 'db_assistant.js',       export: 'DbAssistantPage' },
     campaigns:     { file: 'campaigns.js?v=2',      export: 'CampaignsPage' },
     products:      { file: 'products.js',           export: 'ProductsPage' },
+    tiktok:        { file: 'tiktok.js',              export: 'TikTokPage' },
+    shopee:        { file: 'shopee.js',              export: 'ShopeePage' },
     handoff:       { file: 'handoff.js?v=2',        export: 'HandoffPage' },
     paymentlinks:  { file: 'payment_links.js',      export: 'PaymentLinksPage' },
     cloud:         { file: 'cloud.js',              export: 'CloudPage' },

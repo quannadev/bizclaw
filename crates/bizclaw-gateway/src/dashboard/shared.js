@@ -177,6 +177,9 @@ export const PAGES_NEW = [
       { id: 'handoff', icon: '🤝', label: 'Chuyển giao' },
       { id: 'campaigns', icon: '📢', label: 'Chiến dịch' },
       { id: 'knowledge', icon: '📚', label: 'Tri thức' },
+      { id: 'products', icon: '📦', label: 'Sản phẩm' },
+      { id: 'tiktok', icon: '🎵', label: 'TikTok' },
+      { id: 'shopee', icon: '🛒', label: 'Shopee' },
     ]
   },
   // ── Cấu hình ──
