@@ -1,193 +1,173 @@
-# ⚡ BizClaw — AI Platform for SME Growth
+# BizClaw
+
+**Open-source AI agent platform that works alongside humans to amplify productivity.**
+
+One binary. 18+ LLM providers. 9 channels. Hybrid RAG. Multi-agent orchestration. Built in Rust.
 
 <p align="center">
-  <img src="docs/images/hero-banner.png" alt="BizClaw — AI Agent Platform" width="800">
+  <a href="#-bizclaw-cloud">BizClaw Cloud</a> (SaaS) · <a href="#-bizclaw-single-tenant">BizClaw</a> (Self-Hosted)
 </p>
-
-<p align="center">
-  <strong>AI Agent Platform — Two Deployment Options</strong><br>
-  <a href="#-bizclaw-cloud-multi-tenant">BizClaw Cloud</a> (SaaS) • <a href="#-bizclaw-single-tenant">BizClaw</a> (Self-Hosted)
-</p>
-
-> **BizClaw** là nền tảng AI Agent được thiết kế cho SME Việt Nam. Kết nối đa kênh, tạo nội dung thông minh, và tự động hóa quy trình — tất cả trong một nền tảng duy nhất.
 
 [![Rust](https://img.shields.io/badge/Rust-100%25-orange?logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-743%20passing-brightgreen)]()
 [![Version](https://img.shields.io/badge/version-v1.1.7-purple)]()
-[![Website](https://img.shields.io/badge/🌐_Website-bizclaw.vn-blue)](https://bizclaw.vn)
-[![Facebook](https://img.shields.io/badge/📘_Fanpage-bizclaw.vn-1877F2?logo=facebook)](https://www.facebook.com/bizclaw.vn)
+[![Website](https://img.shields.io/badge/🌐_bizclaw.vn-blue)](https://bizclaw.vn)
 
 ---
 
-## 🎯 BizClaw dành cho ai?
+## Why BizClaw
 
-| Đối tượng | Lợi ích |
-|-----------|---------|
-| 🏪 **SME / Doanh nghiệp nhỏ** | "Nhân viên AI" trả lời 24/7, tư vấn tự động, tiết kiệm nhân sự |
-| 🛒 **E-Commerce** | Quản lý đơn hàng, tạo content đa kênh (Shopee, TikTok, Zalo) |
-| 📱 **Marketing** | Lên lịch đăng bài tự động, phân tích hiệu quả chiến dịch |
-| 📞 **Sales / Support** | Chatbot thông minh, phản hồi nhanh chóng |
+AI should work **with** you, not replace you. BizClaw connects your messaging channels to AI agents that handle the repetitive work — answering customers, creating content, scheduling posts, monitoring dashboards — so you focus on decisions that matter.
+
+- **No LLM hosting required** — bring your own API keys from any of 18+ providers
+- **Works where your team already is** — Zalo, Telegram, Discord, Slack, Email, Web, and more
+- **Runs on modest hardware** — ~13 MB binary, < 1s startup, works on a $5 VPS
+- **Open source** — MIT licensed, fork and customize freely
 
 ---
 
-## 🏢 BizClaw Cloud (Multi-Tenant)
+## Core Features
 
-> **Giải pháp SaaS** — Không cần server, bắt đầu trong 5 phút.
+| Category | Details |
+|----------|---------|
+| **LLM Providers (18+)** | OpenAI, Anthropic, Gemini, DeepSeek, Groq, OpenRouter, MiniMax, xAI (Grok), Mistral, BytePlus ModelArk, Cohere, Perplexity, DashScope, Together, and any OpenAI-compatible API |
+| **Channels (9)** | Zalo (Personal + OA), Telegram, Discord, Slack, Email (IMAP/SMTP), WhatsApp, Webhook, Web Chat |
+| **Built-in Tools (35+)** | Browser automation (stealth), social posting, database queries, voice transcription (Whisper), shell exec, file operations, HTTP client, planning |
+| **MCP Ecosystem** | Model Context Protocol — connect 1000+ external tools via [MCP Hub](https://github.com/modelcontextprotocol/servers) |
+| **Knowledge RAG** | Hybrid search (FTS5 + vector), multi-model embedding, folder watcher, nudge system |
+| **Multi-Agent** | Orchestrate agent teams with isolated roles — sequential, fan-out, conditional, and loop workflows |
+| **Autonomous Hands** | Background agents running 24/7 — research, analytics, content creation, monitoring, outreach |
+| **Workflows (23+)** | Pre-built templates: Content Pipeline, Expert Consensus, Research Pipeline, Code Review, AI Slides |
+| **Security** | AES-256 vault, RBAC 4-tier, prompt injection scanner (8 patterns, 80+ keywords), SSRF protection, audit trail, command allowlisting |
+| **Observability** | Prometheus metrics (`/metrics`), Grafana-ready dashboards, per-provider LLM call tracing |
 
-### Tính năng chính
+---
 
-| Hạng mục | Chi tiết |
-|-----------|----------|
-| **🔌 18+ AI Providers** | OpenAI, Anthropic, Gemini, DeepSeek, Groq, MiniMax, xAI (Grok), Mistral, BytePlus ModelArk |
-| **💬 9 Channels** | Telegram, Discord, Slack, Email, Webhook, WhatsApp, Zalo (Personal + OA), Web |
-| **🛠️ 35+ Tools** | Browser automation, Social posting, Database, Voice transcription, Shell, File operations |
-| **🔗 MCP Ecosystem** | Kết nối 1000+ tools từ MCP Hub |
-| **📚 Knowledge RAG** | Hybrid search (FTS5 + Vector), multi-model embedding |
-| **🤖 Multi-Agent** | Tạo đội ngũ agent với vai trò khác nhau |
-| **🔄 Workflows** | 23 workflow templates — Sequential, FanOut, Conditional, Loop |
-| **📊 Analytics** | Dashboard theo dõi hiệu suất, Prometheus metrics |
-| **🔐 Bảo mật** | RBAC 4-tier, AES-256 encryption, Audit trail |
+## 🌩 BizClaw Cloud
 
-### Cài đặt nhanh
+> Managed SaaS — no server required, start in under 5 minutes.
 
 ```bash
-# Truy cập cloud platform
-# → https://bizclaw.vn
+# Sign up at https://bizclaw.vn
 
-# Hoặc CLI
+# Or via CLI
 npm install -g @bizclaw/cli
 bizclaw login
 bizclaw init
 ```
 
+| | |
+|---|---|
+| **Deployment** | Fully managed (hosted) |
+| **Data** | Encrypted at rest (AES-256) |
+| **Setup** | < 5 minutes |
+| **Maintenance** | Managed by BizClaw team |
+| **Support** | 24/7 |
+
 ---
 
 ## 🏠 BizClaw (Single-Tenant)
 
-> **Giải pháp Self-Hosted** — Dữ liệu 100% thuộc về bạn, chạy trên VPS/Local.
+> Self-hosted — your data stays on your infrastructure, 100% on-premise.
 
-### Tính năng chính
-
-| Hạng mục | Chi tiết |
-|-----------|----------|
-| **🔌 18+ AI Providers** | OpenAI, Anthropic, Gemini, DeepSeek, Groq, OpenRouter, Together, MiniMax, xAI (Grok), Mistral, BytePlus ModelArk, Cohere, Perplexity, DashScope |
-| **💬 9 Channels** | CLI, Telegram, Discord, Slack, Email (IMAP/SMTP), Webhook, WhatsApp, Zalo |
-| **🛠️ 35+ Tools** | Browser (Stealth), Social Post, DB Semantic, Voice Transcribe, Shell, File, HTTP, Plan, Zalo Tool |
-| **🔗 MCP** | Model Context Protocol — kết nối MCP servers bên ngoài |
-| **🖐️ Autonomous Hands** | Agent chạy background 24/7 — Research, Analytics, Content, Monitoring, Security |
-| **📚 Knowledge RAG** | Hybrid search, Nudges, MCP server, Folder Watcher |
-| **🔄 Workflows** | 23 workflow templates có sẵn |
-| **🖥️ Web Dashboard** | 20+ trang UI (VI/EN), dark/light mode |
-| **🔐 Vault** | Mã hoá API keys với AES-256-CBC |
-
-### Cài đặt nhanh
+### Install
 
 ```bash
-# Cách 1: Desktop App (macOS / Windows / Linux)
-git clone https://github.com/nguyenduchoai/bizclaw-cloud.git
-cd bizclaw && cargo build --release
+# From source
+git clone https://github.com/nguyenduchoai/bizclaw.git && cd bizclaw
+cargo build --release
 ./target/release/bizclaw-desktop
 
-# Cách 2: Docker
+# Docker
 docker-compose -f docker-compose.standalone.yml up -d
 
-# Cách 3: Remote Access
+# Remote access
 ./target/release/bizclaw serve --tunnel
 ```
 
 | Platform | Binary | Size |
 |----------|--------|------|
-| 🍎 **macOS** | `bizclaw-desktop` | ~13MB |
-| 🪟 **Windows** | `bizclaw-desktop.exe` | ~12MB |
-| 🐧 **Linux** | `bizclaw-desktop` | ~12MB |
+| 🍎 macOS | `bizclaw-desktop` | ~13 MB |
+| 🪟 Windows | `bizclaw-desktop.exe` | ~12 MB |
+| 🐧 Linux | `bizclaw-desktop` | ~12 MB |
+
+### Web Dashboard
+
+20+ pages, Vietnamese & English, dark/light mode. Built-in at `http://localhost:3000`.
+
+| | |
+|---|---|
+| **Deployment** | VPS / Local / Docker |
+| **Data** | 100% on-premise |
+| **Setup** | < 10 minutes |
+| **Maintenance** | Self-managed |
+| **Support** | Community + Enterprise |
 
 ---
 
-## ✨ So sánh hai giải pháp
-
-| Tính năng | BizClaw Cloud | BizClaw (Self-Hosted) |
-|------------|--------------|------------------------|
-| Deployment | SaaS (hosted) | VPS / Local |
-| Dữ liệu | Encrypted in cloud | 100% on-premise |
-| Setup | < 5 minutes | < 10 minutes |
-| Maintenance | Managed by BizClaw | Self-managed |
-| API Keys | Shared vault | Private vault |
-| Channels | Full | Full |
-| Workflows | Full | Full |
-| Pricing | Subscription | One-time (self-hosted) |
-| Support | 24/7 | Community + Enterprise |
-
----
-
-## 🛠️ Tích hợp đa kênh
-
-BizClaw kết nối tất cả các kênh quan trọng cho SME Việt:
+## Architecture
 
 ```
-  ┌─────────────────────────────────────────────────┐
-  │                 BizClaw Platform                 │
-  │                                                   │
-  │  💬 Zalo OA    →  Tin nhắn, Quảng cáo, OA      │
-  │  📱 TikTok    →  Video, Shop, Content         │
-  │  🛒 Shopee    →  Quản lý đơn hàng           │
-  │  💬 Telegram   →  Hỗ trợ khách hàng          │
-  │  📧 Email     →  Email marketing              │
-  │  🌐 Web       →  Chat widget                 │
-  └─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    BizClaw Platform                       │
+├──────────────────────────────────────────────────────────┤
+│  Gateway (Axum)  ·  Scheduler (Cron)  ·  Hands (24/7)   │
+├──────────────────────────────────────────────────────────┤
+│  Channels (9)    ·  Multi-Agent       ·  Workflows (23+) │
+├──────────────────────────────────────────────────────────┤
+│  Knowledge RAG (FTS5 + Vector)  ·  MCP Ecosystem         │
+├──────────────────────────────────────────────────────────┤
+│  AI Providers (18+)                                      │
+│  OpenAI · Anthropic · Gemini · DeepSeek · Groq           │
+│  MiniMax · xAI · Mistral · OpenRouter · ...              │
+└──────────────────────────────────────────────────────────┘
 ```
 
----
-
-## 🤖 AI Agents — Tự động hóa mọi quy trình
-
-### Autonomous Hands (Background Agents)
-
-Agent chạy 24/7, tự retry, tự báo cáo:
-
-| Hand | Nhiệm vụ |
-|------|-----------|
-| 🔍 **Research Hand** | Thu thập thông tin, phân tích xu hướng |
-| 📊 **Analytics Hand** | Thống kê, xử lý trends |
-| ✍️ **Content Hand** | Sáng tạo nội dung, self-review |
-| 🛡️ **Monitor Hand** | Giám sát hệ thống, cảnh báo |
-| 🔄 **Sync Hand** | Đồng bộ dữ liệu đa kênh |
-| 📣 **Outreach Hand** | Soạn tin, gửi đa kênh |
-
-### Multi-Agent System
-
-Tạo đội ngũ agent với vai trò khác nhau:
+### Source Layout
 
 ```
-  ┌─────────────────── Orchestrator ───────────────────┐
-  │                                                     │
-  │  🧑‍💼 Agent "Research"  │ Gemini/flash    │ Web     │
-  │  📊 Agent "Analyst"   │ DeepSeek/chat   │ Reports │
-  │  ✍️ Agent "Writer"    │ Claude          │ Content │
-  │  📞 Agent "Support"    │ GPT-4o          │ Chat    │
-  │                                                     │
-  └─────────────────────────────────────────────────────┘
+bizclaw/
+├── src/              # Rust core — gateway, agents, channels, providers
+├── crates/           # Internal crates — tools, RAG, vault, workflows
+├── dashboard/        # Web UI (Preact, 20+ pages)
+├── migrations/       # SQLite schema migrations
+├── deploy/           # Docker & VPS deployment configs
+├── docs/             # Architecture, API reference, guides
+├── android/          # Android interaction client
+└── training/         # BizClaw Academy materials
 ```
 
 ---
 
-## 🔄 Workflows — Tự động hóa quy trình
+## Multi-Agent Orchestration
 
-23 workflow templates có sẵn:
+Each agent runs with its own identity, LLM provider, tools, and context. Define teams in TOML:
 
-| Template | Use Case |
-|---------|----------|
-| **Content Pipeline** | Viết → Review → Publish |
-| **Expert Consensus** | Thu thập ý kiến nhiều chuyên gia |
-| **Research Pipeline** | Gather → Analyze → Report |
-| **Code Review** | Submit → Review → Approve |
-| **AI Slide Creator** | Topic → Slides → Present |
+```toml
+[[agents]]
+id = "researcher"
+model = "gemini/gemini-2.0-flash"
+tools = ["web_search", "web_fetch", "browser"]
+
+[[agents]]
+id = "writer"
+model = "anthropic/claude-sonnet-4-20250514"
+tools = ["file_write", "social_post"]
+
+[[agents]]
+id = "support"
+model = "openai/gpt-4o"
+tools = ["zalo", "telegram", "email"]
+```
+
+Orchestration modes: **Sequential** (chain) · **Fan-Out** (parallel) · **Conditional** (routing) · **Loop** (iterative)
 
 ---
 
-## 🔌 Mở rộng với MCP
+## MCP Integration
 
-> Model Context Protocol — kết nối tools không giới hạn.
+Connect any MCP-compatible server for unlimited extensibility:
 
 ```toml
 [[mcp_servers]]
@@ -201,105 +181,90 @@ command = "npx"
 args = ["-y", "@modelcontextprotocol/server-filesystem", "/data"]
 ```
 
-**1000+ MCP tools** có sẵn tại [MCP Hub](https://github.com/modelcontextprotocol/servers)
+**1000+ tools** available at [MCP Hub](https://github.com/modelcontextprotocol/servers).
 
 ---
 
-## 🔐 Bảo mật & Compliance
+## Autonomous Hands
 
-| Tính năng | Mô tả |
-|-----------|--------|
-| **AES-256 Encryption** | Mã hoá API keys at rest |
-| **RBAC 4-tier** | Admin → Manager → User → Viewer |
-| **Prompt Injection Scanner** | 8 patterns, 80+ keywords (EN/VI/CN) |
-| **SSRF Protection** | IPv4 + IPv6 validation |
-| **Audit Trail** | Log mọi action |
-| **Rate Limiting** | Per-IP protection |
-| **Command Allowlist** | Sandboxed execution |
+Background agents that run 24/7, auto-retry on failure, and self-report:
+
+| Hand | Purpose |
+|------|---------|
+| 🔍 Research | Gather intelligence, analyze trends |
+| 📊 Analytics | Process data, generate reports |
+| ✍️ Content | Create and self-review content |
+| 🛡️ Monitor | System health, alert on anomalies |
+| 🔄 Sync | Cross-channel data synchronization |
+| 📣 Outreach | Draft and send multi-channel messages |
 
 ---
 
-## 📊 Monitoring & Analytics
+## Security
+
+| Feature | Description |
+|---------|-------------|
+| AES-256 Vault | API keys encrypted at rest |
+| RBAC (4-tier) | Admin → Manager → User → Viewer |
+| Prompt Injection Scanner | 8 detection patterns, 80+ keywords (EN/VI/CN) |
+| SSRF Protection | IPv4 + IPv6 validation |
+| Audit Trail | Every action logged |
+| Rate Limiting | Per-IP protection |
+| Command Allowlist | Sandboxed shell execution |
+
+---
+
+## Documentation
+
+| Resource | Link |
+|----------|------|
+| Full Documentation | [docs/](docs/) |
+| SME Quickstart | [docs/sme-quickstart.md](docs/sme-quickstart.md) |
+| Architecture | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| API Reference | [docs/api/](docs/api/) |
+| Agent Templates | [gallery/](gallery/) — 51 templates |
+| Changelog | [CHANGELOG.md](CHANGELOG.md) |
+
+---
+
+## Development
 
 ```bash
-# Prometheus metrics endpoint
-curl http://localhost:3000/metrics
+# Build from source
+cargo build --release
 
-# Output: OpenMetrics format
-bizclaw_llm_requests_total{provider="openai"} 1234
-bizclaw_channel_messages_total{channel="telegram"} 5678
-bizclaw_agent_active_tasks 42
+# Run tests
+cargo test
+
+# Run with debug logging
+RUST_LOG=bizclaw=debug cargo run
+
+# Docker (production)
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
-Tích hợp Grafana dashboards có sẵn.
+Requirements: **Rust 1.80+**, macOS / Linux / Windows.
 
 ---
 
-## 🏗️ Architecture
+## Contributing
 
-```
-┌─────────────────────────────────────────────────────┐
-│                    BizClaw Platform                  │
-├─────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌───────────┐  │
-│  │   Gateway   │  │  Scheduler  │  │   Hands   │  │
-│  │   (Axum)    │  │   (Cron)    │  │ (Background)│
-│  └─────────────┘  └─────────────┘  └───────────┘  │
-├─────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌───────────┐  │
-│  │  Channels  │  │   Agents    │  │ Workflows │  │
-│  │ (9 kênh)   │  │  (Multi)    │  │  (23+)    │  │
-│  └─────────────┘  └─────────────┘  └───────────┘  │
-├─────────────────────────────────────────────────────┤
-│  ┌───────────────────────────────────────────────┐  │
-│  │            AI Providers (18+)                 │  │
-│  │  OpenAI • Anthropic • Gemini • DeepSeek     │  │
-│  │  Groq • MiniMax • xAI • Mistral • ...      │  │
-│  └───────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────┘
-```
+Pull requests welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting.
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Commit with clear messages
+4. Open a Pull Request
 
 ---
 
-## 📖 Tài liệu
+## License
 
-| Tài liệu | Mô tả |
-|----------|--------|
-| [📚 Docs](docs/) | Tài liệu chi tiết |
-| [🏪 SME Quickstart](docs/sme-quickstart.md) | Hướng dẫn SME trong 5 phút |
-| [🛠️ Architecture](docs/ARCHITECTURE.md) | Kiến trúc hệ thống |
-| [🔧 API Reference](docs/api/) | API endpoints |
-| [🤖 Agent Templates](gallery/) | 51 agent templates |
-
----
-
-## 🧪 SME Lean Model — Giảm 75% nhân sự vận hành
-
-> BizClaw được thiết kế theo mô hình **SME Lean** — tối ưu AI-first, giảm nhân sự thủ công.
-
-| Trước | Sau với BizClaw |
-|-------|----------------|
-| 8-12 nhân viên | 2-3 nhân viên |
-| 10 posts/tuần | 50+ posts/tuần |
-| Phản hồi 2-4 giờ | Phản hồi 5-15 phút |
-| Content handmade | Content AI-generated |
-| Manual scheduling | Auto-scheduling |
-
----
-
-## 📝 License
-
-MIT License — Sử dụng tự do cho mục đích thương mại và phi thương mại.
-
----
-
-## 🤝 Contributing
-
-Pull requests are welcome! Vui lòng đọc [CONTRIBUTING.md](CONTRIBUTING.md) trước khi đóng góp.
+[MIT License](LICENSE) — free for commercial and non-commercial use.
 
 ---
 
 <p align="center">
-  <strong>Built with ❤️ for SME Việt Nam</strong><br>
-  <a href="https://bizclaw.vn">bizclaw.vn</a> • <a href="https://facebook.com/bizclaw.vn">Facebook</a> • <a href="mailto:support@bizclaw.vn">Support</a>
+  <strong>Built with ❤️ for humans who want to do more with less.</strong><br>
+  <a href="https://bizclaw.vn">bizclaw.vn</a> · <a href="https://facebook.com/bizclaw.vn">Facebook</a> · <a href="mailto:support@bizclaw.vn">Support</a>
 </p>
