@@ -327,8 +327,9 @@ pub use orchestrator::{
 // ═══ Workflows + Skills + Tools API ═══
 // Extracted to routes/workflows.rs — re-export for backward compatibility
 pub use workflows::{
-    skills_create, skills_delete, skills_detail, skills_install, skills_list, skills_uninstall,
-    skills_update, tools_create, tools_delete, tools_list, tools_toggle, workflows_create,
+    skills_create, skills_delete, skills_detail, skills_hunt, skills_install, skills_list,
+    skills_quick_hunt, skills_search, skills_uninstall, skills_update,
+    tools_create, tools_delete, tools_list, tools_toggle, workflows_create,
     workflows_delete, workflows_list, workflows_run, workflows_update,
 };
 

@@ -584,6 +584,287 @@ pub async fn skills_detail(
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// SKILL HUNTER — Tự động tìm và cài đặt skills từ OpenHub
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Search skills from OpenHub marketplace (mock data for demo)
+pub async fn skills_search(
+    State(_state): State<Arc<AppState>>,
+    axum::extract::Query(params): axum::extract::Query<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let query = params["q"]
+        .as_str()
+        .unwrap_or("")
+        .to_lowercase();
+
+    // Mock OpenHub skills database (thay bằng API thật khi có)
+    let openhub_skills = vec![
+        serde_json::json!({
+            "id": "openhub-seo-expert",
+            "name": "SEO Expert Pro",
+            "source": "openhub",
+            "icon": "🔍",
+            "category": "marketing",
+            "tags": ["seo", "google", "ranking", "keywords"],
+            "version": "2.0.0",
+            "author": "SEO Masters",
+            "downloads": 15420,
+            "rating": 4.8,
+            "description": "Chuyên gia SEO: phân tích từ khóa, tối ưu on-page, backlink strategy, technical SEO",
+            "system_prompt": "Bạn là chuyên gia SEO hàng đầu. Nhiệm vụ: phân tích từ khóa, tối ưu nội dung cho Google ranking, xây dựng chiến lược backlink, kiểm tra Technical SEO (Core Web Vitals, schema markup). Luôn đưa ra data cụ thể và actionable recommendations."
+        }),
+        serde_json::json!({
+            "id": "openhub-data-analyst",
+            "name": "Data Analyst Pro",
+            "source": "openhub",
+            "icon": "📊",
+            "category": "data",
+            "tags": ["analytics", "visualization", "python", "pandas"],
+            "version": "1.5.0",
+            "author": "DataScience Corp",
+            "downloads": 23100,
+            "rating": 4.9,
+            "description": "Phân tích dữ liệu: pandas, numpy, matplotlib, seaborn, dashboard creation",
+            "system_prompt": "Bạn là chuyên gia phân tích dữ liệu. Chuyên về pandas, numpy, matplotlib, seaborn, plotly. Tạo visualization đẹp, phân tích trends, forecast, và báo cáo chi tiết."
+        }),
+        serde_json::json!({
+            "id": "openhub-copywriter",
+            "name": "Elite Copywriter",
+            "source": "openhub",
+            "icon": "✍️",
+            "category": "marketing",
+            "tags": ["copywriting", "ads", "landing-page", "conversion"],
+            "version": "3.1.0",
+            "author": "CopyPro",
+            "downloads": 18700,
+            "rating": 4.7,
+            "description": "Viết content chuyên nghiệp: ads copy, landing page, email marketing, CTA optimization",
+            "system_prompt": "Bạn là copywriter hàng đầu. Chuyên viết: Facebook ads, Google ads, landing page, email sequences, sales letters. Tối ưu conversion rate, viết compelling copy với storytelling."
+        }),
+        serde_json::json!({
+            "id": "openhub-legal-advisor",
+            "name": "Legal Advisor VN",
+            "source": "openhub",
+            "icon": "⚖️",
+            "category": "business",
+            "tags": ["legal", "contract", "labor-law", "vn-law"],
+            "version": "1.2.0",
+            "author": "LegalTech VN",
+            "downloads": 8900,
+            "rating": 4.6,
+            "description": "Tư vấn pháp lý Việt Nam: hợp đồng, luật lao động, sở hữu trí tuệ, thuế",
+            "system_prompt": "Bạn là chuyên gia tư vấn pháp lý Việt Nam. Chuyên về: hợp đồng thương mại, luật lao động, sở hữu trí tuệ, luật thuế, giải quyết tranh chấp. Đưa ra ý kiến cập nhật theo quy định pháp luật hiện hành."
+        }),
+        serde_json::json!({
+            "id": "openhub-video-editor",
+            "name": "Video Editor AI",
+            "source": "openhub",
+            "icon": "🎬",
+            "category": "media",
+            "tags": ["video", "editing", "montage", "caption"],
+            "version": "2.0.0",
+            "author": "MediaAI",
+            "downloads": 12300,
+            "rating": 4.5,
+            "description": "Hỗ trợ biên tập video: script, caption, subtitle, timeline planning",
+            "system_prompt": "Bạn là chuyên gia biên tập video. Hỗ trợ: viết script, tạo caption/subtitle, lên timeline, đề xuất transitions và effects. Tối ưu cho TikTok, YouTube, Instagram Reels."
+        }),
+        serde_json::json!({
+            "id": "openhub-product-manager",
+            "name": "Product Manager",
+            "source": "openhub",
+            "icon": "📱",
+            "category": "product",
+            "tags": ["product", "roadmap", "prd", "user-story"],
+            "version": "1.8.0",
+            "author": "PM Pro",
+            "downloads": 11200,
+            "rating": 4.8,
+            "description": "Quản lý sản phẩm: viết PRD, user story, roadmap planning, competitor analysis",
+            "system_prompt": "Bạn là Product Manager chuyên nghiệp. Nhiệm vụ: viết PRD chi tiết, tạo user stories, lên roadmap sản phẩm, phân tích đối thủ, Define MVP, prioritize features."
+        }),
+        serde_json::json!({
+            "id": "openhub-accountant",
+            "name": "Kế toán thuế",
+            "source": "openhub",
+            "icon": "💼",
+            "category": "finance",
+            "tags": ["accounting", "tax", "finance", "vn-accounting"],
+            "version": "2.1.0",
+            "author": "FinTech VN",
+            "downloads": 9800,
+            "rating": 4.7,
+            "description": "Kế toán và thuế Việt Nam: báo cáo tài chính, quyết toán thuế, hồ sơ thuế",
+            "system_prompt": "Bạn là chuyên gia kế toán thuế Việt Nam. Chuyên về: báo cáo tài chính, quyết toán thuế TNDN, thuế GTGT, hồ sơ thuế hàng năm, tư vấn chi phí hợp lý, lập tờ khai thuế."
+        }),
+        serde_json::json!({
+            "id": "openhub-hr-recruiter",
+            "name": "HR Recruiter",
+            "source": "openhub",
+            "icon": "👔",
+            "category": "hr",
+            "tags": ["recruitment", "jd", "interview", "hr"],
+            "version": "1.5.0",
+            "author": "HR Tech",
+            "downloads": 7600,
+            "rating": 4.6,
+            "description": "Tuyển dụng nhân sự: viết JD, sàng lọc CV, câu hỏi phỏng vấn",
+            "system_prompt": "Bạn là chuyên gia HR/Tuyển dụng. Hỗ trợ: viết JD hấp dẫn, sàng lọc CV, tạo câu hỏi phỏng vấn theo vị trí, đánh giá ứng viên, viết offer letter."
+        }),
+    ];
+
+    // Filter by query
+    let results: Vec<_> = openhub_skills
+        .into_iter()
+        .filter(|s| {
+            let name = s["name"].as_str().unwrap_or("").to_lowercase();
+            let desc = s["description"].as_str().unwrap_or("").to_lowercase();
+            let tags = s["tags"]
+                .as_array()
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>().join(" "))
+                .unwrap_or_default()
+                .to_lowercase();
+
+            query.is_empty()
+                || name.contains(&query)
+                || desc.contains(&query)
+                || tags.contains(&query)
+        })
+        .collect();
+
+    Json(serde_json::json!({
+        "ok": true,
+        "query": query,
+        "results": results,
+        "total": results.len(),
+        "source": "openhub",
+        "message": if query.is_empty() {
+            "Danh sách tất cả skills từ OpenHub".to_string()
+        } else {
+            format!("Tìm thấy {} skills phù hợp với '{}'", results.len(), query)
+        }
+    }))
+}
+
+/// Hunt & install a skill from OpenHub (download + create agent)
+pub async fn skills_hunt(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Path(skill_id): axum::extract::Path<String>,
+) -> Json<serde_json::Value> {
+    // Get skill from OpenHub
+    let search_resp = skills_search(State(state.clone()), axum::extract::Query(serde_json::json!({"q": &skill_id}))).await;
+
+    let results = search_resp.0["results"].as_array().cloned().unwrap_or_default();
+    let skill = results.iter().find(|s| s["id"].as_str() == Some(&skill_id));
+
+    if let Some(skill) = skill {
+        let name = skill["name"].as_str().unwrap_or("Unknown");
+        let system_prompt = skill["system_prompt"].as_str().unwrap_or("");
+
+        // Create agent from skill
+        let agent_id = format!("hunter-{}", skill_id.replace("openhub-", "").replace("-", "_"));
+
+        // Create the agent via helper
+        let role = skill["category"].as_str().unwrap_or("assistant");
+        match super::agents::create_agent_from_skill(state, &agent_id, role, system_prompt).await {
+            Ok(_) => {
+                tracing::info!("[skill-hunter] Created agent '{}' from skill '{}'", agent_id, name);
+                Json(serde_json::json!({
+                    "ok": true,
+                    "message": format!("Đã tìm và cài đặt skill '{}'. Agent '{}' đã sẵn sàng!", name, agent_id),
+                    "agent_id": agent_id,
+                    "skill": skill,
+                    "next_steps": format!(
+                        "Gửi tin nhắn đến agent '{}' để bắt đầu sử dụng",
+                        agent_id
+                    )
+                }))
+            }
+            Err(e) => {
+                tracing::error!("[skill-hunter] Failed to create agent: {}", e);
+                Json(serde_json::json!({
+                    "ok": false,
+                    "error": format!("Không thể tạo agent: {}", e)
+                }))
+            }
+        }
+    } else {
+        Json(serde_json::json!({
+            "ok": false,
+            "error": format!("Skill '{}' không tìm thấy trên OpenHub", skill_id)
+        }))
+    }
+}
+
+/// Quick hunt - search and install in one step
+pub async fn skills_quick_hunt(
+    State(state): State<Arc<AppState>>,
+    axum::extract::Query(params): axum::extract::Query<serde_json::Value>,
+) -> Json<serde_json::Value> {
+    let query = params["q"].as_str().unwrap_or("");
+
+    if query.is_empty() {
+        return Json(serde_json::json!({
+            "ok": false,
+            "error": "Vui lòng cung cấp từ khóa tìm kiếm (q=...)"
+        }));
+    }
+
+    // Search first
+    let search_resp = skills_search(
+        State(state.clone()),
+        axum::extract::Query(serde_json::json!({"q": query}))
+    ).await;
+
+    let results = search_resp.0["results"].as_array().cloned().unwrap_or_default();
+
+    if results.is_empty() {
+        return Json(serde_json::json!({
+            "ok": false,
+            "error": format!("Không tìm thấy skill nào phù hợp với '{}'", query),
+            "suggestions": vec![
+                "Thử từ khóa khác",
+                "Tìm theo category: marketing, data, coding, business",
+                "Tìm theo tags cụ thể"
+            ]
+        }));
+    }
+
+    // Auto-install first result
+    let first_skill = &results[0];
+    let skill_id = first_skill["id"].as_str().unwrap_or("");
+
+    // Create agent
+    let agent_id = format!("hunter_{}", skill_id.replace("openhub-", "").replace("-", "_"));
+    let system_prompt = first_skill["system_prompt"].as_str().unwrap_or("");
+    let skill_name = first_skill["name"].as_str().unwrap_or("Unknown");
+    let role = first_skill["category"].as_str().unwrap_or("assistant");
+
+    match super::agents::create_agent_from_skill(state, &agent_id, role, system_prompt).await {
+        Ok(_) => {
+            Json(serde_json::json!({
+                "ok": true,
+                "message": format!("🎯 Đã tìm và cài đặt '{}'!", skill_name),
+                "agent_id": agent_id,
+                "skill": first_skill,
+                "all_results": results,
+                "usage": format!(
+                    "Gửi: /api/v1/agents/{}/chat với message của bạn",
+                    agent_id
+                )
+            }))
+        }
+        Err(e) => {
+            Json(serde_json::json!({
+                "ok": false,
+                "error": format!("Lỗi khi cài đặt: {}", e),
+                "results": results
+            }))
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // TOOLS CRUD — custom tools stored in ~/.bizclaw/tools/
 // ═══════════════════════════════════════════════════════════════════════
 

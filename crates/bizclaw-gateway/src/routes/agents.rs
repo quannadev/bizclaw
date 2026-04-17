@@ -382,11 +382,36 @@ pub async fn agent_chat(
 
     let mut orch = state.orchestrator.lock().await;
     match orch.send_to(&name, message).await {
-        Ok(response) => Json(serde_json::json!({
-            "ok": true,
-            "agent": name,
-            "response": response,
-        })),
+        Ok(response) => {
+            // Check for [ROUTE:agent-name] format and delegate if present
+            let final_response = if let Some(route_info) = parse_route(&response) {
+                tracing::info!("[agent_chat:{name}] Routing to {}", route_info.agent);
+                match orch.send_to(&route_info.agent, &route_info.message).await {
+                    Ok(delegate_response) => {
+                        // Include both the routing decision and the delegated response
+                        format!(
+                            "{} được chuyển đến {}:\n\n{}",
+                            route_info.original, route_info.agent, delegate_response
+                        )
+                    }
+                    Err(e) => {
+                        tracing::error!("[agent_chat:{name}] Delegation failed: {e}");
+                        format!(
+                            "{} (⚠️ Không thể chuyển đến {}: {})",
+                            response, route_info.agent, e
+                        )
+                    }
+                }
+            } else {
+                response
+            };
+
+            Json(serde_json::json!({
+                "ok": true,
+                "agent": name,
+                "response": final_response,
+            }))
+        }
         Err(e) => {
             tracing::error!("[agent_chat:{name}] {e}");
             Json(serde_json::json!({
@@ -395,6 +420,68 @@ pub async fn agent_chat(
             }))
         }
     }
+}
+
+/// Create an agent from skill (used by Skill Hunter)
+pub async fn create_agent_from_skill(
+    state: Arc<AppState>,
+    name: &str,
+    role: &str,
+    system_prompt: &str,
+) -> Result<(), String> {
+    let mut agent_config = state
+        .full_config
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .clone();
+
+    agent_config.identity.name = name.to_string();
+    agent_config.identity.system_prompt = system_prompt.to_string();
+    agent_config.identity.persona = role.to_string();
+
+    apply_provider_config_from_db(&state.db, &mut agent_config);
+
+    match bizclaw_agent::Agent::new(agent_config) {
+        Ok(agent) => {
+            let provider = agent.provider_name().to_string();
+            let model = agent.model_name().to_string();
+            let system_prompt_str = agent.system_prompt().to_string();
+            let mut orch = state.orchestrator.lock().await;
+            orch.add_agent(name, role, &format!("Agent from skill: {}", name), agent);
+
+            if let Err(e) = state.db.upsert_agent(name, role, &format!("Agent from skill: {}", name), &provider, &model, &system_prompt_str) {
+                tracing::warn!("DB persist failed for agent '{}': {}", name, e);
+            }
+
+            Ok(())
+        }
+        Err(e) => Err(format!("Failed to create agent: {}", e)),
+    }
+}
+
+/// Parse [ROUTE:agent-name] format from response
+fn parse_route(response: &str) -> Option<RouteInfo> {
+    let trimmed = response.trim();
+    let start = trimmed.find("[ROUTE:")?;
+    let end = trimmed[start..].find("]")?;
+    let agent_with_bracket = &trimmed[start..start + end + 1];
+    let agent = agent_with_bracket
+        .strip_prefix("[ROUTE:")?
+        .strip_suffix("]")?
+        .trim()
+        .to_lowercase();
+    let message = trimmed[start + end + 1..].trim().to_string();
+    Some(RouteInfo {
+        agent,
+        message,
+        original: response.to_string(),
+    })
+}
+
+struct RouteInfo {
+    agent: String,
+    message: String,
+    original: String,
 }
 
 /// Broadcast message to all agents.

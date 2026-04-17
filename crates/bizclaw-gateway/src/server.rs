@@ -952,6 +952,10 @@ pub fn build_router_from_arc(shared: Arc<AppState>) -> Router {
         // Skills read
         .route("/api/v1/skills", get(super::routes::skills_list))
         .route("/api/v1/skills/{id}", get(super::routes::skills_detail))
+        // Skill Hunter - Tự động tìm và cài đặt từ OpenHub
+        .route("/api/v1/skills/openhub/search", get(super::routes::skills_search))
+        .route("/api/v1/skills/openhub/hunt/{id}", get(super::routes::skills_hunt))
+        .route("/api/v1/skills/openhub/quick", get(super::routes::skills_quick_hunt))
         // TTS
         .route("/api/v1/tts/voices", get(super::routes::tts_voices))
         // Usage read

@@ -8,7 +8,19 @@
 
 # Environment & secrets
 .env
+.env.*
 *.log
+.secrets
+
+# Local BizClaw data (contains API keys)
+/.bizclaw/
+.bizclaw_credentials
+
+# Credentials and tokens
+*.key
+*.pem
+*.crt
+credentials.json
 
 # Non-production — AI dev toolkit (local only)
 .agent/
