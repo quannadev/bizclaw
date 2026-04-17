@@ -37,6 +37,7 @@ fn test_app() -> Router {
             ),
         )),
         knowledge: Arc::new(tokio::sync::Mutex::new(None)),
+        crm: Arc::new(bizclaw_crm::CRMManager::new()),
         telegram_bots: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         db: Arc::new(
             bizclaw_gateway::db::GatewayDb::open(std::path::Path::new(":memory:")).unwrap(),

@@ -178,10 +178,10 @@ impl I18n {
     }
 
     pub fn load_from_json(&mut self, locale: &str, path: &Path) -> Result<(), I18nError> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| I18nError::LoadError(e.to_string()))?;
-        let translations: TranslationMap = serde_json::from_str(&content)
-            .map_err(|e| I18nError::InvalidFormat(e.to_string()))?;
+        let content =
+            std::fs::read_to_string(path).map_err(|e| I18nError::LoadError(e.to_string()))?;
+        let translations: TranslationMap =
+            serde_json::from_str(&content).map_err(|e| I18nError::InvalidFormat(e.to_string()))?;
         self.register_translation(locale, translations);
         Ok(())
     }
@@ -194,7 +194,7 @@ impl I18n {
         let pattern = path.join("*.json");
         let entries = glob::glob(pattern.to_string_lossy().as_ref())
             .map_err(|e| I18nError::LoadError(e.to_string()))?;
-            
+
         for entry in entries.filter_map(|e| e.ok()) {
             if let Some(filename) = entry.file_stem() {
                 let locale = filename.to_string_lossy();
@@ -242,18 +242,39 @@ impl I18n {
         map.insert("auth.logout".to_string(), "Đăng xuất".to_string());
         map.insert("auth.email".to_string(), "Email".to_string());
         map.insert("auth.password".to_string(), "Mật khẩu".to_string());
-        map.insert("auth.forgot_password".to_string(), "Quên mật khẩu?".to_string());
-        map.insert("auth.welcome_back".to_string(), "Chào mừng trở lại".to_string());
-        map.insert("auth.enter_credentials".to_string(), "Nhập thông tin đăng nhập".to_string());
-        map.insert("auth.invalid_credentials".to_string(), "Email hoặc mật khẩu không đúng".to_string());
-        map.insert("auth.session_expired".to_string(), "Phiên đã hết hạn. Vui lòng đăng nhập lại.".to_string());
+        map.insert(
+            "auth.forgot_password".to_string(),
+            "Quên mật khẩu?".to_string(),
+        );
+        map.insert(
+            "auth.welcome_back".to_string(),
+            "Chào mừng trở lại".to_string(),
+        );
+        map.insert(
+            "auth.enter_credentials".to_string(),
+            "Nhập thông tin đăng nhập".to_string(),
+        );
+        map.insert(
+            "auth.invalid_credentials".to_string(),
+            "Email hoặc mật khẩu không đúng".to_string(),
+        );
+        map.insert(
+            "auth.session_expired".to_string(),
+            "Phiên đã hết hạn. Vui lòng đăng nhập lại.".to_string(),
+        );
         map.insert("dashboard.title".to_string(), "Bảng điều khiển".to_string());
-        map.insert("dashboard.subtitle".to_string(), "Trung tâm quản lý BizClaw".to_string());
+        map.insert(
+            "dashboard.subtitle".to_string(),
+            "Trung tâm quản lý BizClaw".to_string(),
+        );
         map.insert("dashboard.status".to_string(), "Trạng thái".to_string());
         map.insert("dashboard.version".to_string(), "Phiên bản".to_string());
         map.insert("dashboard.online".to_string(), "Trực tuyến".to_string());
         map.insert("dashboard.offline".to_string(), "Ngoại tuyến".to_string());
-        map.insert("dashboard.uptime".to_string(), "Thời gian hoạt động".to_string());
+        map.insert(
+            "dashboard.uptime".to_string(),
+            "Thời gian hoạt động".to_string(),
+        );
         map.insert("content.title".to_string(), "Tạo Nội Dung".to_string());
         map.insert("content.generate".to_string(), "Tạo nội dung".to_string());
         map.insert("content.script".to_string(), "Kịch bản".to_string());
@@ -261,7 +282,10 @@ impl I18n {
         map.insert("content.video".to_string(), "Video".to_string());
         map.insert("content.voice".to_string(), "Giọng đọc".to_string());
         map.insert("content.style".to_string(), "Phong cách".to_string());
-        map.insert("content.placeholder".to_string(), "Nhập mô tả nội dung...".to_string());
+        map.insert(
+            "content.placeholder".to_string(),
+            "Nhập mô tả nội dung...".to_string(),
+        );
         map.insert("scheduler.title".to_string(), "Lịch Đăng Bài".to_string());
         map.insert("scheduler.schedule".to_string(), "Đặt lịch".to_string());
         map.insert("scheduler.platforms".to_string(), "Nền tảng".to_string());
@@ -291,7 +315,10 @@ impl I18n {
         map.insert("settings.title".to_string(), "Cài Đặt".to_string());
         map.insert("settings.profile".to_string(), "Hồ sơ".to_string());
         map.insert("settings.account".to_string(), "Tài khoản".to_string());
-        map.insert("settings.notifications".to_string(), "Thông báo".to_string());
+        map.insert(
+            "settings.notifications".to_string(),
+            "Thông báo".to_string(),
+        );
         map.insert("settings.integrations".to_string(), "Tích hợp".to_string());
         map.insert("settings.api_keys".to_string(), "API Keys".to_string());
         map.insert("settings.language".to_string(), "Ngôn ngữ".to_string());
@@ -300,11 +327,23 @@ impl I18n {
         map.insert("settings.light".to_string(), "Sáng".to_string());
         map.insert("settings.system".to_string(), "Hệ thống".to_string());
         map.insert("error.not_found".to_string(), "Không tìm thấy".to_string());
-        map.insert("error.unauthorized".to_string(), "Không có quyền truy cập".to_string());
+        map.insert(
+            "error.unauthorized".to_string(),
+            "Không có quyền truy cập".to_string(),
+        );
         map.insert("error.forbidden".to_string(), "Bị cấm truy cập".to_string());
-        map.insert("error.internal".to_string(), "Lỗi máy chủ nội bộ".to_string());
-        map.insert("error.bad_request".to_string(), "Yêu cầu không hợp lệ".to_string());
-        map.insert("error.validation".to_string(), "Dữ liệu không hợp lệ".to_string());
+        map.insert(
+            "error.internal".to_string(),
+            "Lỗi máy chủ nội bộ".to_string(),
+        );
+        map.insert(
+            "error.bad_request".to_string(),
+            "Yêu cầu không hợp lệ".to_string(),
+        );
+        map.insert(
+            "error.validation".to_string(),
+            "Dữ liệu không hợp lệ".to_string(),
+        );
         map.insert("error.network".to_string(), "Lỗi kết nối mạng".to_string());
         map.insert("error.timeout".to_string(), "Hết thời gian chờ".to_string());
         map
@@ -339,26 +378,47 @@ impl I18n {
         map.insert("auth.logout".to_string(), "Logout".to_string());
         map.insert("auth.email".to_string(), "Email".to_string());
         map.insert("auth.password".to_string(), "Password".to_string());
-        map.insert("auth.forgot_password".to_string(), "Forgot password?".to_string());
+        map.insert(
+            "auth.forgot_password".to_string(),
+            "Forgot password?".to_string(),
+        );
         map.insert("auth.welcome_back".to_string(), "Welcome back".to_string());
-        map.insert("auth.enter_credentials".to_string(), "Enter your credentials".to_string());
-        map.insert("auth.invalid_credentials".to_string(), "Invalid email or password".to_string());
-        map.insert("auth.session_expired".to_string(), "Session expired. Please login again.".to_string());
+        map.insert(
+            "auth.enter_credentials".to_string(),
+            "Enter your credentials".to_string(),
+        );
+        map.insert(
+            "auth.invalid_credentials".to_string(),
+            "Invalid email or password".to_string(),
+        );
+        map.insert(
+            "auth.session_expired".to_string(),
+            "Session expired. Please login again.".to_string(),
+        );
         map.insert("dashboard.title".to_string(), "Dashboard".to_string());
-        map.insert("dashboard.subtitle".to_string(), "BizClaw Control Center".to_string());
+        map.insert(
+            "dashboard.subtitle".to_string(),
+            "BizClaw Control Center".to_string(),
+        );
         map.insert("dashboard.status".to_string(), "Status".to_string());
         map.insert("dashboard.version".to_string(), "Version".to_string());
         map.insert("dashboard.online".to_string(), "Online".to_string());
         map.insert("dashboard.offline".to_string(), "Offline".to_string());
         map.insert("dashboard.uptime".to_string(), "Uptime".to_string());
         map.insert("content.title".to_string(), "Content Creation".to_string());
-        map.insert("content.generate".to_string(), "Generate content".to_string());
+        map.insert(
+            "content.generate".to_string(),
+            "Generate content".to_string(),
+        );
         map.insert("content.script".to_string(), "Script".to_string());
         map.insert("content.image".to_string(), "Image".to_string());
         map.insert("content.video".to_string(), "Video".to_string());
         map.insert("content.voice".to_string(), "Voice".to_string());
         map.insert("content.style".to_string(), "Style".to_string());
-        map.insert("content.placeholder".to_string(), "Enter content description...".to_string());
+        map.insert(
+            "content.placeholder".to_string(),
+            "Enter content description...".to_string(),
+        );
         map.insert("scheduler.title".to_string(), "Post Scheduler".to_string());
         map.insert("scheduler.schedule".to_string(), "Schedule".to_string());
         map.insert("scheduler.platforms".to_string(), "Platforms".to_string());
@@ -388,8 +448,14 @@ impl I18n {
         map.insert("settings.title".to_string(), "Settings".to_string());
         map.insert("settings.profile".to_string(), "Profile".to_string());
         map.insert("settings.account".to_string(), "Account".to_string());
-        map.insert("settings.notifications".to_string(), "Notifications".to_string());
-        map.insert("settings.integrations".to_string(), "Integrations".to_string());
+        map.insert(
+            "settings.notifications".to_string(),
+            "Notifications".to_string(),
+        );
+        map.insert(
+            "settings.integrations".to_string(),
+            "Integrations".to_string(),
+        );
         map.insert("settings.api_keys".to_string(), "API Keys".to_string());
         map.insert("settings.language".to_string(), "Language".to_string());
         map.insert("settings.theme".to_string(), "Theme".to_string());
@@ -399,7 +465,10 @@ impl I18n {
         map.insert("error.not_found".to_string(), "Not found".to_string());
         map.insert("error.unauthorized".to_string(), "Unauthorized".to_string());
         map.insert("error.forbidden".to_string(), "Forbidden".to_string());
-        map.insert("error.internal".to_string(), "Internal server error".to_string());
+        map.insert(
+            "error.internal".to_string(),
+            "Internal server error".to_string(),
+        );
         map.insert("error.bad_request".to_string(), "Bad request".to_string());
         map.insert("error.validation".to_string(), "Invalid data".to_string());
         map.insert("error.network".to_string(), "Network error".to_string());
@@ -440,7 +509,7 @@ mod tests {
     fn test_translation_vietnamese() {
         let i18n = I18n::new();
         i18n.set_current_locale("vi").unwrap();
-        
+
         assert_eq!(i18n.t("common.save"), "Lưu");
         assert_eq!(i18n.t("auth.login"), "Đăng nhập");
         assert_eq!(i18n.t("dashboard.title"), "Bảng điều khiển");
@@ -450,7 +519,7 @@ mod tests {
     fn test_translation_english() {
         let i18n = I18n::new();
         i18n.set_current_locale("en").unwrap();
-        
+
         assert_eq!(i18n.t("common.save"), "Save");
         assert_eq!(i18n.t("auth.login"), "Login");
         assert_eq!(i18n.t("dashboard.title"), "Dashboard");
@@ -460,7 +529,7 @@ mod tests {
     fn test_translation_with_args() {
         let i18n = I18n::new();
         i18n.set_current_locale("en").unwrap();
-        
+
         let result = i18n.t_args("Hello {name}", &[("name", "World")]);
         assert_eq!(result, "Hello World");
     }
@@ -472,7 +541,7 @@ mod tests {
         assert_eq!(vi_config.name, "Vietnamese");
         assert_eq!(vi_config.native_name, "Tiếng Việt");
         assert_eq!(vi_config.direction, TextDirection::Ltr);
-        
+
         let en_config = LocaleConfig::en();
         assert_eq!(en_config.code, "en");
         assert_eq!(en_config.name, "English");
@@ -483,7 +552,7 @@ mod tests {
     fn test_fallback() {
         let i18n = I18n::new();
         i18n.set_current_locale("vi").unwrap();
-        
+
         let result = i18n.t_with_locale("nonexistent.key", "xx");
         assert_eq!(result, "nonexistent.key");
     }
@@ -499,9 +568,9 @@ mod tests {
     fn test_global_functions() {
         set_locale("vi").unwrap();
         assert_eq!(get_locale(), "vi");
-        
+
         assert_eq!(t("common.save"), "Lưu");
-        
+
         set_locale("en").unwrap();
         assert_eq!(t("common.save"), "Save");
     }

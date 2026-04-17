@@ -234,7 +234,7 @@ impl SocialContent {
 
     pub fn format_for_platform(&self, platform: Platform) -> String {
         let mut formatted = self.text.clone();
-        
+
         if !self.hashtags.is_empty() {
             let tag_separator = match platform {
                 Platform::ZaloOA => " #",
@@ -242,11 +242,11 @@ impl SocialContent {
                 Platform::Facebook | Platform::Instagram => " #",
                 _ => " #",
             };
-            
+
             let tags = self.hashtags.join(tag_separator);
             formatted = format!("{}\n\n#{}", formatted, tags);
         }
-        
+
         formatted
     }
 }
@@ -270,19 +270,19 @@ mod tests {
             SocialContent::builder().text("Test").build(),
             scheduled_at,
         );
-        
+
         assert_eq!(post.status, PostStatus::Scheduled);
-        
+
         post.publish();
         assert_eq!(post.status, PostStatus::Published);
         assert!(post.published_at.is_some());
-        
+
         let mut failed_post = ScheduledPost::new(
             Platform::TikTok,
             SocialContent::builder().text("Test").build(),
             scheduled_at,
         );
-        
+
         failed_post.fail("Network error".to_string());
         assert_eq!(post.status, PostStatus::Published);
         assert_eq!(failed_post.error_message, Some("Network error".to_string()));
@@ -295,7 +295,7 @@ mod tests {
             .hashtags(vec!["bizclaw", "startup"])
             .platform(Platform::ZaloOA)
             .build();
-            
+
         let formatted = content.format_for_platform(Platform::ZaloOA);
         assert!(formatted.contains("#bizclaw"));
         assert!(formatted.contains("#startup"));

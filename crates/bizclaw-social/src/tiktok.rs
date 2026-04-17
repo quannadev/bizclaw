@@ -128,7 +128,7 @@ impl TikTokClient {
     pub async fn set_credentials(&self, access_token: String, open_id: String) {
         let mut token_guard = self.access_token.write().await;
         *token_guard = Some(access_token);
-        
+
         let mut openid_guard = self.open_id.write().await;
         *openid_guard = Some(open_id);
     }
@@ -154,16 +154,18 @@ impl TikTokClient {
             ("redirect_uri", redirect_uri),
         ];
 
-        let response = self.client
+        let response = self
+            .client
             .post("https://open.tiktokapis.com/v2/oauth/token/")
             .form(&params)
             .send()
             .await?;
 
         let data: TikTokAuthResponse = response.json().await?;
-        
+
         if data.message == "success" {
-            self.set_credentials(data.data.access_token.clone(), data.data.open_id.clone()).await;
+            self.set_credentials(data.data.access_token.clone(), data.data.open_id.clone())
+                .await;
             Ok(data.data)
         } else {
             anyhow::bail!("TikTok auth failed: {}", data.message)
@@ -176,7 +178,8 @@ impl TikTokClient {
 
         let query = r#"{"fields": ["open_id", "union_id", "avatar_url", "display_name", "is_verified", "follower_count", "following_count", "likes_count", "video_count"]}"#;
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/v2/user/info/", self.base_url))
             .header("Authorization", format!("Bearer {}", token))
             .header("Content-Type", "application/json")
@@ -193,7 +196,11 @@ impl TikTokClient {
         Ok(result.data)
     }
 
-    pub async fn upload_video_init(&self, file_size: u64, file_name: &str) -> Result<TikTokUploadInitResponse> {
+    pub async fn upload_video_init(
+        &self,
+        file_size: u64,
+        file_name: &str,
+    ) -> Result<TikTokUploadInitResponse> {
         let token = self.access_token.read().await;
         let token = token.as_ref().context("No access token")?;
 
@@ -205,7 +212,8 @@ impl TikTokClient {
             }
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/v2/video/init/", self.base_url))
             .header("Authorization", format!("Bearer {}", token))
             .header("Content-Type", "application/json")
@@ -228,7 +236,8 @@ impl TikTokClient {
         video_data: &[u8],
         part_number: u32,
     ) -> Result<()> {
-        let response = self.client
+        let response = self
+            .client
             .put(upload_url)
             .header("Content-Type", "video/mp4")
             .header("Content-Length", video_data.len().to_string())
@@ -245,7 +254,12 @@ impl TikTokClient {
         }
     }
 
-    pub async fn publish_video(&self, video_id: &str, title: &str, description: &str) -> Result<String> {
+    pub async fn publish_video(
+        &self,
+        video_id: &str,
+        title: &str,
+        description: &str,
+    ) -> Result<String> {
         let token = self.access_token.read().await;
         let token = token.as_ref().context("No access token")?;
 
@@ -262,7 +276,8 @@ impl TikTokClient {
             hashtag_ids: None,
         };
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/v2/video/upload/search/", self.base_url))
             .header("Authorization", format!("Bearer {}", token))
             .header("Content-Type", "application/json")
@@ -293,7 +308,8 @@ impl TikTokClient {
             "fields": ["id", "title", "description", "cover_image_url", "share_url", "create_time", "video_status"]
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post(format!("{}/v2/video/list/", self.base_url))
             .header("Authorization", format!("Bearer {}", token))
             .header("Content-Type", "application/json")
@@ -394,7 +410,8 @@ impl TikTokShopClient {
     pub async fn get_products(&self) -> Result<Vec<TikTokShopProduct>> {
         let token = self.access_token.as_ref().context("No access token")?;
 
-        let response = self.client
+        let response = self
+            .client
             .get("https://open-api.tiktokglobalshop.com/202309/products")
             .header("Authorization", format!("Bearer {}", token))
             .send()
@@ -417,7 +434,8 @@ impl TikTokShopClient {
     pub async fn create_product(&self, product: &TikTokShopProduct) -> Result<String> {
         let token = self.access_token.as_ref().context("No access token")?;
 
-        let response = self.client
+        let response = self
+            .client
             .post("https://open-api.tiktokglobalshop.com/202309/products")
             .header("Authorization", format!("Bearer {}", token))
             .json(product)
@@ -441,7 +459,8 @@ impl TikTokShopClient {
     pub async fn get_orders(&self, page_size: u32) -> Result<Vec<TikTokShopOrder>> {
         let token = self.access_token.as_ref().context("No access token")?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&format!(
                 "https://open-api.tiktokglobalshop.com/202309/orders?page_size={}",
                 page_size
@@ -480,16 +499,10 @@ mod tests {
 
     #[test]
     fn test_generate_auth_url() {
-        let client = TikTokClient::new(
-            "my_client_key".to_string(),
-            "my_secret".to_string(),
-        );
-        
-        let url = client.generate_auth_url(
-            "https://myapp.com/callback",
-            "random_state_string"
-        );
-        
+        let client = TikTokClient::new("my_client_key".to_string(), "my_secret".to_string());
+
+        let url = client.generate_auth_url("https://myapp.com/callback", "random_state_string");
+
         assert!(url.contains("client_key=my_client_key"));
         assert!(url.contains("redirect_uri=https://myapp.com/callback"));
     }
@@ -501,9 +514,9 @@ mod tests {
             "shop_secret".to_string(),
             "app_12345".to_string(),
         );
-        
+
         assert!(client.access_token.is_none());
-        
+
         let client_with_token = client.with_token("my_access_token".to_string());
         assert!(client_with_token.access_token.is_some());
     }

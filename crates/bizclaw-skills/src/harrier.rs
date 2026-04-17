@@ -30,25 +30,22 @@ pub fn local_harrier_embed_definition() -> ToolDefinition {
 
 /// Implementation of Harrier embedding using an external API endpoint (like Ollama or OpenAI compatible).
 pub async fn execute_local_harrier_embed(
-    text: &str, 
-    _task_type: &str, 
-    api_url: Option<String>, 
-    api_key: Option<String>
+    text: &str,
+    _task_type: &str,
+    api_url: Option<String>,
+    api_key: Option<String>,
 ) -> Result<Vec<f32>> {
-    tracing::info!(
-        "🧠 Embedding requested for text ({} bytes)",
-        text.len()
-    );
+    tracing::info!("🧠 Embedding requested for text ({} bytes)", text.len());
 
     if text.is_empty() {
         return Err(BizClawError::Other("Embedding text cannot be empty".into()));
     }
 
     let url = api_url.unwrap_or_else(|| "http://localhost:11434/api/embeddings".to_string());
-    
+
     let client = reqwest::Client::new();
     let is_ollama = url.contains("11434") || url.contains("/api/embeddings");
-    
+
     let mut req = client.post(&url);
     if let Some(key) = api_key {
         if !key.is_empty() {
@@ -69,30 +66,45 @@ pub async fn execute_local_harrier_embed(
         })
     };
 
-    let resp = req.json(&payload).send().await
-        .map_err(|e| BizClawError::Other(format!("Failed to connect to embedding API: {}", e)))?;
+    let resp =
+        req.json(&payload).send().await.map_err(|e| {
+            BizClawError::Other(format!("Failed to connect to embedding API: {}", e))
+        })?;
 
     if !resp.status().is_success() {
-        let err_text = resp.text().await.unwrap_or_else(|_| "Unknown API Error".into());
-        return Err(BizClawError::Other(format!("Embedding API error: {}", err_text)));
+        let err_text = resp
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown API Error".into());
+        return Err(BizClawError::Other(format!(
+            "Embedding API error: {}",
+            err_text
+        )));
     }
 
-    let json: serde_json::Value = resp.json().await
+    let json: serde_json::Value = resp
+        .json()
+        .await
         .map_err(|e| BizClawError::Other(format!("Failed to parse embedding response: {}", e)))?;
 
     let vec = if is_ollama {
-        json.get("embedding")
-            .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|x| x.as_f64().map(|f| f as f32)).collect::<Vec<f32>>())
+        json.get("embedding").and_then(|v| v.as_array()).map(|arr| {
+            arr.iter()
+                .filter_map(|x| x.as_f64().map(|f| f as f32))
+                .collect::<Vec<f32>>()
+        })
     } else {
         json.get("data")
             .and_then(|d| d.as_array())
             .and_then(|d| d.first())
             .and_then(|first| first.get("embedding"))
             .and_then(|e| e.as_array())
-            .map(|arr| arr.iter().filter_map(|x| x.as_f64().map(|f| f as f32)).collect::<Vec<f32>>())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|x| x.as_f64().map(|f| f as f32))
+                    .collect::<Vec<f32>>()
+            })
     };
 
     vec.ok_or_else(|| BizClawError::Other("Invalid embedding response format".into()))
 }
-

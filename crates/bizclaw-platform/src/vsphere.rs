@@ -140,7 +140,11 @@ impl VSphereClient {
             return Err("Empty session token from vSphere".into());
         }
 
-        tracing::info!("✅ vSphere session established: {}...{}", &session_id[..4.min(session_id.len())], &session_id[session_id.len().saturating_sub(4)..]);
+        tracing::info!(
+            "✅ vSphere session established: {}...{}",
+            &session_id[..4.min(session_id.len())],
+            &session_id[session_id.len().saturating_sub(4)..]
+        );
 
         Ok(Self {
             base_url,
@@ -160,11 +164,7 @@ impl VSphereClient {
     ///
     /// POST /api/vcenter/vm with source = template VM ID.
     /// Returns the new VM's ID (e.g., "vm-123").
-    pub async fn clone_vm(
-        &self,
-        template_id: &str,
-        spec: &CloneSpec,
-    ) -> Result<String, String> {
+    pub async fn clone_vm(&self, template_id: &str, spec: &CloneSpec) -> Result<String, String> {
         let url = format!("{}/api/vcenter/vm", self.base_url);
 
         let placement = serde_json::json!({
@@ -334,10 +334,7 @@ impl VSphereClient {
     /// GET /api/vcenter/vm/{vm}/guest/identity
     /// Requires VMware Tools running in guest.
     pub async fn get_vm_ip(&self, vm_id: &str) -> Result<Option<String>, String> {
-        let url = format!(
-            "{}/api/vcenter/vm/{}/guest/identity",
-            self.base_url, vm_id
-        );
+        let url = format!("{}/api/vcenter/vm/{}/guest/identity", self.base_url, vm_id);
 
         let resp = self
             .http
@@ -357,9 +354,7 @@ impl VSphereClient {
             .await
             .map_err(|e| format!("Parse guest identity failed: {e}"))?;
 
-        let ip = body["ip_address"]
-            .as_str()
-            .map(|s| s.to_string());
+        let ip = body["ip_address"].as_str().map(|s| s.to_string());
 
         Ok(ip)
     }
@@ -367,11 +362,7 @@ impl VSphereClient {
     /// Wait for VM to boot and report its IP address.
     ///
     /// Polls guest identity every 5 seconds, up to `timeout_secs`.
-    pub async fn wait_for_ip(
-        &self,
-        vm_id: &str,
-        timeout_secs: u64,
-    ) -> Result<String, String> {
+    pub async fn wait_for_ip(&self, vm_id: &str, timeout_secs: u64) -> Result<String, String> {
         let deadline = tokio::time::Instant::now() + Duration::from_secs(timeout_secs);
 
         loop {
@@ -448,10 +439,7 @@ impl VSphereClient {
             .map_err(|e| format!("List VMs failed: {e}"))?;
 
         if !resp.status().is_success() {
-            return Err(format!(
-                "List VMs failed (HTTP {})",
-                resp.status()
-            ));
+            return Err(format!("List VMs failed (HTTP {})", resp.status()));
         }
 
         let vms: Vec<VmSummary> = resp
@@ -469,25 +457,19 @@ impl VSphereClient {
         let vms = self.list_vms().await?;
 
         let total = vms.len() as u32;
-        let powered_on = vms
-            .iter()
-            .filter(|v| v.power_state == "POWERED_ON")
-            .count() as u32;
+        let powered_on = vms.iter().filter(|v| v.power_state == "POWERED_ON").count() as u32;
         let powered_off = vms
             .iter()
             .filter(|v| v.power_state == "POWERED_OFF")
             .count() as u32;
-        let suspended = vms
-            .iter()
-            .filter(|v| v.power_state == "SUSPENDED")
-            .count() as u32;
+        let suspended = vms.iter().filter(|v| v.power_state == "SUSPENDED").count() as u32;
 
         Ok(ClusterStats {
             total_vms: total,
             powered_on,
             powered_off,
             suspended,
-            total_cpu_mhz: None,  // Requires host API
+            total_cpu_mhz: None, // Requires host API
             used_cpu_mhz: None,
             total_memory_mb: None,
             used_memory_mb: None,
@@ -527,9 +509,7 @@ impl VSphereClient {
             match http.get(&url2).send().await {
                 Ok(resp2) if resp2.status().is_success() => {
                     let body: serde_json::Value = resp2.json().await.unwrap_or_default();
-                    let version = body["value"]["version"]
-                        .as_str()
-                        .unwrap_or("reachable");
+                    let version = body["value"]["version"].as_str().unwrap_or("reachable");
                     Ok(format!("vSphere {}", version))
                 }
                 _ => {
@@ -559,7 +539,10 @@ impl VSphereClient {
 impl Drop for VSphereClient {
     fn drop(&mut self) {
         // Note: Can't async in Drop. Session will eventually expire on vCenter side.
-        tracing::debug!("VSphereClient dropped — session {} will expire on server", &self.session_id[..8.min(self.session_id.len())]);
+        tracing::debug!(
+            "VSphereClient dropped — session {} will expire on server",
+            &self.session_id[..8.min(self.session_id.len())]
+        );
     }
 }
 
@@ -598,7 +581,10 @@ pub async fn provision_tenant_vm(
     let network = config["network"].as_str().map(|s| s.to_string());
 
     if host.is_empty() || user.is_empty() || template_id.is_empty() {
-        tracing::error!("❌ vSphere not configured — cannot provision VM for tenant {}", tenant_id);
+        tracing::error!(
+            "❌ vSphere not configured — cannot provision VM for tenant {}",
+            tenant_id
+        );
         let db_lock = state.db.lock().await;
         let _ = db_lock.cloud_update_tenant_status(&tenant_id, "error");
         return;
@@ -672,7 +658,8 @@ pub async fn provision_tenant_vm(
         Err(e) => {
             tracing::warn!(
                 "⚠️ VM {} booted but no IP yet: {} — marking as booting",
-                vm_id, e
+                vm_id,
+                e
             );
             // Don't mark as error — VM might just need more time
             // Background health checker will update status later

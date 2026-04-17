@@ -18,7 +18,7 @@ pub struct SocialScheduler {
 impl SocialScheduler {
     pub fn new() -> Self {
         let (tx, _rx) = mpsc::channel(100);
-        
+
         Self {
             posts: Arc::new(RwLock::new(HashMap::new())),
             pending_posts: Arc::new(RwLock::new(Vec::new())),
@@ -36,17 +36,17 @@ impl SocialScheduler {
 
     pub fn schedule(&self, post: ScheduledPost) -> Result<String> {
         let post_id = post.id.clone();
-        
+
         {
             let mut posts = self.posts.write();
             posts.insert(post_id.clone(), post.clone());
         }
-        
+
         {
             let mut pending = self.pending_posts.write();
             pending.push(post_id.clone());
         }
-        
+
         info!("Scheduled post: {}", post_id);
         Ok(post_id)
     }
@@ -58,12 +58,12 @@ impl SocialScheduler {
                 anyhow::bail!("Post not found: {}", post_id);
             }
         }
-        
+
         {
             let mut pending = self.pending_posts.write();
             pending.retain(|id| id != post_id);
         }
-        
+
         info!("Cancelled post: {}", post_id);
         Ok(())
     }
@@ -71,7 +71,7 @@ impl SocialScheduler {
     pub fn get_pending(&self) -> Vec<ScheduledPost> {
         let posts = self.posts.read();
         let pending = self.pending_posts.read();
-        
+
         pending
             .iter()
             .filter_map(|id| posts.get(id).cloned())
@@ -95,7 +95,7 @@ impl SocialScheduler {
     pub fn get_due_posts(&self, before: DateTime<Utc>) -> Vec<ScheduledPost> {
         let posts = self.posts.read();
         let pending = self.pending_posts.read();
-        
+
         pending
             .iter()
             .filter_map(|id| {
@@ -111,7 +111,7 @@ impl SocialScheduler {
 
     pub fn mark_publishing(&self, post_id: &str) -> Result<()> {
         let mut posts = self.posts.write();
-        
+
         if let Some(post) = posts.get_mut(post_id) {
             post.status = PostStatus::Publishing;
             post.updated_at = Utc::now();
@@ -123,7 +123,7 @@ impl SocialScheduler {
 
     pub fn mark_published(&self, post_id: &str) -> Result<()> {
         let mut posts = self.posts.write();
-        
+
         if let Some(post) = posts.get_mut(post_id) {
             post.publish();
             Ok(())
@@ -134,7 +134,7 @@ impl SocialScheduler {
 
     pub fn mark_failed(&self, post_id: &str, error: String) -> Result<()> {
         let mut posts = self.posts.write();
-        
+
         if let Some(post) = posts.get_mut(post_id) {
             post.fail(error);
             Ok(())
@@ -184,34 +184,33 @@ impl CronScheduler {
         }
     }
 
-    pub fn start<F>(&self, mut executor: F) 
-    where 
+    pub fn start<F>(&self, mut executor: F)
+    where
         F: FnMut(ScheduledPost) -> tokio::task::JoinHandle<Result<()>> + Send + 'static,
     {
         let scheduler = self.scheduler.clone();
         let interval_secs = self.interval_seconds;
-        
+
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(
-                tokio::time::Duration::from_secs(interval_secs)
-            );
-            
+            let mut interval =
+                tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
+
             loop {
                 interval.tick().await;
-                
+
                 let now = Utc::now();
                 let due_posts = scheduler.get_due_posts(now);
-                
+
                 for post in due_posts {
                     let post_id = post.id.clone();
-                    
+
                     if let Err(e) = scheduler.mark_publishing(&post_id) {
                         error!("Failed to mark post as publishing: {}", e);
                         continue;
                     }
-                    
+
                     let handle = executor(post.clone());
-                    
+
                     let scheduler_clone = scheduler.clone();
                     tokio::spawn(async move {
                         match handle.await {
@@ -221,17 +220,19 @@ impl CronScheduler {
                                 }
                             }
                             Ok(Err(e)) => {
-                                if let Err(e) = scheduler_clone.mark_failed(&post_id, e.to_string()) {
+                                if let Err(e) = scheduler_clone.mark_failed(&post_id, e.to_string())
+                                {
                                     error!("Failed to mark post as failed: {}", e);
                                 }
                             }
                             Err(e) => {
-                                if let Err(e) = scheduler_clone.mark_failed(&post_id, e.to_string()) {
+                                if let Err(e) = scheduler_clone.mark_failed(&post_id, e.to_string())
+                                {
                                     error!("Failed to mark post as failed: {}", e);
                                 }
                             }
                         }
-                        
+
                         scheduler_clone.remove_from_pending(&post_id);
                     });
                 }
@@ -252,7 +253,12 @@ impl SchedulerHandle {
         }
     }
 
-    pub fn schedule(&self, platform: Platform, content: SocialContent, scheduled_at: DateTime<Utc>) -> Result<String> {
+    pub fn schedule(
+        &self,
+        platform: Platform,
+        content: SocialContent,
+        scheduled_at: DateTime<Utc>,
+    ) -> Result<String> {
         let post = ScheduledPost::new(platform, content, scheduled_at);
         self.scheduler.schedule(post)
     }
@@ -318,18 +324,14 @@ mod tests {
     #[test]
     fn test_schedule_post() {
         let scheduler = SocialScheduler::new();
-        
+
         let content = SocialContent::builder()
             .text("Test post")
             .platform(Platform::ZaloOA)
             .build();
-        
-        let post = ScheduledPost::new(
-            Platform::ZaloOA,
-            content,
-            Utc::now() + Duration::hours(1),
-        );
-        
+
+        let post = ScheduledPost::new(Platform::ZaloOA, content, Utc::now() + Duration::hours(1));
+
         let result = scheduler.schedule(post);
         assert!(result.is_ok());
     }
@@ -337,56 +339,49 @@ mod tests {
     #[test]
     fn test_cancel_post() {
         let scheduler = SocialScheduler::new();
-        
+
         let content = SocialContent::builder()
             .text("Test post")
             .platform(Platform::TikTok)
             .build();
-        
-        let post = ScheduledPost::new(
-            Platform::TikTok,
-            content,
-            Utc::now() + Duration::hours(1),
-        );
-        
+
+        let post = ScheduledPost::new(Platform::TikTok, content, Utc::now() + Duration::hours(1));
+
         let post_id = scheduler.schedule(post).unwrap();
-        
+
         let result = scheduler.cancel(&post_id);
         assert!(result.is_ok());
-        
+
         assert!(scheduler.get_post(&post_id).is_none());
     }
 
     #[test]
     fn test_get_due_posts() {
         let scheduler = SocialScheduler::new();
-        
+
         let content = SocialContent::builder()
             .text("Past post")
             .platform(Platform::Facebook)
             .build();
-        
-        let past_post = ScheduledPost::new(
-            Platform::Facebook,
-            content,
-            Utc::now() - Duration::hours(1),
-        );
-        
+
+        let past_post =
+            ScheduledPost::new(Platform::Facebook, content, Utc::now() - Duration::hours(1));
+
         scheduler.schedule(past_post).unwrap();
-        
+
         let content2 = SocialContent::builder()
             .text("Future post")
             .platform(Platform::Instagram)
             .build();
-        
+
         let future_post = ScheduledPost::new(
             Platform::Instagram,
             content2,
             Utc::now() + Duration::hours(1),
         );
-        
+
         scheduler.schedule(future_post).unwrap();
-        
+
         let due_posts = scheduler.get_due_posts(Utc::now());
         assert_eq!(due_posts.len(), 1);
         assert_eq!(due_posts[0].platform, Platform::Facebook);
@@ -398,10 +393,10 @@ mod tests {
             .platforms(vec![Platform::ZaloOA, Platform::TikTok])
             .content_template("Daily update!")
             .hashtags(vec!["bizclaw", "ai"]);
-        
+
         assert_eq!(schedule.platforms.len(), 2);
         assert_eq!(schedule.hashtags.len(), 2);
-        
+
         let now = Utc::now();
         let next = schedule.next_run(now);
         assert!(next > now);

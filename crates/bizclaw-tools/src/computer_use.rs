@@ -67,7 +67,10 @@ impl ComputerUseTool {
                 .map_err(|e| format!("Failed to run screencapture: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("screencapture failed: {}", String::from_utf8_lossy(&output.stderr)));
+                return Err(format!(
+                    "screencapture failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ));
             }
         }
 
@@ -84,15 +87,16 @@ impl ComputerUseTool {
                 .map_err(|e| format!("Failed to run PowerShell: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("PowerShell screenshot failed: {}", String::from_utf8_lossy(&output.stderr)));
+                return Err(format!(
+                    "PowerShell screenshot failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ));
             }
         }
 
         #[cfg(target_os = "linux")]
         {
-            let result = Command::new("scrot")
-                .arg(&temp_path_str)
-                .output();
+            let result = Command::new("scrot").arg(&temp_path_str).output();
 
             if result.is_err() || !result.as_ref().unwrap().status.success() {
                 let output = Command::new("import")
@@ -127,9 +131,12 @@ impl ComputerUseTool {
         Ok(base64)
     }
 
-    fn resize_and_convert(&self, input: &std::path::Path, output: &std::path::Path) -> std::result::Result<(), String> {
-        let img = image::open(input)
-            .map_err(|e| format!("Failed to open image: {e}"))?;
+    fn resize_and_convert(
+        &self,
+        input: &std::path::Path,
+        output: &std::path::Path,
+    ) -> std::result::Result<(), String> {
+        let img = image::open(input).map_err(|e| format!("Failed to open image: {e}"))?;
 
         let (width, height) = img.dimensions();
         let max_width = self.config.screenshot_max_width;
@@ -152,12 +159,17 @@ impl ComputerUseTool {
         #[cfg(target_os = "macos")]
         {
             let output = Command::new("cliclick")
-                .args(["m:#{x},{y}".replace("{x}", &x.to_string()).replace("{y}", &y.to_string())])
+                .args(["m:#{x},{y}"
+                    .replace("{x}", &x.to_string())
+                    .replace("{y}", &y.to_string())])
                 .output()
                 .map_err(|e| format!("Failed to run cliclick: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("cliclick failed: {}", String::from_utf8_lossy(&output.stderr)));
+                return Err(format!(
+                    "cliclick failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ));
             }
         }
 
@@ -173,7 +185,10 @@ impl ComputerUseTool {
                 .map_err(|e| format!("Failed to run PowerShell: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("PowerShell mouse_move failed: {}", String::from_utf8_lossy(&output.stderr)));
+                return Err(format!(
+                    "PowerShell mouse_move failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ));
             }
         }
 
@@ -185,7 +200,10 @@ impl ComputerUseTool {
                 .map_err(|e| format!("Failed to run xdotool: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("xdotool failed: {}", String::from_utf8_lossy(&output.stderr)));
+                return Err(format!(
+                    "xdotool failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ));
             }
         }
 
@@ -197,7 +215,13 @@ impl ComputerUseTool {
         Ok(())
     }
 
-    async fn mouse_click(&self, x: i32, y: i32, button: &str, clicks: u32) -> std::result::Result<(), String> {
+    async fn mouse_click(
+        &self,
+        x: i32,
+        y: i32,
+        button: &str,
+        clicks: u32,
+    ) -> std::result::Result<(), String> {
         self.mouse_move(x, y).await?;
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
@@ -267,7 +291,10 @@ public class WinClick {{
                 .map_err(|e| format!("Failed to run PowerShell: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("PowerShell mouse_click failed: {}", String::from_utf8_lossy(&output.stderr)));
+                return Err(format!(
+                    "PowerShell mouse_click failed: {}",
+                    String::from_utf8_lossy(&output.stderr)
+                ));
             }
         }
 
@@ -280,7 +307,14 @@ public class WinClick {{
             };
 
             let output = Command::new("xdotool")
-                .args(["mousemove", "--sync", &x.to_string(), &y.to_string(), "click", button_num])
+                .args([
+                    "mousemove",
+                    "--sync",
+                    &x.to_string(),
+                    &y.to_string(),
+                    "click",
+                    button_num,
+                ])
                 .output()
                 .map_err(|e| format!("Failed to run xdotool: {e}"))?;
 
@@ -306,7 +340,13 @@ public class WinClick {{
             }
 
             Command::new("osascript")
-                .args(["-e", &format!("tell application \"System Events\" to keystroke \"{}\"", escaped)])
+                .args([
+                    "-e",
+                    &format!(
+                        "tell application \"System Events\" to keystroke \"{}\"",
+                        escaped
+                    ),
+                ])
                 .output()
                 .map_err(|e| format!("Failed to run osascript: {e}"))?;
         }
@@ -436,8 +476,14 @@ public class WinClick {{
         {
             let output = Command::new("cliclick")
                 .args([
-                    "dd:#{x1},{y1}".replace("{x1}", &x1.to_string()).replace("{y1}", &y1.to_string()).as_str(),
-                    "du:#{x2},{y2}".replace("{x2}", &x2.to_string()).replace("{y2}", &y2.to_string()).as_str()
+                    "dd:#{x1},{y1}"
+                        .replace("{x1}", &x1.to_string())
+                        .replace("{y1}", &y1.to_string())
+                        .as_str(),
+                    "du:#{x2},{y2}"
+                        .replace("{x2}", &x2.to_string())
+                        .replace("{y2}", &y2.to_string())
+                        .as_str(),
                 ])
                 .output()
                 .map_err(|e| format!("Failed to run cliclick: {e}"))?;
@@ -487,8 +533,12 @@ public class Drag {{
         {
             let output = Command::new("xdotool")
                 .args([
-                    "mousemove", "--sync", &x1.to_string(), &y1.to_string(),
-                    "mousedown", "1"
+                    "mousemove",
+                    "--sync",
+                    &x1.to_string(),
+                    &y1.to_string(),
+                    "mousedown",
+                    "1",
                 ])
                 .output()
                 .map_err(|e| format!("Failed to run xdotool: {e}"))?;
@@ -577,38 +627,41 @@ impl Tool for ComputerUseTool {
 
         let result = match parsed.action.as_str() {
             "screenshot" => {
-                let base64 = self.screenshot().await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                let base64 = self.screenshot().await.map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
                     "image": base64,
                     "message": "Screenshot captured. Analyze the image to determine next actions."
-                }).to_string()
+                })
+                .to_string()
             }
 
             "mouse_move" => {
-                let (x, y) = parsed.x
-                    .zip(parsed.y)
-                    .ok_or_else(|| BizClawError::Tool("x and y coordinates required".to_string()))?;
+                let (x, y) = parsed.x.zip(parsed.y).ok_or_else(|| {
+                    BizClawError::Tool("x and y coordinates required".to_string())
+                })?;
 
-                self.mouse_move(x, y).await
+                self.mouse_move(x, y)
+                    .await
                     .map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
                     "x": x,
                     "y": y,
                     "message": format!("Mouse moved to ({}, {})", x, y)
-                }).to_string()
+                })
+                .to_string()
             }
 
             "mouse_click" | "click" => {
-                let (x, y) = parsed.x
-                    .zip(parsed.y)
-                    .ok_or_else(|| BizClawError::Tool("x and y coordinates required".to_string()))?;
+                let (x, y) = parsed.x.zip(parsed.y).ok_or_else(|| {
+                    BizClawError::Tool("x and y coordinates required".to_string())
+                })?;
                 let button = parsed.button.unwrap_or_else(|| "left".to_string());
                 let clicks = parsed.clicks.unwrap_or(1);
 
-                self.mouse_click(x, y, &button, clicks).await
+                self.mouse_click(x, y, &button, clicks)
+                    .await
                     .map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
@@ -617,84 +670,106 @@ impl Tool for ComputerUseTool {
                     "button": button,
                     "clicks": clicks,
                     "message": format!("{} click at ({}, {})", button, x, y)
-                }).to_string()
+                })
+                .to_string()
             }
 
             "double_click" => {
-                let (x, y) = parsed.x
-                    .zip(parsed.y)
-                    .ok_or_else(|| BizClawError::Tool("x and y coordinates required".to_string()))?;
+                let (x, y) = parsed.x.zip(parsed.y).ok_or_else(|| {
+                    BizClawError::Tool("x and y coordinates required".to_string())
+                })?;
 
-                self.mouse_click(x, y, "left", 2).await
+                self.mouse_click(x, y, "left", 2)
+                    .await
                     .map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
                     "x": x,
                     "y": y,
                     "message": format!("Double click at ({}, {})", x, y)
-                }).to_string()
+                })
+                .to_string()
             }
 
             "right_click" => {
-                let (x, y) = parsed.x
-                    .zip(parsed.y)
-                    .ok_or_else(|| BizClawError::Tool("x and y coordinates required".to_string()))?;
+                let (x, y) = parsed.x.zip(parsed.y).ok_or_else(|| {
+                    BizClawError::Tool("x and y coordinates required".to_string())
+                })?;
 
-                self.mouse_click(x, y, "right", 1).await
+                self.mouse_click(x, y, "right", 1)
+                    .await
                     .map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
                     "x": x,
                     "y": y,
                     "message": format!("Right click at ({}, {})", x, y)
-                }).to_string()
+                })
+                .to_string()
             }
 
             "type_text" | "type" => {
-                let text = parsed.text
+                let text = parsed
+                    .text
                     .ok_or_else(|| BizClawError::Tool("text required".to_string()))?;
 
-                self.type_text(&text).await
+                self.type_text(&text)
+                    .await
                     .map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
                     "text": text,
                     "message": format!("Typed: {}", text)
-                }).to_string()
+                })
+                .to_string()
             }
 
             "key_press" | "key" => {
-                let key = parsed.key
+                let key = parsed
+                    .key
                     .ok_or_else(|| BizClawError::Tool("key required".to_string()))?;
 
-                self.key_press(&key).await
+                self.key_press(&key)
+                    .await
                     .map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
                     "key": key,
                     "message": format!("Pressed: {}", key)
-                }).to_string()
+                })
+                .to_string()
             }
 
             "drag" => {
-                let (x1, y1) = parsed.x
-                    .zip(parsed.y)
-                    .ok_or_else(|| BizClawError::Tool("x and y coordinates required for start position".to_string()))?;
-                let (x2, y2) = parsed.x2
-                    .zip(parsed.y2)
-                    .ok_or_else(|| BizClawError::Tool("x2 and y2 coordinates required for end position".to_string()))?;
+                let (x1, y1) = parsed.x.zip(parsed.y).ok_or_else(|| {
+                    BizClawError::Tool(
+                        "x and y coordinates required for start position".to_string(),
+                    )
+                })?;
+                let (x2, y2) = parsed.x2.zip(parsed.y2).ok_or_else(|| {
+                    BizClawError::Tool(
+                        "x2 and y2 coordinates required for end position".to_string(),
+                    )
+                })?;
 
-                self.drag(x1, y1, x2, y2).await
+                self.drag(x1, y1, x2, y2)
+                    .await
                     .map_err(|e| BizClawError::Tool(e))?;
                 serde_json::json!({
                     "success": true,
                     "from": {"x": x1, "y": y1},
                     "to": {"x": x2, "y": y2},
                     "message": format!("Dragged from ({}, {}) to ({}, {})", x1, y1, x2, y2)
-                }).to_string()
+                })
+                .to_string()
             }
 
-            _ => return Err(BizClawError::Tool(format!("Unknown action: {}", parsed.action)))
+            _ => {
+                return Err(BizClawError::Tool(format!(
+                    "Unknown action: {}",
+                    parsed.action
+                )));
+            }
         };
 
         Ok(ToolResult {

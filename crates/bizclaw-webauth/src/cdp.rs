@@ -258,10 +258,14 @@ impl CdpClient {
 
         for c in text.chars() {
             // Send char as key down & key up
-            self.send_command("Input.dispatchKeyEvent", json!({
-                "type": "char",
-                "text": c.to_string(),
-            })).await?;
+            self.send_command(
+                "Input.dispatchKeyEvent",
+                json!({
+                    "type": "char",
+                    "text": c.to_string(),
+                }),
+            )
+            .await?;
 
             // Simulating human delay between 50ms and 150ms per keystroke.
             let delay_ms = rng.gen_range(50..150);

@@ -80,15 +80,16 @@ impl PreparsedCommandsTool {
         }
 
         let command = parts[0].trim_start_matches('/').to_string();
-        let args: Vec<String> = parts[1..]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        let args: Vec<String> = parts[1..].iter().map(|s| s.to_string()).collect();
 
         Some((command, args))
     }
 
-    async fn execute_command(&self, command: &str, args: &[String]) -> std::result::Result<String, String> {
+    async fn execute_command(
+        &self,
+        command: &str,
+        args: &[String],
+    ) -> std::result::Result<String, String> {
         match command {
             "help" | "h" | "?" => Ok(self.help()),
             "status" | "stat" => Ok(self.status()),
@@ -113,7 +114,10 @@ impl PreparsedCommandsTool {
             "date" => Ok(self.date()),
             "whoami" => Ok(self.whoami()),
             "uptime" => Ok(self.uptime()),
-            _ => Err(format!("Unknown command: /{}. Type /help for available commands.", command)),
+            _ => Err(format!(
+                "Unknown command: /{}. Type /help for available commands.",
+                command
+            )),
         }
     }
 
@@ -160,7 +164,9 @@ impl PreparsedCommandsTool {
   /clear                  - Xóa conversation
 
 Note: Commands bắt đầu bằng / được thực thi ngay, không tốn token LLM.
-"#.trim().to_string()
+"#
+        .trim()
+        .to_string()
     }
 
     fn status(&self) -> String {
@@ -181,7 +187,8 @@ Note: Commands bắt đầu bằng / được thực thi ngay, không tốn toke
              🧠 Memory: OK\n\
              📦 Tools: OK\n\
              🌐 Network: OK\n\
-             💾 Disk: OK".to_string()
+             💾 Disk: OK"
+            .to_string()
     }
 
     fn version(&self) -> String {
@@ -206,7 +213,8 @@ Note: Commands bắt đầu bằng / được thực thi ngay, không tốn toke
 - Session ID: (hiện tại)
 
 Sử dụng /clear để reset conversation.
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn clear(&self) -> String {
@@ -229,7 +237,8 @@ Sử dụng /clear để reset conversation.
 11. config_manager - Config management
 12. plan - Task planning
 13. email - Email operations
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn list_skills(&self) -> String {
@@ -238,7 +247,8 @@ Sử dụng /clear để reset conversation.
 (Chưa có skills nào được cài đặt)
 
 Sử dụng /skill install <name> để cài đặt.
-"#.to_string()
+"#
+        .to_string()
     }
 
     fn cwd(&self) -> String {
@@ -278,12 +288,10 @@ Sử dụng /skill install <name> để cài đặt.
 
         let mut output = format!("📁 {}\n\n", path.display());
 
-        let entries = std::fs::read_dir(&path)
-            .map_err(|e| format!("Cannot read directory: {e}"))?;
+        let entries =
+            std::fs::read_dir(&path).map_err(|e| format!("Cannot read directory: {e}"))?;
 
-        let mut entries: Vec<_> = entries
-            .filter_map(|e| e.ok())
-            .collect();
+        let mut entries: Vec<_> = entries.filter_map(|e| e.ok()).collect();
 
         entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
 
@@ -302,8 +310,7 @@ Sử dụng /skill install <name> để cài đặt.
     }
 
     async fn read_file(&self, args: &[String]) -> std::result::Result<String, String> {
-        let file = args.first()
-            .ok_or("Usage: /read <filename>")?;
+        let file = args.first().ok_or("Usage: /read <filename>")?;
 
         let path = if PathBuf::from(file).is_absolute() {
             PathBuf::from(file)
@@ -311,11 +318,15 @@ Sử dụng /skill install <name> để cài đặt.
             self.workspace_dir.join(file)
         };
 
-        let content = std::fs::read_to_string(&path)
-            .map_err(|e| format!("Cannot read file: {e}"))?;
+        let content =
+            std::fs::read_to_string(&path).map_err(|e| format!("Cannot read file: {e}"))?;
 
         let truncated = if content.len() > 5000 {
-            format!("{}...\n\n[{} bytes truncated]", &content[..5000], content.len())
+            format!(
+                "{}...\n\n[{} bytes truncated]",
+                &content[..5000],
+                content.len()
+            )
         } else {
             content
         };
@@ -338,20 +349,20 @@ Sử dụng /skill install <name> để cài đặt.
         };
 
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .map_err(|e| format!("Cannot create directory: {e}"))?;
+            std::fs::create_dir_all(parent).map_err(|e| format!("Cannot create directory: {e}"))?;
         }
 
-        std::fs::write(&path, &content)
-            .map_err(|e| format!("Cannot write file: {e}"))?;
+        std::fs::write(&path, &content).map_err(|e| format!("Cannot write file: {e}"))?;
 
-        Ok(format!("✅ Đã ghi {} bytes vào {}", content.len(), path.display()))
+        Ok(format!(
+            "✅ Đã ghi {} bytes vào {}",
+            content.len(),
+            path.display()
+        ))
     }
 
     async fn find_files(&self, args: &[String]) -> std::result::Result<String, String> {
-        let pattern = args.first()
-            .ok_or("Usage: /find <pattern>")?
-            .to_lowercase();
+        let pattern = args.first().ok_or("Usage: /find <pattern>")?.to_lowercase();
 
         let mut output = format!("🔍 Tìm: {}\n\n", pattern);
         let mut count = 0;
@@ -367,17 +378,23 @@ Sử dụng /skill install <name> để cài đặt.
         Ok(output)
     }
 
-    fn find_recursive(&self, dir: &PathBuf, pattern: &str, output: &mut String, count: &mut usize) -> std::result::Result<(), String> {
+    fn find_recursive(
+        &self,
+        dir: &PathBuf,
+        pattern: &str,
+        output: &mut String,
+        count: &mut usize,
+    ) -> std::result::Result<(), String> {
         if *count >= 100 {
             return Ok(());
         }
 
-        let entries = std::fs::read_dir(dir)
-            .map_err(|e| format!("Cannot read directory: {e}"))?;
+        let entries = std::fs::read_dir(dir).map_err(|e| format!("Cannot read directory: {e}"))?;
 
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
-            let name = path.file_name()
+            let name = path
+                .file_name()
                 .map(|n| n.to_string_lossy().to_lowercase())
                 .unwrap_or_default();
 
@@ -420,15 +437,20 @@ Sử dụng /skill install <name> để cài đặt.
         Ok(output)
     }
 
-    fn grep_recursive(&self, dir: &PathBuf, pattern: &str, output: &mut String) -> std::result::Result<(), String> {
-        let entries = std::fs::read_dir(dir)
-            .map_err(|e| format!("Cannot read directory: {e}"))?;
+    fn grep_recursive(
+        &self,
+        dir: &PathBuf,
+        pattern: &str,
+        output: &mut String,
+    ) -> std::result::Result<(), String> {
+        let entries = std::fs::read_dir(dir).map_err(|e| format!("Cannot read directory: {e}"))?;
 
         for entry in entries.filter_map(|e| e.ok()) {
             let path = entry.path();
 
             if path.is_dir() {
-                let name = path.file_name()
+                let name = path
+                    .file_name()
                     .map(|n| n.to_string_lossy())
                     .unwrap_or_default();
                 if !name.starts_with('.') {
@@ -455,13 +477,9 @@ Sử dụng /skill install <name> để cài đặt.
         let cmd = args.join(" ");
 
         let output = if cfg!(target_os = "windows") {
-            SysCommand::new("cmd")
-                .args(["/C", &cmd])
-                .output()
+            SysCommand::new("cmd").args(["/C", &cmd]).output()
         } else {
-            SysCommand::new("sh")
-                .args(["-c", &cmd])
-                .output()
+            SysCommand::new("sh").args(["-c", &cmd]).output()
         };
 
         match output {
@@ -487,7 +505,7 @@ Sử dụng /skill install <name> để cài đặt.
 
                 Ok(result)
             }
-            Err(e) => Err(format!("Failed to execute: {e}"))
+            Err(e) => Err(format!("Failed to execute: {e}")),
         }
     }
 
@@ -507,14 +525,14 @@ Sử dụng /skill install <name> để cài đặt.
     }
 
     async fn fetch_url(&self, args: &[String]) -> std::result::Result<String, String> {
-        let url = args.first()
-            .ok_or("Usage: /fetch <url>")?;
+        let url = args.first().ok_or("Usage: /fetch <url>")?;
 
         let response = reqwest::get(url)
             .await
             .map_err(|e| format!("Fetch failed: {e}"))?;
 
-        let body = response.text()
+        let body = response
+            .text()
             .await
             .map_err(|e| format!("Read body failed: {e}"))?;
 
@@ -560,15 +578,23 @@ Sử dụng /skill install <name> để cài đặt.
         }
 
         let query = args.join(" ").to_lowercase();
-        let filtered: Vec<_> = content.lines()
+        let filtered: Vec<_> = content
+            .lines()
             .filter(|line| line.to_lowercase().contains(&query))
             .collect();
 
         if filtered.is_empty() {
-            return Ok(format!("🔍 Không tìm thấy '{}' trong memory.", args.join(" ")));
+            return Ok(format!(
+                "🔍 Không tìm thấy '{}' trong memory.",
+                args.join(" ")
+            ));
         }
 
-        Ok(format!("📚 Kết quả tìm kiếm '{}':\n\n{}", query, filtered.join("\n")))
+        Ok(format!(
+            "📚 Kết quả tìm kiếm '{}':\n\n{}",
+            query,
+            filtered.join("\n")
+        ))
     }
 }
 
@@ -604,7 +630,9 @@ impl Tool for PreparsedCommandsTool {
         let parsed: PreparsedArgs = serde_json::from_str(args)
             .map_err(|e| BizClawError::Tool(format!("Invalid arguments: {e}")))?;
 
-        let result = self.execute_command(&parsed.command, &parsed.args).await
+        let result = self
+            .execute_command(&parsed.command, &parsed.args)
+            .await
             .map_err(|e| BizClawError::Tool(e))?;
 
         Ok(ToolResult {

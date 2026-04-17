@@ -101,8 +101,14 @@ impl TokenBucket {
 impl RateLimiter {
     fn new(config: &RateLimitConfig) -> Self {
         Self {
-            request_bucket: TokenBucket::new(config.requests_per_minute, config.requests_per_minute as f64),
-            token_bucket: TokenBucket::new(config.tokens_per_minute, config.tokens_per_minute as f64),
+            request_bucket: TokenBucket::new(
+                config.requests_per_minute,
+                config.requests_per_minute as f64,
+            ),
+            token_bucket: TokenBucket::new(
+                config.tokens_per_minute,
+                config.tokens_per_minute as f64,
+            ),
         }
     }
 
@@ -178,7 +184,7 @@ impl BrainRouter {
     pub fn get_metrics(&self) -> RouterMetrics {
         let metrics = self.metrics.read().unwrap();
         let mut stats = metrics.clone();
-        
+
         // Update stats from providers
         for entry in &self.providers {
             let state = entry.state.read().unwrap();
@@ -187,18 +193,21 @@ impl BrainRouter {
                 errors: state.failure_count as u64,
                 avg_latency_ms: state.last_latency,
                 total_tokens: state.total_tokens.clone(),
-                estimated_cost: 0.0, 
+                estimated_cost: 0.0,
             };
-            stats.provider_stats.insert(entry.config.name.clone(), p_stats);
+            stats
+                .provider_stats
+                .insert(entry.config.name.clone(), p_stats);
         }
-        
+
         stats
     }
 
-
     /// Select the best provider based on current strategy and state.
     fn select_provider(&self, estimated_tokens: u32) -> Option<Arc<ProviderEntry>> {
-        let healthy_providers: Vec<_> = self.providers.iter()
+        let healthy_providers: Vec<_> = self
+            .providers
+            .iter()
             .filter(|p| {
                 let state = p.state.read().unwrap();
                 let mut rl = p.rate_limiter.write().unwrap();
@@ -222,7 +231,9 @@ impl BrainRouter {
                 sorted.sort_by(|a, b| {
                     let a_lat = a.state.read().unwrap().last_latency;
                     let b_lat = b.state.read().unwrap().last_latency;
-                    a_lat.partial_cmp(&b_lat).unwrap_or(std::cmp::Ordering::Equal)
+                    a_lat
+                        .partial_cmp(&b_lat)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 });
                 sorted.first().cloned()
             }
@@ -234,19 +245,31 @@ impl BrainRouter {
                 let mut sorted = healthy_providers;
                 sorted.sort_by(|a, b| {
                     // Try to find a model in the provider's default list to get cost data
-                    let a_cost = a.config.models.first().and_then(|m_id| {
-                        crate::provider_registry::get_provider_config(&a.config.name)
-                            .and_then(|c| c.default_models.iter().find(|m| m.id == m_id))
-                            .map(|m| m.cost_per_1m_prompt + m.cost_per_1m_completion)
-                    }).unwrap_or(0.0);
+                    let a_cost = a
+                        .config
+                        .models
+                        .first()
+                        .and_then(|m_id| {
+                            crate::provider_registry::get_provider_config(&a.config.name)
+                                .and_then(|c| c.default_models.iter().find(|m| m.id == m_id))
+                                .map(|m| m.cost_per_1m_prompt + m.cost_per_1m_completion)
+                        })
+                        .unwrap_or(0.0);
 
-                    let b_cost = b.config.models.first().and_then(|m_id| {
-                        crate::provider_registry::get_provider_config(&b.config.name)
-                            .and_then(|c| c.default_models.iter().find(|m| m.id == m_id))
-                            .map(|m| m.cost_per_1m_prompt + m.cost_per_1m_completion)
-                    }).unwrap_or(0.0);
+                    let b_cost = b
+                        .config
+                        .models
+                        .first()
+                        .and_then(|m_id| {
+                            crate::provider_registry::get_provider_config(&b.config.name)
+                                .and_then(|c| c.default_models.iter().find(|m| m.id == m_id))
+                                .map(|m| m.cost_per_1m_prompt + m.cost_per_1m_completion)
+                        })
+                        .unwrap_or(0.0);
 
-                    a_cost.partial_cmp(&b_cost).unwrap_or(std::cmp::Ordering::Equal)
+                    a_cost
+                        .partial_cmp(&b_cost)
+                        .unwrap_or(std::cmp::Ordering::Equal)
                 });
                 sorted.first().cloned()
             }
@@ -255,19 +278,21 @@ impl BrainRouter {
 
     /// Redact sensitive information from messages before sending to cloud.
     fn redact_messages(&self, messages: &[Message]) -> Vec<Message> {
-        messages.iter().map(|m| {
-            let (content, _) = self.redactor.redact(&m.content);
-            Message {
-                role: m.role.clone(),
-                content,
-                name: m.name.clone(),
-                tool_calls: m.tool_calls.clone(),
-                tool_call_id: m.tool_call_id.clone(),
-            }
-        }).collect()
+        messages
+            .iter()
+            .map(|m| {
+                let (content, _) = self.redactor.redact(&m.content);
+                Message {
+                    role: m.role.clone(),
+                    content,
+                    name: m.name.clone(),
+                    tool_calls: m.tool_calls.clone(),
+                    tool_call_id: m.tool_call_id.clone(),
+                }
+            })
+            .collect()
     }
 }
-
 
 #[async_trait]
 impl Provider for BrainRouter {
@@ -282,7 +307,7 @@ impl Provider for BrainRouter {
         params: &GenerateParams,
     ) -> Result<ProviderResponse> {
         let estimated_tokens = 500; // Basic heuristic
-        
+
         // 1. Determine primary path based on BrainMode
         let use_local = match self.mode {
             BrainMode::LocalOnly => true,
@@ -306,7 +331,7 @@ impl Provider for BrainRouter {
 
         // 3. Try Cloud Providers (with redaction)
         let redacted_messages = self.redact_messages(messages);
-        
+
         if let Some(entry) = self.select_provider(estimated_tokens) {
             let start = Instant::now();
             let result = entry.provider.chat(&redacted_messages, tools, params).await;
@@ -314,7 +339,7 @@ impl Provider for BrainRouter {
 
             let mut state = entry.state.write().unwrap();
             state.request_count += 1;
-            
+
             match result {
                 Ok(resp) => {
                     state.health = CircuitState::Healthy;
@@ -323,7 +348,11 @@ impl Provider for BrainRouter {
                     if let Some(usage) = &resp.usage {
                         state.total_tokens.prompt_tokens += usage.prompt_tokens;
                         state.total_tokens.completion_tokens += usage.completion_tokens;
-                        entry.rate_limiter.write().unwrap().consume(usage.total_tokens);
+                        entry
+                            .rate_limiter
+                            .write()
+                            .unwrap()
+                            .consume(usage.total_tokens);
                     }
                     return Ok(resp);
                 }
@@ -348,7 +377,9 @@ impl Provider for BrainRouter {
             }
         }
 
-        Err(BizClawError::Provider("All providers exhausted or unavailable".into()))
+        Err(BizClawError::Provider(
+            "All providers exhausted or unavailable".into(),
+        ))
     }
 
     async fn list_models(&self) -> Result<Vec<ModelInfo>> {

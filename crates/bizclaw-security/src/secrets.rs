@@ -12,10 +12,10 @@
 //! - Backward compatible: detects CBC/ECCB-encrypted files and re-encrypts on save
 
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Nonce,
+    aead::{Aead, AeadCore, KeyInit, OsRng},
 };
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use bizclaw_core::error::{BizClawError, Result};
 use sha2::Sha256;
 use std::collections::HashMap;
@@ -231,8 +231,8 @@ fn decrypt_aes256_gcm(encoded: &str, key: &[u8; 32]) -> Result<String> {
 /// AES-256-CBC decrypt with PKCS7 unpadding (legacy support).
 /// Input format: [16-byte IV] + [ciphertext]
 fn decrypt_aes256_cbc(data: &[u8], key: &[u8; 32]) -> Result<String> {
-    use aes::cipher::{generic_array::GenericArray, BlockDecrypt, KeyInit};
     use aes::Aes256;
+    use aes::cipher::{BlockDecrypt, KeyInit, generic_array::GenericArray};
 
     if data.len() < 32 || !data.len().is_multiple_of(16) {
         return Err(BizClawError::Security(
@@ -283,8 +283,8 @@ fn decrypt_aes256_cbc(data: &[u8], key: &[u8; 32]) -> Result<String> {
 /// AES-256-ECB decrypt with PKCS7 unpadding (legacy support).
 /// DEPRECATED: Only used for migrating old ECB-encrypted secrets.
 fn decrypt_aes256_ecb(data: &[u8], key: &[u8; 32]) -> Vec<u8> {
-    use aes::cipher::{generic_array::GenericArray, BlockDecrypt, KeyInit};
     use aes::Aes256;
+    use aes::cipher::{BlockDecrypt, KeyInit, generic_array::GenericArray};
 
     let cipher = Aes256::new(GenericArray::from_slice(key));
     let block_size = 16;
@@ -340,8 +340,8 @@ mod tests {
 
     #[test]
     fn test_gcm_tamper_detection() {
-        use aes::cipher::{generic_array::GenericArray, BlockEncrypt, KeyInit};
         use aes::Aes256;
+        use aes::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
 
         let key = derive_machine_key();
         let data = b"secret data";
@@ -373,8 +373,8 @@ mod tests {
 
     #[test]
     fn test_legacy_ecb_still_decrypts() {
-        use aes::cipher::{generic_array::GenericArray, BlockEncrypt, KeyInit};
         use aes::Aes256;
+        use aes::cipher::{BlockEncrypt, KeyInit, generic_array::GenericArray};
 
         let key = derive_machine_key();
         let data = b"legacy test data";

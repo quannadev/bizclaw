@@ -8,10 +8,10 @@
 //! in a multi-tenant cloud environment to prevent padding oracle attacks.
 
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Nonce,
+    aead::{Aead, AeadCore, KeyInit, OsRng},
 };
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use bizclaw_core::error::{BizClawError, Result};
 use rand::RngCore;
 
@@ -66,10 +66,7 @@ pub fn decrypt_aes256_gcm(encoded: &str, key: &[u8; 32]) -> Result<String> {
         .map_err(|e| BizClawError::Security(format!("AES-256-GCM decryption failed: {}", e)))?;
 
     String::from_utf8(plaintext).map_err(|e| {
-        BizClawError::Security(format!(
-            "Decrypted payload produced invalid UTF-8: {}",
-            e
-        ))
+        BizClawError::Security(format!("Decrypted payload produced invalid UTF-8: {}", e))
     })
 }
 

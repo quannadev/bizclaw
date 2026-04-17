@@ -333,12 +333,7 @@ impl ApprovalGate {
         Ok(())
     }
 
-    async fn decide(
-        &self,
-        id: &str,
-        by: &str,
-        approve: bool,
-    ) -> ApprovalResult<PendingAction> {
+    async fn decide(&self, id: &str, by: &str, approve: bool) -> ApprovalResult<PendingAction> {
         let action = {
             let pending = self.pending.lock().await;
             pending.get(id).cloned()
@@ -349,7 +344,9 @@ impl ApprovalGate {
         self.verify_caller(by, &action).await?;
 
         let mut pending = self.pending.lock().await;
-        let action = pending.get_mut(id).ok_or_else(|| ApprovalError::NotFound(id.to_string()))?;
+        let action = pending
+            .get_mut(id)
+            .ok_or_else(|| ApprovalError::NotFound(id.to_string()))?;
 
         if action.status != ApprovalStatus::Pending {
             return Err(ApprovalError::AlreadyDecided(action.status.to_string()));
@@ -522,7 +519,10 @@ mod tests {
         gate.approve(&id, "admin").await.unwrap();
         let second = gate.approve(&id, "admin").await;
         assert!(second.is_err());
-        assert!(matches!(second.unwrap_err(), ApprovalError::AlreadyDecided(_)));
+        assert!(matches!(
+            second.unwrap_err(),
+            ApprovalError::AlreadyDecided(_)
+        ));
     }
 
     #[tokio::test]
@@ -544,11 +544,15 @@ mod tests {
             vec!["authorized@bizclaw.com".into()],
         );
 
-        let id = gate.submit("shell", r#"{"command":"rm -rf /"}"#, "s1").await;
+        let id = gate
+            .submit("shell", r#"{"command":"rm -rf /"}"#, "s1")
+            .await;
 
         let result = gate.approve(&id, "unauthorized@attacker.com").await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ApprovalError::Unauthorized(c) if c == "unauthorized@attacker.com"));
+        assert!(
+            matches!(result.unwrap_err(), ApprovalError::Unauthorized(c) if c == "unauthorized@attacker.com")
+        );
 
         let audit_entries = gate.audit_log().get_entries().await;
         assert!(audit_entries.is_empty());
@@ -564,11 +568,15 @@ mod tests {
             vec!["authorized@bizclaw.com".into()],
         );
 
-        let id = gate.submit("shell", r#"{"command":"rm -rf /"}"#, "s1").await;
+        let id = gate
+            .submit("shell", r#"{"command":"rm -rf /"}"#, "s1")
+            .await;
 
         let result = gate.deny(&id, "hacker@evil.com").await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ApprovalError::Unauthorized(c) if c == "hacker@evil.com"));
+        assert!(
+            matches!(result.unwrap_err(), ApprovalError::Unauthorized(c) if c == "hacker@evil.com")
+        );
     }
 
     #[tokio::test]
@@ -581,7 +589,9 @@ mod tests {
             vec!["admin@bizclaw.com".into()],
         );
 
-        let id = gate.submit("shell", r#"{"command":"ls"}"#, "session-x").await;
+        let id = gate
+            .submit("shell", r#"{"command":"ls"}"#, "session-x")
+            .await;
         gate.approve(&id, "admin@bizclaw.com").await.unwrap();
 
         let audit_entries = gate.audit_log().get_entries().await;
@@ -601,7 +611,9 @@ mod tests {
             vec!["security@bizclaw.com".into()],
         );
 
-        let id = gate.submit("shell", r#"{"command":"rm -rf"}"#, "session-y").await;
+        let id = gate
+            .submit("shell", r#"{"command":"rm -rf"}"#, "session-y")
+            .await;
         gate.deny(&id, "security@bizclaw.com").await.unwrap();
 
         let audit_entries = gate.audit_log().get_entries().await;

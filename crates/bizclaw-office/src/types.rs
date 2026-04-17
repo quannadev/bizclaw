@@ -42,12 +42,33 @@ impl Default for DocumentMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum DocumentElement {
-    Heading { level: u8, text: String },
-    Paragraph { text: String, style: Option<ParagraphStyle> },
-    Table { headers: Vec<String>, rows: Vec<Vec<String>>, style: Option<TableStyle> },
-    List { items: Vec<String>, ordered: bool },
-    Image { url: String, caption: Option<String>, width: Option<u32>, height: Option<u32> },
-    Code { language: String, code: String },
+    Heading {
+        level: u8,
+        text: String,
+    },
+    Paragraph {
+        text: String,
+        style: Option<ParagraphStyle>,
+    },
+    Table {
+        headers: Vec<String>,
+        rows: Vec<Vec<String>>,
+        style: Option<TableStyle>,
+    },
+    List {
+        items: Vec<String>,
+        ordered: bool,
+    },
+    Image {
+        url: String,
+        caption: Option<String>,
+        width: Option<u32>,
+        height: Option<u32>,
+    },
+    Code {
+        language: String,
+        code: String,
+    },
     PageBreak,
 }
 

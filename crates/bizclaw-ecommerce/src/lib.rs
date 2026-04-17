@@ -10,8 +10,8 @@
 //! - Implements proper authentication (OAuth/API keys)
 //! - No scraping or unauthorized data collection
 
-pub mod tiktok;
 pub mod shopee;
+pub mod tiktok;
 pub mod types;
 
 use serde::{Deserialize, Serialize};
@@ -45,6 +45,9 @@ pub trait EcommercePlatform: Send + Sync {
     async fn authenticate(&mut self) -> anyhow::Result<()>;
     async fn get_orders(&self, status: Option<&str>) -> anyhow::Result<Vec<types::Order>>;
     async fn get_products(&self) -> anyhow::Result<Vec<types::Product>>;
-    async fn get_inventory(&self, product_ids: Option<Vec<String>>) -> anyhow::Result<Vec<types::InventoryItem>>;
+    async fn get_inventory(
+        &self,
+        product_ids: Option<Vec<String>>,
+    ) -> anyhow::Result<Vec<types::InventoryItem>>;
     async fn update_inventory(&self, product_id: &str, quantity: i32) -> anyhow::Result<()>;
 }

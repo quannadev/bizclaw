@@ -27,7 +27,9 @@ impl Allowlist {
     /// Blocks shell metacharacters that could bypass allowlist via command chaining.
     pub fn is_command_allowed(&self, command: &str) -> bool {
         // Block shell metacharacters that enable command chaining/injection
-        const DANGEROUS_CHARS: &[char] = &[';', '|', '&', '`', '$', '(', ')', '{', '}', '>', '<', '\n', '\r', '\0'];
+        const DANGEROUS_CHARS: &[char] = &[
+            ';', '|', '&', '`', '$', '(', ')', '{', '}', '>', '<', '\n', '\r', '\0',
+        ];
         if command.chars().any(|c| DANGEROUS_CHARS.contains(&c)) {
             tracing::warn!(
                 "[security] Blocked command with shell metacharacters: {:?}",

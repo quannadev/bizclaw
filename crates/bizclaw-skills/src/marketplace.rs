@@ -252,7 +252,10 @@ impl SkillMarketplace {
         install_dir: &std::path::Path,
     ) -> Result<SkillListing, String> {
         if !Self::is_valid_slug(slug) {
-            return Err(format!("Invalid slug '{}': must be alphanumeric, hyphen, or underscore (max 128 chars)", slug));
+            return Err(format!(
+                "Invalid slug '{}': must be alphanumeric, hyphen, or underscore (max 128 chars)",
+                slug
+            ));
         }
 
         let client = reqwest::Client::new();
@@ -344,7 +347,10 @@ impl SkillMarketplace {
     /// Uninstall a skill.
     pub fn uninstall(&mut self, slug: &str, install_dir: &std::path::Path) -> Result<(), String> {
         if !Self::is_valid_slug(slug) {
-            return Err(format!("Invalid slug '{}': must be alphanumeric, hyphen, or underscore", slug));
+            return Err(format!(
+                "Invalid slug '{}': must be alphanumeric, hyphen, or underscore",
+                slug
+            ));
         }
         let skill_dir = install_dir.join(slug);
         if skill_dir.exists() {
@@ -522,11 +528,7 @@ impl SkillMarketplace {
             .map(|s| {
                 let skill_text = format!(
                     "{} {} {} {:?} {:?}",
-                    s.name,
-                    s.display_name,
-                    s.description,
-                    s.tags,
-                    s.business_category
+                    s.name, s.display_name, s.description, s.tags, s.business_category
                 );
                 let sim = cosine_similarity(&task_embedding, &skill_text);
                 (s.clone(), sim)
@@ -564,8 +566,8 @@ fn cosine_similarity(a: &[f32], text_b: &str) -> f32 {
             TODO: Replace with real embeddings from Ollama/OpenAI API, or remove this function."
 )]
 fn simple_embedding(text: &str, dim: usize) -> Option<Vec<f32>> {
-    use std::hash::{Hash, Hasher};
     use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
 
     let mut hasher = DefaultHasher::new();
     text.hash(&mut hasher);

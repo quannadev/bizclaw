@@ -22,8 +22,8 @@ use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 
 use crate::types::{
-    DailySales, InventoryItem, Order, OrderItem, OrderStatus, Product, ProductStatus,
-    SalesReport, TopProduct,
+    DailySales, InventoryItem, Order, OrderItem, OrderStatus, Product, ProductStatus, SalesReport,
+    TopProduct,
 };
 
 use super::{EcommercePlatform, ShopeeConfig};
@@ -188,11 +188,14 @@ impl ShopeeApi {
 
     fn generate_signature(&self, path: &str, body: &str) -> String {
         let message = format!("{}{}{}", self.config.partner_id, path, body);
-        let mut mac =
-            HmacSha256::new_from_slice(self.config.secret_key.as_bytes()).expect("HMAC can take key of any size");
+        let mut mac = HmacSha256::new_from_slice(self.config.secret_key.as_bytes())
+            .expect("HMAC can take key of any size");
         mac.update(message.as_bytes());
         let result = mac.finalize();
-        base64::Engine::encode(&base64::engine::general_purpose::STANDARD, result.into_bytes())
+        base64::Engine::encode(
+            &base64::engine::general_purpose::STANDARD,
+            result.into_bytes(),
+        )
     }
 
     fn map_status(shopee_status: &str) -> OrderStatus {
@@ -254,9 +257,7 @@ impl ShopeeApi {
                 .recipient_address
                 .as_ref()
                 .and_then(|a| a.phone.clone()),
-            customer_address: shopee_order
-                .recipient_address
-                .and_then(|a| a.full_address),
+            customer_address: shopee_order.recipient_address.and_then(|a| a.full_address),
             total_amount: shopee_order.amount / 100000.0,
             shipping_fee: shopee_order.shipping_fee / 100000.0,
             discount: shopee_order.discount / 100000.0,
@@ -344,10 +345,16 @@ impl ShopeeApi {
             .context("Failed to parse Shopee response")?;
 
         if let Some(error) = api_response.error {
-            anyhow::bail!("Shopee API error: {} - {}", error, api_response.message.unwrap_or_default());
+            anyhow::bail!(
+                "Shopee API error: {} - {}",
+                error,
+                api_response.message.unwrap_or_default()
+            );
         }
 
-        api_response.response.context("Empty response from Shopee API")
+        api_response
+            .response
+            .context("Empty response from Shopee API")
     }
 }
 
@@ -384,7 +391,8 @@ impl EcommercePlatform for ShopeeApi {
                 create_time_to: None,
             };
 
-            let response: OrderListResponse = self.make_request("/order/get_order_list", request).await?;
+            let response: OrderListResponse =
+                self.make_request("/order/get_order_list", request).await?;
 
             for shopee_order in response.order_list {
                 all_orders.push(self.convert_order(shopee_order));
@@ -411,7 +419,9 @@ impl EcommercePlatform for ShopeeApi {
                 status: Some(1),
             };
 
-            let response: ProductListResponse = self.make_request("/product/get_product_list", request).await?;
+            let response: ProductListResponse = self
+                .make_request("/product/get_product_list", request)
+                .await?;
 
             for shopee_product in response.product_list {
                 all_products.push(self.convert_product(shopee_product));
@@ -424,7 +434,10 @@ impl EcommercePlatform for ShopeeApi {
         Ok(all_products)
     }
 
-    async fn get_inventory(&self, product_ids: Option<Vec<String>>) -> anyhow::Result<Vec<InventoryItem>> {
+    async fn get_inventory(
+        &self,
+        product_ids: Option<Vec<String>>,
+    ) -> anyhow::Result<Vec<InventoryItem>> {
         if product_ids.is_none() {
             return Ok(Vec::new());
         }
@@ -432,7 +445,12 @@ impl EcommercePlatform for ShopeeApi {
         let products = self.get_products().await?;
         let ids: Vec<i64> = products
             .iter()
-            .filter(|p| product_ids.as_ref().map(|ids| ids.contains(&p.id)).unwrap_or(false))
+            .filter(|p| {
+                product_ids
+                    .as_ref()
+                    .map(|ids| ids.contains(&p.id))
+                    .unwrap_or(false)
+            })
             .map(|p| p.id.parse().unwrap_or(0))
             .collect();
 
@@ -448,19 +466,29 @@ impl EcommercePlatform for ShopeeApi {
                 model: Option<Vec<ShopeeModel>>,
             }
 
-            if let Ok(response) = self.make_request::<_, ShopeeResponse<StockResponse>>("/product/get_model_list", request).await {
+            if let Ok(response) = self
+                .make_request::<_, ShopeeResponse<StockResponse>>(
+                    "/product/get_model_list",
+                    request,
+                )
+                .await
+            {
                 if let Some(models) = response.response.and_then(|r| r.model) {
                     for model in models {
                         inventory.push(InventoryItem {
                             product_id: product_id.to_string(),
                             sku: Some(model.model_id.to_string()),
                             warehouse_id: None,
-                            quantity: model.stock_info.as_ref()
+                            quantity: model
+                                .stock_info
+                                .as_ref()
                                 .and_then(|s| s.first())
                                 .and_then(|st| st.normal_stock)
                                 .unwrap_or(0),
                             reserved_quantity: 0,
-                            available_quantity: model.stock_info.as_ref()
+                            available_quantity: model
+                                .stock_info
+                                .as_ref()
                                 .and_then(|s| s.first())
                                 .and_then(|st| st.normal_stock)
                                 .unwrap_or(0),
@@ -483,9 +511,14 @@ impl EcommercePlatform for ShopeeApi {
             stock: quantity,
         };
 
-        self.make_request::<_, serde_json::Value>("/product/update_stock", request).await?;
+        self.make_request::<_, serde_json::Value>("/product/update_stock", request)
+            .await?;
 
-        tracing::info!("Updated Shopee inventory for product {} to {}", product_id, quantity);
+        tracing::info!(
+            "Updated Shopee inventory for product {} to {}",
+            product_id,
+            quantity
+        );
         Ok(())
     }
 }
@@ -512,7 +545,8 @@ impl ShopeeApi {
             create_time_to: Some(end_ts),
         };
 
-        let response: OrderListResponse = self.make_request("/order/get_order_list", request).await?;
+        let response: OrderListResponse =
+            self.make_request("/order/get_order_list", request).await?;
 
         let orders: Vec<Order> = response
             .order_list

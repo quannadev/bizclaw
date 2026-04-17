@@ -136,7 +136,7 @@ impl ZaloAuth {
     /// Login with cookie (fastest method).
     /// Uses ParamsEncryptor + get_sign_key matching zca-js v2 protocol.
     pub async fn login_with_cookie(&self, cookie: &str) -> Result<LoginData> {
-        use super::crypto::{ParamsEncryptor, get_sign_key, encode_aes_base64, decode_aes_base64};
+        use super::crypto::{ParamsEncryptor, decode_aes_base64, encode_aes_base64, get_sign_key};
         use std::collections::BTreeMap;
 
         tracing::info!("Zalo auth: logging in with cookie...");
@@ -228,10 +228,12 @@ impl ZaloAuth {
         // Decrypt response if encrypted (zca-js: decryptResp(enk, data))
         let login_data = if let Some(ref enk) = encrypt_key {
             if let Some(encrypted_data) = login_body["data"].as_str() {
-                let decrypted = decode_aes_base64(enk, encrypted_data)
-                    .ok_or_else(|| BizClawError::AuthFailed("Failed to decrypt login response".into()))?;
-                serde_json::from_str::<serde_json::Value>(&decrypted)
-                    .map_err(|e| BizClawError::AuthFailed(format!("Invalid decrypted login data: {e}")))?
+                let decrypted = decode_aes_base64(enk, encrypted_data).ok_or_else(|| {
+                    BizClawError::AuthFailed("Failed to decrypt login response".into())
+                })?;
+                serde_json::from_str::<serde_json::Value>(&decrypted).map_err(|e| {
+                    BizClawError::AuthFailed(format!("Invalid decrypted login data: {e}"))
+                })?
             } else {
                 login_body["data"].clone()
             }
@@ -270,7 +272,10 @@ impl ZaloAuth {
                 .collect()
         });
 
-        tracing::info!("Zalo auth: login successful, uid={}", login_data["uid"].as_str().unwrap_or("?"));
+        tracing::info!(
+            "Zalo auth: login successful, uid={}",
+            login_data["uid"].as_str().unwrap_or("?")
+        );
 
         Ok(LoginData {
             uid: login_data["uid"].as_str().unwrap_or("").into(),

@@ -91,7 +91,8 @@ Yêu cầu:
 - Hook gây chú ý trong 2 dòng đầu
 - 3-5 bullet points về tính năng nổi bật
 - Call-to-action rõ ràng
-- 2-3 hashtags phù hợp"#.to_string(),
+- 2-3 hashtags phù hợp"#
+                    .to_string(),
                 variables: vec![
                     TemplateVariable {
                         name: "product_name".to_string(),
@@ -126,7 +127,8 @@ Nội dung: {{{content}}}
 Yêu cầu:
 - Ngôn ngữ thân thiện, gần gũi
 - Phù hợp với người dùng Việt Nam
-- Có thể copy-paste trực tiếp"#.to_string(),
+- Có thể copy-paste trực tiếp"#
+                    .to_string(),
                 variables: vec![
                     TemplateVariable {
                         name: "title".to_string(),
@@ -159,7 +161,8 @@ Yêu cầu:
 - Highlight USP (điểm bán hàng độc nhất)
 - Ưu điểm nổi bật so với đối thủ
 - Thông tin vận chuyển, bảo hành
-- Keywords cho SEO tìm kiếm"#.to_string(),
+- Keywords cho SEO tìm kiếm"#
+                    .to_string(),
                 variables: vec![
                     TemplateVariable {
                         name: "product_name".to_string(),
@@ -202,7 +205,8 @@ Yêu cầu:
 - Subject line hấp dẫn, tăng open rate
 - Preview text gây tò mò
 - Cấu trúc: Greeting -> Value -> Main content -> CTA
-- Personal signing"#.to_string(),
+- Personal signing"#
+                    .to_string(),
                 variables: vec![
                     TemplateVariable {
                         name: "subject".to_string(),
@@ -238,7 +242,8 @@ Nội dung câu hỏi: {{{question}}}
 Yêu cầu:
 - Thân thiện, chuyên nghiệp
 - Trả lời đúng trọng tâm
-- Có upsell/cross-sell nếu phù hợp"#.to_string(),
+- Có upsell/cross-sell nếu phù hợp"#
+                    .to_string(),
                 variables: vec![
                     TemplateVariable {
                         name: "question_type".to_string(),
@@ -274,7 +279,8 @@ Yêu cầu:
 - Hook mạnh trong 3 giây đầu
 - Tốc độ nhanh, hấp dẫn
 - Pattern switch để giữ viewer
-- CTA cuối video"#.to_string(),
+- CTA cuối video"#
+                    .to_string(),
                 variables: vec![
                     TemplateVariable {
                         name: "topic".to_string(),
@@ -333,6 +339,10 @@ mod tests {
         let fb_templates = manager.list_templates_by_platform(&ContentPlatform::Facebook);
 
         assert!(!fb_templates.is_empty());
-        assert!(fb_templates.iter().all(|t| t.platform == ContentPlatform::Facebook));
+        assert!(
+            fb_templates
+                .iter()
+                .all(|t| t.platform == ContentPlatform::Facebook)
+        );
     }
 }

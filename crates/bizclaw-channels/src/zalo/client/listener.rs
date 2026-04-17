@@ -3,6 +3,7 @@
 //! Sends parsed events via mpsc channel for integration with ZaloChannel.
 
 use super::models::ZaloMessage;
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 use bizclaw_core::error::{BizClawError, Result};
 use bizclaw_core::types::IncomingMessage;
 use futures::StreamExt;
@@ -10,7 +11,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
-use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 /// WebSocket event types from Zalo.
 #[derive(Debug, Clone)]
@@ -232,7 +232,12 @@ impl ZaloListener {
                             Ok(json) => Some(json.to_string()),
                             Err(e) => {
                                 // Fallback: try raw UTF-8 for unencrypted payloads
-                                tracing::trace!("Binary decode failed (cmd={}, enc={}): {}, trying raw", cmd, encrypt_type, e);
+                                tracing::trace!(
+                                    "Binary decode failed (cmd={}, enc={}): {}, trying raw",
+                                    cmd,
+                                    encrypt_type,
+                                    e
+                                );
                                 String::from_utf8(data[4..].to_vec()).ok()
                             }
                         }
@@ -330,7 +335,9 @@ impl ZaloListener {
                                 };
 
                                 if tx.send(incoming).await.is_err() {
-                                    tracing::warn!("Zalo WebSocket: message channel closed, stopping");
+                                    tracing::warn!(
+                                        "Zalo WebSocket: message channel closed, stopping"
+                                    );
                                     return Ok(());
                                 }
 
@@ -356,7 +363,11 @@ impl ZaloListener {
                                 event_type,
                                 ..
                             } => {
-                                tracing::debug!("Zalo: group event '{}' in {}", event_type, group_id);
+                                tracing::debug!(
+                                    "Zalo: group event '{}' in {}",
+                                    event_type,
+                                    group_id
+                                );
                             }
                             ZaloEvent::ConnectionState(state) => {
                                 tracing::info!("Zalo: connection state: {:?}", state);

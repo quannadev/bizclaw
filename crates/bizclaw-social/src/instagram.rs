@@ -120,7 +120,7 @@ impl InstagramClient {
         }
 
         let result: AccountsResponse = response.json().await?;
-        
+
         if let Some(page) = result.data.into_iter().next() {
             if let Some(ig_account) = page.instagram_business_account {
                 Ok(InstagramBusinessAccount {
@@ -154,12 +154,8 @@ impl InstagramClient {
         ];
 
         let url = format!("{}/{}/media", self.base_url, ig_user_id);
-        
-        let response = self.client
-            .post(&url)
-            .form(&params)
-            .send()
-            .await?;
+
+        let response = self.client.post(&url).form(&params).send().await?;
 
         #[derive(Deserialize)]
         struct MediaResponse {
@@ -169,7 +165,7 @@ impl InstagramClient {
         }
 
         let result: MediaResponse = response.json().await?;
-        
+
         if result.status_code == "ACTIVE" {
             Ok(result.id)
         } else {
@@ -197,12 +193,8 @@ impl InstagramClient {
         ];
 
         let url = format!("{}/{}/media", self.base_url, ig_user_id);
-        
-        let response = self.client
-            .post(&url)
-            .form(&params)
-            .send()
-            .await?;
+
+        let response = self.client.post(&url).form(&params).send().await?;
 
         #[derive(Deserialize)]
         struct MediaResponse {
@@ -225,7 +217,7 @@ impl InstagramClient {
         let ig_user_id = ig_user_id.as_ref().context("No Instagram user ID")?;
 
         let children_str = children_ids.join(",");
-        
+
         let params = [
             ("caption", caption),
             ("children_ids", &children_str),
@@ -233,12 +225,8 @@ impl InstagramClient {
         ];
 
         let url = format!("{}/{}/media", self.base_url, ig_user_id);
-        
-        let response = self.client
-            .post(&url)
-            .form(&params)
-            .send()
-            .await?;
+
+        let response = self.client.post(&url).form(&params).send().await?;
 
         #[derive(Deserialize)]
         struct MediaResponse {
@@ -256,18 +244,11 @@ impl InstagramClient {
         let ig_user_id = self.ig_user_id.read().await;
         let ig_user_id = ig_user_id.as_ref().context("No Instagram user ID")?;
 
-        let params = [
-            ("creation_id", creation_id),
-            ("access_token", token),
-        ];
+        let params = [("creation_id", creation_id), ("access_token", token)];
 
         let url = format!("{}/{}/media_publish", self.base_url, ig_user_id);
-        
-        let response = self.client
-            .post(&url)
-            .form(&params)
-            .send()
-            .await?;
+
+        let response = self.client.post(&url).form(&params).send().await?;
 
         #[derive(Deserialize)]
         struct PublishResponse {
@@ -276,7 +257,7 @@ impl InstagramClient {
 
         let result: PublishResponse = response.json().await?;
         let id = result.id.clone();
-        
+
         Ok(InstagramMediaResponse {
             id: id.clone(),
             caption: String::new(),
@@ -335,9 +316,9 @@ impl InstagramClient {
         }
 
         let result: InsightsResponse = response.json().await?;
-        
+
         let mut insights = InstagramMediaInsights::default();
-        
+
         for metric in result.data {
             let value = metric.values.first().map(|v| v.value).unwrap_or(0.0);
             match metric.name.as_str() {
@@ -350,7 +331,7 @@ impl InstagramClient {
                 _ => {}
             }
         }
-        
+
         Ok(insights)
     }
 }
@@ -381,25 +362,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_instagram_client_not_authenticated() {
-        let client = InstagramClient::new(
-            "short".to_string(),
-            None,
-        );
+        let client = InstagramClient::new("short".to_string(), None);
         assert!(!client.is_authenticated().await);
     }
 
     #[tokio::test]
     async fn test_set_credentials() {
-        let client = InstagramClient::new(
-            "initial_token".to_string(),
-            Some("user_1".to_string()),
-        );
-        
+        let client = InstagramClient::new("initial_token".to_string(), Some("user_1".to_string()));
+
         client.set_access_token("new_token".to_string()).await;
         client.set_ig_user_id("user_2".to_string()).await;
-        
+
         assert!(client.is_authenticated().await);
-        
+
         let ig_user_id = client.ig_user_id.read().await;
         assert_eq!(*ig_user_id, Some("user_2".to_string()));
     }

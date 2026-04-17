@@ -1,11 +1,11 @@
 #[cfg(test)]
 mod tests {
     use bizclaw_ecommerce::{
+        EcommerceConfig, ShopeeConfig, TiktokConfig,
         types::{
-            Order, OrderItem, OrderStatus, Product, ProductStatus, InventoryItem, 
-            SalesReport, TopProduct, DailySales,
+            DailySales, InventoryItem, Order, OrderItem, OrderStatus, Product, ProductStatus,
+            SalesReport, TopProduct,
         },
-        EcommerceConfig, TiktokConfig, ShopeeConfig,
     };
 
     #[test]
@@ -46,19 +46,17 @@ mod tests {
             total_amount: 500000.0,
             shipping_fee: 30000.0,
             discount: 50000.0,
-            items: vec![
-                OrderItem {
-                    id: "ITEM001".to_string(),
-                    product_id: "PROD001".to_string(),
-                    product_name: "Product A".to_string(),
-                    sku: Some("SKU001".to_string()),
-                    quantity: 2,
-                    unit_price: 250000.0,
-                    discount: 25000.0,
-                    total_price: 475000.0,
-                    image_url: None,
-                }
-            ],
+            items: vec![OrderItem {
+                id: "ITEM001".to_string(),
+                product_id: "PROD001".to_string(),
+                product_name: "Product A".to_string(),
+                sku: Some("SKU001".to_string()),
+                quantity: 2,
+                unit_price: 250000.0,
+                discount: 25000.0,
+                total_price: 475000.0,
+                image_url: None,
+            }],
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
             notes: None,
@@ -128,7 +126,10 @@ mod tests {
 
         assert!(low_stock_item.available_quantity < 10);
         assert!(healthy_item.available_quantity >= 10);
-        assert_eq!(healthy_item.quantity - healthy_item.reserved_quantity, healthy_item.available_quantity);
+        assert_eq!(
+            healthy_item.quantity - healthy_item.reserved_quantity,
+            healthy_item.available_quantity
+        );
     }
 
     #[test]
@@ -157,13 +158,11 @@ mod tests {
                     revenue: 30_000_000.0,
                 },
             ],
-            daily_breakdown: vec![
-                DailySales {
-                    date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
-                    orders: 50,
-                    revenue: 10_000_000.0,
-                }
-            ],
+            daily_breakdown: vec![DailySales {
+                date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+                orders: 50,
+                revenue: 10_000_000.0,
+            }],
         };
 
         assert_eq!(report.total_orders, 500);

@@ -265,12 +265,14 @@ impl Provider for OpenAiCompatibleProvider {
             // Reasoning models (o1, o3) use max_completion_tokens
             body["max_completion_tokens"] = json!(params.max_tokens);
             body.as_object_mut().map(|m| m.remove("max_tokens"));
-            
+
             // They don't support temperature or top_p (must be 1.0)
             body.as_object_mut().map(|m| m.remove("temperature"));
             body.as_object_mut().map(|m| m.remove("top_p"));
-            
-            tracing::info!("🧠 O-series reasoning: using max_completion_tokens, removing temperature/top_p");
+
+            tracing::info!(
+                "🧠 O-series reasoning: using max_completion_tokens, removing temperature/top_p"
+            );
         }
 
         // ═══════════════════════════════════════
@@ -655,7 +657,7 @@ impl Provider for OpenAiCompatibleProvider {
         match req.send().await {
             Ok(r) if r.status().is_success() => {
                 let json: Value = r.json().await.unwrap_or_default();
-                
+
                 // OpenAI / Anthropic format: { "data": [ { "id": "..." }, ... ] }
                 // Google Gemini format: { "models": [ { "name": "models/..." }, ... ] }
                 let models: Vec<ModelInfo> = if let Some(arr) = json["data"].as_array() {
@@ -753,8 +755,9 @@ mod tests {
     async fn test_openai_reasoning_logic() {
         let mut config = mock_config();
         config.api_key = "test-key".to_string();
-        let provider = OpenAiCompatibleProvider::custom("custom:https://api.openai.com/v1", &config).unwrap();
-        
+        let provider =
+            OpenAiCompatibleProvider::custom("custom:https://api.openai.com/v1", &config).unwrap();
+
         let params = GenerateParams {
             model: "o3-mini".to_string(),
             temperature: 0.7,
@@ -774,7 +777,7 @@ mod tests {
             tool_call_id: None,
         }];
 
-        // In a real test we would use wiremock, but here we just check if it compiles 
+        // In a real test we would use wiremock, but here we just check if it compiles
         // and the logic for reasoning models is correctly branched.
         assert!(params.model.starts_with("o3"));
     }

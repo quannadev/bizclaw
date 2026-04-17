@@ -38,7 +38,13 @@ impl SpreadsheetBuilder {
 
     pub fn add_row(&mut self, values: Vec<CellValue>) {
         if let Some(sheet) = self.current_sheet() {
-            let cells: Vec<Cell> = values.into_iter().map(|v| Cell { value: v, style: None }).collect();
+            let cells: Vec<Cell> = values
+                .into_iter()
+                .map(|v| Cell {
+                    value: v,
+                    style: None,
+                })
+                .collect();
             sheet.rows.push(cells);
         }
     }
@@ -46,15 +52,18 @@ impl SpreadsheetBuilder {
     pub fn add_styled_row(&mut self, values: Vec<Cell>, header_row: bool) {
         if let Some(sheet) = self.current_sheet() {
             let styled_cells: Vec<Cell> = if header_row {
-                values.into_iter().map(|mut c| {
-                    c.style = Some(CellStyle {
-                        bold: true,
-                        background_color: Some("#4CAF50".to_string()),
-                        text_color: Some("#FFFFFF".to_string()),
-                        ..Default::default()
-                    });
-                    c
-                }).collect()
+                values
+                    .into_iter()
+                    .map(|mut c| {
+                        c.style = Some(CellStyle {
+                            bold: true,
+                            background_color: Some("#4CAF50".to_string()),
+                            text_color: Some("#FFFFFF".to_string()),
+                            ..Default::default()
+                        });
+                        c
+                    })
+                    .collect()
             } else {
                 values
             };
@@ -145,19 +154,51 @@ impl SpreadsheetBuilder {
     pub fn add_summary_sheet(&mut self, revenue: f64, orders: i64, costs: f64) -> Result<()> {
         self.add_sheet("Tổng kết");
 
-        self.set_headers(vec!["Chỉ tiêu".to_string(), "Giá trị".to_string(), "Ghi chú".to_string()]);
+        self.set_headers(vec![
+            "Chỉ tiêu".to_string(),
+            "Giá trị".to_string(),
+            "Ghi chú".to_string(),
+        ]);
 
         let profit = revenue - costs;
-        let margin = if revenue > 0.0 { (profit / revenue) * 100.0 } else { 0.0 };
-        let avg_order_value = if orders > 0 { revenue / orders as f64 } else { 0.0 };
+        let margin = if revenue > 0.0 {
+            (profit / revenue) * 100.0
+        } else {
+            0.0
+        };
+        let avg_order_value = if orders > 0 {
+            revenue / orders as f64
+        } else {
+            0.0
+        };
 
         let rows = vec![
-            ("Tổng doanh thu", CellValue::Currency(revenue, "VND".to_string()), "Từ tất cả đơn hàng"),
-            ("Tổng chi phí", CellValue::Currency(costs, "VND".to_string()), "Giá vốn sản phẩm"),
-            ("Lợi nhuận gộp", CellValue::Currency(profit, "VND".to_string()), "Sau khi trừ chi phí"),
+            (
+                "Tổng doanh thu",
+                CellValue::Currency(revenue, "VND".to_string()),
+                "Từ tất cả đơn hàng",
+            ),
+            (
+                "Tổng chi phí",
+                CellValue::Currency(costs, "VND".to_string()),
+                "Giá vốn sản phẩm",
+            ),
+            (
+                "Lợi nhuận gộp",
+                CellValue::Currency(profit, "VND".to_string()),
+                "Sau khi trừ chi phí",
+            ),
             ("Biên lợi nhuận", CellValue::Percentage(margin), "Tỷ lệ %"),
-            ("Số đơn hàng", CellValue::Number(orders as f64), "Tổng số đơn"),
-            ("Giá trị TB/đơn", CellValue::Currency(avg_order_value, "VND".to_string()), "Trung bình mỗi đơn"),
+            (
+                "Số đơn hàng",
+                CellValue::Number(orders as f64),
+                "Tổng số đơn",
+            ),
+            (
+                "Giá trị TB/đơn",
+                CellValue::Currency(avg_order_value, "VND".to_string()),
+                "Trung bình mỗi đơn",
+            ),
         ];
 
         for (label, value, note) in rows {
@@ -205,7 +246,10 @@ pub fn export_to_csv(sheet: &Sheet) -> String {
     }
 
     for row in &sheet.rows {
-        let row_str: Vec<String> = row.iter().map(|cell| cell_value_to_string(&cell.value)).collect();
+        let row_str: Vec<String> = row
+            .iter()
+            .map(|cell| cell_value_to_string(&cell.value))
+            .collect();
         csv.push_str(&row_str.join(","));
         csv.push('\n');
     }
@@ -260,7 +304,10 @@ mod tests {
         let mut builder = SpreadsheetBuilder::new("Test");
         builder.add_sheet("Data");
         builder.set_headers(vec!["Name".to_string(), "Value".to_string()]);
-        builder.add_row(vec![CellValue::Text("Test".to_string()), CellValue::Number(42.0)]);
+        builder.add_row(vec![
+            CellValue::Text("Test".to_string()),
+            CellValue::Number(42.0),
+        ]);
 
         let sheet = &builder.spreadsheet.sheets[0];
         let csv = export_to_csv(sheet);

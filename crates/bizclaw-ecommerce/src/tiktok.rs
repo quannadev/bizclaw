@@ -18,8 +18,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 use crate::types::{
-    DailySales, InventoryItem, Order, OrderItem, OrderStatus, Product, ProductStatus,
-    SalesReport, TopProduct,
+    DailySales, InventoryItem, Order, OrderItem, OrderStatus, Product, ProductStatus, SalesReport,
+    TopProduct,
 };
 
 use super::{EcommercePlatform, TiktokConfig};
@@ -239,7 +239,11 @@ impl TiktokShop {
                 .items
                 .into_iter()
                 .map(|item| OrderItem {
-                    id: format!("{}_{}", item.item_id, item.sku_id.clone().unwrap_or_default()),
+                    id: format!(
+                        "{}_{}",
+                        item.item_id,
+                        item.sku_id.clone().unwrap_or_default()
+                    ),
                     product_id: item.item_id,
                     product_name: item.item_name,
                     sku: item.sku_id,
@@ -440,7 +444,10 @@ impl EcommercePlatform for TiktokShop {
         Ok(products)
     }
 
-    async fn get_inventory(&self, product_ids: Option<Vec<String>>) -> anyhow::Result<Vec<InventoryItem>> {
+    async fn get_inventory(
+        &self,
+        product_ids: Option<Vec<String>>,
+    ) -> anyhow::Result<Vec<InventoryItem>> {
         let access_token = self
             .config
             .access_token
@@ -609,9 +616,12 @@ impl TiktokShop {
 
         Ok(SalesReport {
             platform: "tiktok_shop".to_string(),
-            period_start: chrono::DateTime::parse_from_rfc3339(&format!("{}T00:00:00Z", start_date))
-                .map(|dt| dt.with_timezone(&Utc))
-                .unwrap_or_else(|_| Utc::now()),
+            period_start: chrono::DateTime::parse_from_rfc3339(&format!(
+                "{}T00:00:00Z",
+                start_date
+            ))
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(|_| Utc::now()),
             period_end: chrono::DateTime::parse_from_rfc3339(&format!("{}T23:59:59Z", end_date))
                 .map(|dt| dt.with_timezone(&Utc))
                 .unwrap_or_else(|_| Utc::now()),

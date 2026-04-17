@@ -74,17 +74,14 @@ impl PlanTier {
     /// Models accessible by this plan.
     pub fn allowed_models(&self) -> Vec<&'static str> {
         match self {
-            PlanTier::Starter => vec![
-                "gemma4:e2b", "gemma4:e4b",
-            ],
-            PlanTier::Pro => vec![
-                "gemma4:e2b", "gemma4:e4b", "gemma4:26b",
-            ],
-            PlanTier::Business => vec![
-                "gemma4:e2b", "gemma4:e4b", "gemma4:26b", "gemma4:31b",
-            ],
+            PlanTier::Starter => vec!["gemma4:e2b", "gemma4:e4b"],
+            PlanTier::Pro => vec!["gemma4:e2b", "gemma4:e4b", "gemma4:26b"],
+            PlanTier::Business => vec!["gemma4:e2b", "gemma4:e4b", "gemma4:26b", "gemma4:31b"],
             PlanTier::Enterprise => vec![
-                "gemma4:e2b", "gemma4:e4b", "gemma4:26b", "gemma4:31b",
+                "gemma4:e2b",
+                "gemma4:e4b",
+                "gemma4:26b",
+                "gemma4:31b",
                 "custom",
             ],
         }
@@ -130,8 +127,12 @@ pub struct ChatRequest {
     pub tools: Option<serde_json::Value>,
 }
 
-fn default_max_tokens() -> u32 { 2048 }
-fn default_temperature() -> f32 { 0.7 }
+fn default_max_tokens() -> u32 {
+    2048
+}
+fn default_temperature() -> f32 {
+    0.7
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
@@ -272,8 +273,8 @@ impl AiGatewayState {
         }
 
         // Secondary: Ollama (shared instance)
-        let ollama_host = std::env::var("OLLAMA_HOST")
-            .unwrap_or_else(|_| "http://localhost:11434".into());
+        let ollama_host =
+            std::env::var("OLLAMA_HOST").unwrap_or_else(|_| "http://localhost:11434".into());
         backends.push(InferenceBackend {
             name: "ollama".into(),
             endpoint: ollama_host,
@@ -298,7 +299,11 @@ impl AiGatewayState {
         tracing::info!(
             "🧠 AI Gateway initialized with {} backends: [{}]",
             backends.len(),
-            backends.iter().map(|b| b.name.as_str()).collect::<Vec<_>>().join(", ")
+            backends
+                .iter()
+                .map(|b| b.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
         );
 
         Self {
@@ -320,10 +325,7 @@ impl AiGatewayState {
         req: &ChatRequest,
     ) -> Result<ChatResponse, String> {
         // 1. Determine model
-        let model = req
-            .model
-            .as_deref()
-            .unwrap_or(plan.default_model());
+        let model = req.model.as_deref().unwrap_or(plan.default_model());
 
         // 2. Verify model access
         if !plan.allowed_models().contains(&model) && model != "auto" {
@@ -365,10 +367,7 @@ impl AiGatewayState {
                         let mut limits = self.rate_limits.write().await;
                         if let Some(state) = limits.get_mut(tenant_id) {
                             if !state.check_and_add_tokens(tokens, plan.max_tokens_per_hour()) {
-                                tracing::warn!(
-                                    "⚠️ Tenant {} approaching token limit",
-                                    tenant_id
-                                );
+                                tracing::warn!("⚠️ Tenant {} approaching token limit", tenant_id);
                             }
                         }
                     }
@@ -376,28 +375,22 @@ impl AiGatewayState {
                     // 6. Record usage
                     {
                         let mut usage = self.usage.write().await;
-                        let entry = usage
-                            .entry(tenant_id.to_string())
-                            .or_insert(TenantUsage {
-                                tenant_id: tenant_id.to_string(),
-                                total_requests: 0,
-                                total_prompt_tokens: 0,
-                                total_completion_tokens: 0,
-                                total_tokens: 0,
-                                models_used: HashMap::new(),
-                                last_request: None,
-                            });
+                        let entry = usage.entry(tenant_id.to_string()).or_insert(TenantUsage {
+                            tenant_id: tenant_id.to_string(),
+                            total_requests: 0,
+                            total_prompt_tokens: 0,
+                            total_completion_tokens: 0,
+                            total_tokens: 0,
+                            models_used: HashMap::new(),
+                            last_request: None,
+                        });
 
                         entry.total_requests += 1;
                         entry.total_prompt_tokens += resp.usage.prompt_tokens as u64;
                         entry.total_completion_tokens += resp.usage.completion_tokens as u64;
                         entry.total_tokens += tokens;
-                        *entry
-                            .models_used
-                            .entry(model.to_string())
-                            .or_insert(0) += 1;
-                        entry.last_request =
-                            Some(chrono::Utc::now().to_rfc3339());
+                        *entry.models_used.entry(model.to_string()).or_insert(0) += 1;
+                        entry.last_request = Some(chrono::Utc::now().to_rfc3339());
                     }
 
                     resp.model = format!("{}@{}", model, backend.name);
@@ -466,7 +459,11 @@ impl AiGatewayState {
         if !resp.status().is_success() {
             let status = resp.status();
             let err = resp.text().await.unwrap_or_default();
-            return Err(format!("Ollama HTTP {}: {}", status, &err[..err.len().min(200)]));
+            return Err(format!(
+                "Ollama HTTP {}: {}",
+                status,
+                &err[..err.len().min(200)]
+            ));
         }
 
         let body: serde_json::Value = resp
@@ -537,7 +534,11 @@ impl AiGatewayState {
         if !resp.status().is_success() {
             let status = resp.status();
             let err = resp.text().await.unwrap_or_default();
-            return Err(format!("vLLM HTTP {}: {}", status, &err[..err.len().min(200)]));
+            return Err(format!(
+                "vLLM HTTP {}: {}",
+                status,
+                &err[..err.len().min(200)]
+            ));
         }
 
         let body: serde_json::Value = resp
@@ -640,7 +641,11 @@ impl AiGatewayState {
         if !resp.status().is_success() {
             let status = resp.status();
             let err = resp.text().await.unwrap_or_default();
-            return Err(format!("Gemini HTTP {}: {}", status, &err[..err.len().min(200)]));
+            return Err(format!(
+                "Gemini HTTP {}: {}",
+                status,
+                &err[..err.len().min(200)]
+            ));
         }
 
         let body: serde_json::Value = resp
@@ -756,9 +761,7 @@ pub async fn ai_chat_completions(
 }
 
 /// GET /api/v1/ai/status — AI Gateway status + backend health.
-pub async fn ai_gateway_status(
-    State(state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn ai_gateway_status(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     match state.ai_gateway.as_ref() {
         Some(gw) => {
             let backend_info: Vec<serde_json::Value> = gw
@@ -821,9 +824,7 @@ pub async fn ai_gateway_status(
 }
 
 /// GET /api/v1/ai/usage — Per-tenant usage stats.
-pub async fn ai_usage_stats(
-    State(state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn ai_usage_stats(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     match state.ai_gateway.as_ref() {
         Some(gw) => {
             let usage = gw.usage.read().await;

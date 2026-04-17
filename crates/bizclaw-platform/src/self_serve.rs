@@ -224,9 +224,15 @@ pub async fn register_handler(
             )
             .ok();
 
-            let bank_name = db.get_platform_config("SEPAY_BANK_ID").unwrap_or_else(|| "MB".to_string());
-            let bank_account = db.get_platform_config("SEPAY_ACCOUNT_NO").unwrap_or_else(|| "YOUR_ACCOUNT".to_string());
-            let account_name = db.get_platform_config("SEPAY_ACCOUNT_NAME").unwrap_or_else(|| "YOUR COMPANY".to_string());
+            let bank_name = db
+                .get_platform_config("SEPAY_BANK_ID")
+                .unwrap_or_else(|| "MB".to_string());
+            let bank_account = db
+                .get_platform_config("SEPAY_ACCOUNT_NO")
+                .unwrap_or_else(|| "YOUR_ACCOUNT".to_string());
+            let account_name = db
+                .get_platform_config("SEPAY_ACCOUNT_NAME")
+                .unwrap_or_else(|| "YOUR COMPANY".to_string());
             let amount = 5000000;
             let ref_code = format!("BIZCLAW {}", tenant.slug.to_uppercase());
             let qr_url = format!(

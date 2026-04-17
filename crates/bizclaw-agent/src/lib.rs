@@ -13,6 +13,7 @@
 //! - **Model Router**: Auto-selects optimal model tier based on task complexity
 //! - **Stealth Browser**: Anti-detection patches for headless Chrome automation
 
+pub mod a2a;
 pub mod circuit_breaker;
 pub mod context;
 pub mod context_summarizer;
@@ -23,9 +24,13 @@ pub mod loop_detector;
 pub mod middleware;
 pub mod model_router;
 pub mod orchestrator;
+pub mod pipeline;
 pub mod proactive;
 pub mod progress;
 pub mod subagent;
+
+pub use a2a::{A2AClient, A2AServer, AgentCard, SendTaskRequest, SendTaskResponse};
+pub use pipeline::{AgentPipeline, PipelineContext, PipelineMode, PipelineStage, PipelineState};
 // stealth_browser removed — anti-detection scraping is not suitable for a business platform
 
 use bizclaw_core::config::BizClawConfig;
@@ -303,8 +308,10 @@ impl Agent {
 
         // Save current conversation to cache
         if self.session_id != "default" || self.conversation.len() > 1 {
-            self.session_conversations
-                .insert(self.session_id.clone(), std::mem::take(&mut self.conversation));
+            self.session_conversations.insert(
+                self.session_id.clone(),
+                std::mem::take(&mut self.conversation),
+            );
         }
 
         // LRU eviction: keep max 50 sessions
@@ -336,12 +343,14 @@ impl Agent {
         let mut compacted = false;
         let mut max_context = self.config.brain.context_length as usize;
 
-        // CRITICAL FOR SINGLE-TENANT (5-8GB RAM): 
-        // Clamp context dynamically for Gemma 4 or local models. If unlimited (0) or too large (>8192), 
+        // CRITICAL FOR SINGLE-TENANT (5-8GB RAM):
+        // Clamp context dynamically for Gemma 4 or local models. If unlimited (0) or too large (>8192),
         // clamp to 8192 to guarantee stability without OOMing the VPS.
         if max_context == 0 || max_context > 8192 {
             max_context = 8192;
-            tracing::debug!("⚠️ Clamping max context to 8192 to ensure Gemma 4 stability on 5-8GB RAM");
+            tracing::debug!(
+                "⚠️ Clamping max context to 8192 to ensure Gemma 4 stability on 5-8GB RAM"
+            );
         }
 
         // Knowledge RAG
@@ -370,7 +379,7 @@ impl Agent {
 
         self.conversation.push(Message::user(user_message));
 
-        // Auto-compaction (claw-code pattern): when token utilization > 70%, 
+        // Auto-compaction (claw-code pattern): when token utilization > 70%,
         // summarize old messages to prevent overflowing the context window
         // while preserving critical conversational memory.
         let utilization = if max_context > 0 {
@@ -488,9 +497,17 @@ impl Agent {
                     continue;
                 }
                 // Granular tool permission check
-                if !self.security.check_tool(&tc.function.name).await.unwrap_or(false) {
+                if !self
+                    .security
+                    .check_tool(&tc.function.name)
+                    .await
+                    .unwrap_or(false)
+                {
                     results.push(Message::tool(
-                        format!("Permission denied: tool '{}' disabled by policy", tc.function.name),
+                        format!(
+                            "Permission denied: tool '{}' disabled by policy",
+                            tc.function.name
+                        ),
                         &tc.id,
                     ));
                     continue;
@@ -664,10 +681,7 @@ impl Agent {
         );
 
         // Log telemetry for RAG observability
-        tracing::info!(
-            "📚 Knowledge RAG: {}",
-            telemetry.summary()
-        );
+        tracing::info!("📚 Knowledge RAG: {}", telemetry.summary());
 
         if results.is_empty() {
             // Fallback to basic FTS5 search (handles: no embeddings, Ollama down)
@@ -683,7 +697,11 @@ impl Agent {
                 }
                 context.push_str(&entry);
             }
-            tracing::debug!("Knowledge RAG: {} results (FTS5 fallback), {} chars", basic.len(), context.len());
+            tracing::debug!(
+                "Knowledge RAG: {} results (FTS5 fallback), {} chars",
+                basic.len(),
+                context.len()
+            );
             return Some(context);
         }
 

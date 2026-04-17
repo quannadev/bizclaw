@@ -6,8 +6,8 @@
 //! Ollama, LlamaCpp, OpenRouter) are handled by a single `OpenAiCompatibleProvider`.
 //! The `BrainProvider` handles local GGUF models separately.
 
-pub mod brain;
 pub mod benchmark;
+pub mod brain;
 pub mod failover;
 pub mod llm_tracing;
 pub mod openai_compatible;
@@ -27,9 +27,11 @@ use bizclaw_core::traits::Provider;
 pub fn create_provider(config: &BizClawConfig) -> Result<Box<dyn Provider>> {
     // ═══ NEW: Brain Engine Expansion Path ═══
     // If Brain Engine is enabled and has multiple providers or special routing, use BrainRouter.
-    if config.brain.enabled && (!config.brain.providers.is_empty() || config.brain.model_path != "none") {
+    if config.brain.enabled
+        && (!config.brain.providers.is_empty() || config.brain.model_path != "none")
+    {
         tracing::info!("🧠 Initializing Unified Brain Engine (Modular Router)");
-        
+
         let local_provider: Option<Box<dyn Provider>> = if config.brain.model_path != "none" {
             match brain::BrainProvider::new(config) {
                 Ok(p) => Some(Box::new(p)),
@@ -46,7 +48,10 @@ pub fn create_provider(config: &BizClawConfig) -> Result<Box<dyn Provider>> {
         for p_config in &config.brain.providers {
             match create_single_provider(&p_config.name, config) {
                 Ok(p) => cloud_providers.push((p_config.clone(), p)),
-                Err(e) => tracing::warn!("⚠️ Cloud provider '{}' in Brain config failed to init: {e}", p_config.name),
+                Err(e) => tracing::warn!(
+                    "⚠️ Cloud provider '{}' in Brain config failed to init: {e}",
+                    p_config.name
+                ),
             }
         }
 
@@ -80,9 +85,9 @@ pub fn create_provider(config: &BizClawConfig) -> Result<Box<dyn Provider>> {
                     provider_name,
                     fallback_name
                 );
-                return Ok(Box::new(
-                    failover::FailoverProvider::with_fallback(primary, fallback),
-                ));
+                return Ok(Box::new(failover::FailoverProvider::with_fallback(
+                    primary, fallback,
+                )));
             }
             Err(e) => {
                 tracing::warn!(

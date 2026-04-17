@@ -292,10 +292,11 @@ impl ZaloMessaging {
 
         // Encrypt payload with secret_key (matching zca-js: utils.encodeAES)
         let response = if let Some(ref secret_key) = self.secret_key {
-            let encrypted_params = crate::zalo::client::crypto::encode_aes_cbc_base64(
-                &json_str, secret_key,
-            )
-            .ok_or_else(|| BizClawError::Channel("Failed to encrypt message params".into()))?;
+            let encrypted_params =
+                crate::zalo::client::crypto::encode_aes_cbc_base64(&json_str, secret_key)
+                    .ok_or_else(|| {
+                        BizClawError::Channel("Failed to encrypt message params".into())
+                    })?;
 
             self.client
                 .post(&endpoint)

@@ -31,6 +31,7 @@ members = [
     "crates/bizclaw-i18n",
     "crates/bizclaw-social",
     "crates/bizclaw-media",
+    "crates/bizclaw-crm",
 ]
 
 # ── Workspace-wide lint policy ──────────────────────────
@@ -141,6 +142,7 @@ bizclaw-ffi = { path = "crates/bizclaw-ffi" }
 bizclaw-platform = { path = "crates/bizclaw-platform" }
 bizclaw-skills = { path = "crates/bizclaw-skills" }
 bizclaw-webauth = { path = "crates/bizclaw-webauth" }
+bizclaw-crm = { path = "crates/bizclaw-crm" }
 
 [package]
 name = "bizclaw"

@@ -18,6 +18,6 @@ pub mod tenant_manager;
 
 pub use proxmox_client::ProxmoxClient;
 pub use tenant_manager::{
-    CloudConfig, Tenant, TenantPlan, TenantStatus, ProvisionResult,
-    provision_tenant, suspend_tenant, resume_tenant, delete_tenant,
+    CloudConfig, ProvisionResult, Tenant, TenantPlan, TenantStatus, delete_tenant,
+    provision_tenant, resume_tenant, suspend_tenant,
 };

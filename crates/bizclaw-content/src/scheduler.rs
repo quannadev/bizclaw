@@ -62,8 +62,7 @@ impl ContentScheduler {
             platform: content.platform.clone(),
         });
 
-        self.pending_queue
-            .sort_by_key(|item| item.scheduled_at);
+        self.pending_queue.sort_by_key(|item| item.scheduled_at);
 
         Ok(())
     }

@@ -1,7 +1,7 @@
 use crate::types::{
-    Chart, ChartData, ChartType, Dataset, Document, DocumentElement,
-    DocumentFormat, DocumentMetadata, ParagraphStyle, Report, ReportPeriod, ReportSection,
-    ReportSummary, TableStyle, TopProduct,
+    Chart, ChartData, ChartType, Dataset, Document, DocumentElement, DocumentFormat,
+    DocumentMetadata, ParagraphStyle, Report, ReportPeriod, ReportSection, ReportSummary,
+    TableStyle, TopProduct,
 };
 use anyhow::Result;
 use chrono::{Duration, Utc};
@@ -92,10 +92,7 @@ impl ReportGenerator {
     fn generate_highlights(&self, revenue: f64, orders: i64, avg: f64) -> Vec<String> {
         let mut highlights = Vec::new();
 
-        highlights.push(format!(
-            "Tổng doanh thu: {} VNĐ",
-            format_currency(revenue)
-        ));
+        highlights.push(format!("Tổng doanh thu: {} VNĐ", format_currency(revenue)));
         highlights.push(format!("Số đơn hàng: {}", orders));
         highlights.push(format!(
             "Giá trị trung bình mỗi đơn: {} VNĐ",
@@ -116,9 +113,7 @@ impl ReportGenerator {
                 text: "Tổng quan".to_string(),
             },
             DocumentElement::Paragraph {
-                text: format!(
-                    "Trong kỳ báo cáo, doanh nghiệp đã đạt được những kết quả sau:"
-                ),
+                text: format!("Trong kỳ báo cáo, doanh nghiệp đã đạt được những kết quả sau:"),
                 style: None,
             },
         ];
@@ -376,7 +371,14 @@ mod tests {
         ];
 
         let doc = generator
-            .generate_sales_report("Báo cáo doanh thu tháng", start, end, 97_500_000.0, 325, products)
+            .generate_sales_report(
+                "Báo cáo doanh thu tháng",
+                start,
+                end,
+                97_500_000.0,
+                325,
+                products,
+            )
             .unwrap();
 
         assert!(!doc.content.is_empty());

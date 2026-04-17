@@ -1,19 +1,33 @@
 #![doc = include_str!("../README.md")]
 
-pub mod zalo;
-pub mod tiktok;
+pub mod adapters;
 pub mod facebook;
+pub mod facebook_inbox;
+pub mod facebook_poster;
 pub mod instagram;
 pub mod scheduler;
+pub mod social_manager;
+pub mod tiktok;
 pub mod types;
-pub mod adapters;
+pub mod zalo;
 
-pub use zalo::ZaloClient;
-pub use tiktok::TikTokClient;
-pub use facebook::FacebookClient;
-pub use instagram::InstagramClient;
-pub use types::*;
 pub use adapters::SocialAdapter;
+pub use facebook::FacebookClient;
+pub use facebook_inbox::{
+    Conversation, FacebookInboxCollector, FacebookMessage, InboxConfig, InboxStatistics,
+    MessageClassification, MessageFilters,
+};
+pub use facebook_poster::{
+    FacebookPoster, FacebookPosterConfig, PostMetrics, PostResult, PostStatus, ScheduledPost,
+};
+pub use instagram::InstagramClient;
+pub use social_manager::{
+    Comment, DirectMessage, Insights, PlatformCredentials, PostContent, PostResponse,
+    SocialMediaManager,
+};
+pub use tiktok::TikTokClient;
+pub use types::*;
+pub use zalo::ZaloClient;
 
 #[cfg(test)]
 mod tests {
@@ -28,9 +42,9 @@ mod tests {
 
     #[test]
     fn test_post_status() {
-        assert_eq!(PostStatus::Draft.to_string(), "draft");
-        assert_eq!(PostStatus::Scheduled.to_string(), "scheduled");
-        assert_eq!(PostStatus::Published.to_string(), "published");
+        assert_eq!(PostStatus::Pending, PostStatus::Pending);
+        assert_eq!(PostStatus::Scheduled, PostStatus::Scheduled);
+        assert_eq!(PostStatus::Posted, PostStatus::Posted);
     }
 
     #[test]

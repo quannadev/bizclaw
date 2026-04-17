@@ -181,7 +181,9 @@ impl CloudRouter {
             let b_pri = b.read().unwrap().config.priority;
             b_pri.cmp(&a_pri)
         });
-        sorted.into_iter().find(|p| p.read().unwrap().state != CircuitState::Unhealthy)
+        sorted
+            .into_iter()
+            .find(|p| p.read().unwrap().state != CircuitState::Unhealthy)
     }
 
     async fn try_provider(
@@ -214,9 +216,18 @@ impl CloudRouter {
     ) -> Result<ProviderResponse> {
         let estimated_tokens = params.max_tokens;
         match self.mode {
-            BrainMode::CloudFirst => self.cloud_first(messages, tools, params, estimated_tokens).await,
-            BrainMode::LocalFirst => self.local_first(messages, tools, params, estimated_tokens).await,
-            BrainMode::CloudOnly => self.cloud_only(messages, tools, params, estimated_tokens).await,
+            BrainMode::CloudFirst => {
+                self.cloud_first(messages, tools, params, estimated_tokens)
+                    .await
+            }
+            BrainMode::LocalFirst => {
+                self.local_first(messages, tools, params, estimated_tokens)
+                    .await
+            }
+            BrainMode::CloudOnly => {
+                self.cloud_only(messages, tools, params, estimated_tokens)
+                    .await
+            }
             BrainMode::LocalOnly => self.local_only(messages, tools, params).await,
         }
     }
@@ -238,7 +249,10 @@ impl CloudRouter {
                 p.should_try_request(estimated_tokens)
             };
             if should_try {
-                match self.try_provider(Arc::clone(&provider), messages, tools, params).await {
+                match self
+                    .try_provider(Arc::clone(&provider), messages, tools, params)
+                    .await
+                {
                     Ok(resp) => return Ok(resp),
                     Err(e) => {
                         tracing::warn!("Provider {} failed: {}", provider_name, e);
@@ -275,7 +289,9 @@ impl CloudRouter {
                 p.should_try_request(estimated_tokens)
             };
             if should_try {
-                return self.try_provider(Arc::clone(&provider), messages, tools, params).await;
+                return self
+                    .try_provider(Arc::clone(&provider), messages, tools, params)
+                    .await;
             }
         }
         Err(BizClawError::provider("All providers failed"))
@@ -295,7 +311,10 @@ impl CloudRouter {
                 p.should_try_request(estimated_tokens)
             };
             if should_try {
-                match self.try_provider(Arc::clone(provider), messages, tools, params).await {
+                match self
+                    .try_provider(Arc::clone(provider), messages, tools, params)
+                    .await
+                {
                     Ok(resp) => return Ok(resp),
                     Err(e) => {
                         tracing::warn!("Provider {} failed: {}", provider_name, e);
@@ -338,7 +357,7 @@ impl Provider for CloudRouter {
         let mut models = Vec::new();
         let providers: Vec<_> = self.providers.iter().map(|p| Arc::clone(p)).collect();
         let local = self.local_provider.clone();
-        
+
         for p in &providers {
             let prov = Arc::clone(p);
             let provider_arc = {
@@ -360,7 +379,7 @@ impl Provider for CloudRouter {
     async fn health_check(&self) -> Result<bool> {
         let providers: Vec<_> = self.providers.iter().map(|p| Arc::clone(p)).collect();
         let local = self.local_provider.clone();
-        
+
         for p in &providers {
             let prov = Arc::clone(p);
             let provider_arc = {

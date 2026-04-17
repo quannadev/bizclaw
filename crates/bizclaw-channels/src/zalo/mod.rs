@@ -233,10 +233,15 @@ impl ZaloChannel {
                 if age > stale_threshold {
                     tracing::warn!(
                         "⚠️ Zalo watchdog: session STALE for uid={} ({}s since last heartbeat). Re-auth may be needed.",
-                        s.uid, age
+                        s.uid,
+                        age
                     );
                 } else {
-                    tracing::trace!("Zalo watchdog: session healthy for uid={} ({}s)", s.uid, age);
+                    tracing::trace!(
+                        "Zalo watchdog: session healthy for uid={} ({}s)",
+                        s.uid,
+                        age
+                    );
                 }
             }
         });
@@ -266,14 +271,16 @@ impl Channel for ZaloChannel {
                         self.own_uid = restored.uid.clone();
                         self.cookie = restored.cookie.clone();
                         self.cipher_key = restored.zpw_enk.clone();
-                        self.messaging.set_login_info(&restored.uid, restored.zpw_enk.as_deref());
+                        self.messaging
+                            .set_login_info(&restored.uid, restored.zpw_enk.as_deref());
 
                         // Re-login to refresh service map + ws URLs
                         if let Some(ref cookie) = restored.cookie {
                             match self.auth.login_with_cookie(cookie).await {
                                 Ok(login_data) => {
                                     if let Some(ref map) = login_data.zpw_service_map_v3 {
-                                        let service_map = client::messaging::ZaloServiceMap::from_login_data(map);
+                                        let service_map =
+                                            client::messaging::ZaloServiceMap::from_login_data(map);
                                         self.messaging.set_service_map(service_map);
                                     }
                                     if let Some(ref ws) = login_data.zpw_ws {
@@ -283,7 +290,9 @@ impl Channel for ZaloChannel {
                                     tracing::info!("Zalo: session refreshed successfully");
                                 }
                                 Err(e) => {
-                                    tracing::warn!("Zalo: persisted session expired, doing fresh login: {e}");
+                                    tracing::warn!(
+                                        "Zalo: persisted session expired, doing fresh login: {e}"
+                                    );
                                     self.session.invalidate().await;
                                     // Fall through to fresh login below
                                 }

@@ -283,7 +283,8 @@ impl Provider for FailoverProvider {
             }
         }
 
-        Err(last_error.unwrap_or_else(|| BizClawError::Provider("All providers unavailable".into())))
+        Err(last_error
+            .unwrap_or_else(|| BizClawError::Provider("All providers unavailable".into())))
     }
 
     async fn list_models(&self) -> Result<Vec<ModelInfo>> {

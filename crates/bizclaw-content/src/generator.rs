@@ -63,11 +63,19 @@ impl ContentGenerator {
         };
 
         let platform_instruction = match request.platform {
-            ContentPlatform::Facebook => "Optimized for Facebook feed. Can include emojis and hashtags.",
+            ContentPlatform::Facebook => {
+                "Optimized for Facebook feed. Can include emojis and hashtags."
+            }
             ContentPlatform::Zalo => "Suitable for Zalo OA. Use Vietnamese naturally.",
-            ContentPlatform::TikTok => "Catchy and trendy. Short, punchy sentences. Include trending elements.",
-            ContentPlatform::Shopee => "E-commerce focused. Highlight product benefits and include price info.",
-            ContentPlatform::Website => "SEO-optimized blog post. Include proper headings structure.",
+            ContentPlatform::TikTok => {
+                "Catchy and trendy. Short, punchy sentences. Include trending elements."
+            }
+            ContentPlatform::Shopee => {
+                "E-commerce focused. Highlight product benefits and include price info."
+            }
+            ContentPlatform::Website => {
+                "SEO-optimized blog post. Include proper headings structure."
+            }
             ContentPlatform::Email => "Email marketing format. Strong subject line, clear body.",
         };
 
@@ -149,7 +157,10 @@ Topic: {}
     fn extract_hashtags(&self, text: &str) -> Vec<String> {
         text.split_whitespace()
             .filter(|word| word.starts_with('#'))
-            .map(|s| s.trim_matches(|c: char| !c.is_alphanumeric() && c != '_').to_string())
+            .map(|s| {
+                s.trim_matches(|c: char| !c.is_alphanumeric() && c != '_')
+                    .to_string()
+            })
             .collect()
     }
 
@@ -163,7 +174,10 @@ Topic: {}
         vec![Media {
             media_type,
             url: String::new(),
-            caption: Some(format!("Suggested media for: {}", &body[..body.len().min(100)])),
+            caption: Some(format!(
+                "Suggested media for: {}",
+                &body[..body.len().min(100)]
+            )),
         }]
     }
 }
@@ -191,7 +205,8 @@ fn uuid_v4() -> String {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    format!("{:x}-{:x}-4{:x}-{:x}-{:x}",
+    format!(
+        "{:x}-{:x}-4{:x}-{:x}-{:x}",
         timestamp >> 96,
         (timestamp >> 64) & 0xFFFF,
         (timestamp >> 48) & 0xFFF,
@@ -209,7 +224,10 @@ mod tests {
     #[async_trait]
     impl LlmClient for MockLlmClient {
         async fn generate(&self, _prompt: &str) -> Result<String> {
-            Ok("Tiêu đề bài viết\nNội dung bài viết mẫu với hashtag #vietnamese #business".to_string())
+            Ok(
+                "Tiêu đề bài viết\nNội dung bài viết mẫu với hashtag #vietnamese #business"
+                    .to_string(),
+            )
         }
     }
 

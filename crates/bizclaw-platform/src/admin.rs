@@ -106,10 +106,19 @@ impl AdminServer {
             .route("/api/admin/ollama/delete", post(ollama_delete_model))
             .route("/api/admin/ollama/health", get(ollama_health))
             // AI Gateway — Shared AI Brain for multi-tenant inference
-            .route("/v1/ai/chat/completions", post(crate::ai_gateway::ai_chat_completions))
-            .route("/api/v1/ai/status", get(crate::ai_gateway::ai_gateway_status))
+            .route(
+                "/v1/ai/chat/completions",
+                post(crate::ai_gateway::ai_chat_completions),
+            )
+            .route(
+                "/api/v1/ai/status",
+                get(crate::ai_gateway::ai_gateway_status),
+            )
             .route("/api/v1/ai/usage", get(crate::ai_gateway::ai_usage_stats))
-            .route("/api/v1/ai/usage/{tenant_id}", get(crate::ai_gateway::ai_tenant_usage))
+            .route(
+                "/api/v1/ai/usage/{tenant_id}",
+                get(crate::ai_gateway::ai_tenant_usage),
+            )
             // Tenant Config (key-value settings)
             .route("/api/admin/tenants/{id}/configs", get(list_tenant_configs))
             .route("/api/admin/tenants/{id}/configs", post(set_tenant_configs))
@@ -223,14 +232,36 @@ impl AdminServer {
             )
             .route("/api/admin/servers/{sid}/health", get(srv_health_check))
             // ── CLOUD SaaS INTEGRATION ──────────────────────────────────────
-            .route("/api/v1/cloud/tenants", get(crate::api_cloud::cloud_list_tenants).post(crate::api_cloud::cloud_create_tenant))
-            .route("/api/v1/cloud/tenants/{id}", delete(crate::api_cloud::cloud_delete_tenant))
-            .route("/api/v1/cloud/tenants/{id}/suspend", post(crate::api_cloud::cloud_suspend_tenant))
-            .route("/api/v1/cloud/tenants/{id}/resume", post(crate::api_cloud::cloud_resume_tenant))
-            .route("/api/v1/cloud/tenants/{id}/renew", post(crate::api_cloud::cloud_renew_tenant))
+            .route(
+                "/api/v1/cloud/tenants",
+                get(crate::api_cloud::cloud_list_tenants)
+                    .post(crate::api_cloud::cloud_create_tenant),
+            )
+            .route(
+                "/api/v1/cloud/tenants/{id}",
+                delete(crate::api_cloud::cloud_delete_tenant),
+            )
+            .route(
+                "/api/v1/cloud/tenants/{id}/suspend",
+                post(crate::api_cloud::cloud_suspend_tenant),
+            )
+            .route(
+                "/api/v1/cloud/tenants/{id}/resume",
+                post(crate::api_cloud::cloud_resume_tenant),
+            )
+            .route(
+                "/api/v1/cloud/tenants/{id}/renew",
+                post(crate::api_cloud::cloud_renew_tenant),
+            )
             .route("/api/v1/cloud/stats", get(crate::api_cloud::cloud_stats))
-            .route("/api/v1/cloud/config", get(crate::api_cloud::cloud_get_config).post(crate::api_cloud::cloud_save_config))
-            .route("/api/v1/cloud/test", post(crate::api_cloud::cloud_test_connection))
+            .route(
+                "/api/v1/cloud/config",
+                get(crate::api_cloud::cloud_get_config).post(crate::api_cloud::cloud_save_config),
+            )
+            .route(
+                "/api/v1/cloud/test",
+                post(crate::api_cloud::cloud_test_connection),
+            )
             .route(
                 "/api/admin/servers/{sid}/command",
                 post(srv_execute_command),
@@ -769,14 +800,18 @@ async fn pay2s_webhook_handler(
 
                                     // Activate tenant
                                     if tenant.status == "pending" {
-                                        let _ = db.update_tenant_status(&tenant.id, "stopped", None);
+                                        let _ =
+                                            db.update_tenant_status(&tenant.id, "stopped", None);
                                     }
 
                                     // Auto-activate the owner user if they are pending
                                     if let Some(owner_id) = tenant.owner_id {
                                         if let Ok(Some(user)) = db.get_user_by_id(&owner_id) {
                                             if user.status == "pending" {
-                                                tracing::info!("🔓 Auto-activating pending user {} after payment", user.email);
+                                                tracing::info!(
+                                                    "🔓 Auto-activating pending user {} after payment",
+                                                    user.email
+                                                );
                                                 let _ = db.update_user_status(&user.id, "active");
                                                 let _ = db.update_user_role(&user.id, "admin");
                                             }
@@ -793,20 +828,42 @@ async fn pay2s_webhook_handler(
                                         )),
                                     );
                                 }
-                            } else if let Ok(Some(cloud_id)) = db.find_cloud_tenant_by_ref(&tenant_ref) {
-                                tracing::info!("✅ Auto cloud plan activated via Pay2S: cloud={}, amount={}đ", cloud_id, amount);
+                            } else if let Ok(Some(cloud_id)) =
+                                db.find_cloud_tenant_by_ref(&tenant_ref)
+                            {
+                                tracing::info!(
+                                    "✅ Auto cloud plan activated via Pay2S: cloud={}, amount={}đ",
+                                    cloud_id,
+                                    amount
+                                );
                                 let _ = db.complete_payment(&tx_ref, &cloud_id);
                                 if let Ok(tenants) = db.cloud_list_tenants() {
-                                    if let Some(ct) = tenants.iter().find(|t| t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)) {
-                                        let cplan = ct.get("plan").and_then(|v| v.as_str()).unwrap_or("starter").to_string();
-                                        let cname = ct.get("name").and_then(|v| v.as_str()).unwrap_or("Tenant").to_string();
+                                    if let Some(ct) = tenants.iter().find(|t| {
+                                        t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)
+                                    }) {
+                                        let cplan = ct
+                                            .get("plan")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("starter")
+                                            .to_string();
+                                        let cname = ct
+                                            .get("name")
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("Tenant")
+                                            .to_string();
                                         let _ = db.cloud_update_tenant_status(&cloud_id, "active");
                                         let _ = db.log_event("cloud_plan_activated", "pay2s", &cloud_id, Some(&format!("Auto-activated Cloud VPS plan '{}' via Pay2S payment {}đ", cplan, amount)));
-                                        
+
                                         let state_clone = state.clone();
                                         let tid = cloud_id.clone();
                                         tokio::spawn(async move {
-                                            crate::vsphere::provision_tenant_vm(state_clone, tid, cname, cplan).await;
+                                            crate::vsphere::provision_tenant_vm(
+                                                state_clone,
+                                                tid,
+                                                cname,
+                                                cplan,
+                                            )
+                                            .await;
                                         });
                                     }
                                 }
@@ -1044,7 +1101,7 @@ async fn sepay_webhook_handler(
                                 let _ = db.complete_payment(&tx_ref, &tenant.id);
 
                                 // Activate tenant from 'stopped' to 'running' if applicable,
-                                // or just 'stopped' so Watchdog can start it. We'll set 'stopped' 
+                                // or just 'stopped' so Watchdog can start it. We'll set 'stopped'
                                 // if it's currently something else, to let Mama take over.
                                 if tenant.status == "pending" {
                                     let _ = db.update_tenant_status(&tenant.id, "stopped", None);
@@ -1054,7 +1111,10 @@ async fn sepay_webhook_handler(
                                 if let Some(owner_id) = tenant.owner_id {
                                     if let Ok(Some(user)) = db.get_user_by_id(&owner_id) {
                                         if user.status == "pending" {
-                                            tracing::info!("🔓 Auto-activating pending user {} after payment", user.email);
+                                            tracing::info!(
+                                                "🔓 Auto-activating pending user {} after payment",
+                                                user.email
+                                            );
                                             let _ = db.update_user_status(&user.id, "active");
                                             let _ = db.update_user_role(&user.id, "admin");
                                         }
@@ -1071,20 +1131,41 @@ async fn sepay_webhook_handler(
                                     )),
                                 );
                             }
-                        } else if let Ok(Some(cloud_id)) = db.find_cloud_tenant_by_ref(&tenant_ref) {
-                            tracing::info!("✅ Auto cloud plan activated via SePay: cloud={}, amount={}đ", cloud_id, amount);
+                        } else if let Ok(Some(cloud_id)) = db.find_cloud_tenant_by_ref(&tenant_ref)
+                        {
+                            tracing::info!(
+                                "✅ Auto cloud plan activated via SePay: cloud={}, amount={}đ",
+                                cloud_id,
+                                amount
+                            );
                             let _ = db.complete_payment(&tx_ref, &cloud_id);
                             if let Ok(tenants) = db.cloud_list_tenants() {
-                                if let Some(ct) = tenants.iter().find(|t| t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)) {
-                                    let cplan = ct.get("plan").and_then(|v| v.as_str()).unwrap_or("starter").to_string();
-                                    let cname = ct.get("name").and_then(|v| v.as_str()).unwrap_or("Tenant").to_string();
+                                if let Some(ct) = tenants.iter().find(|t| {
+                                    t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)
+                                }) {
+                                    let cplan = ct
+                                        .get("plan")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("starter")
+                                        .to_string();
+                                    let cname = ct
+                                        .get("name")
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("Tenant")
+                                        .to_string();
                                     let _ = db.cloud_update_tenant_status(&cloud_id, "active");
                                     let _ = db.log_event("cloud_plan_activated", "sepay", &cloud_id, Some(&format!("Auto-activated Cloud VPS plan '{}' via SePay payment {}đ", cplan, amount)));
-                                    
+
                                     let state_clone = state.clone();
                                     let tid = cloud_id.clone();
                                     tokio::spawn(async move {
-                                        crate::vsphere::provision_tenant_vm(state_clone, tid, cname, cplan).await;
+                                        crate::vsphere::provision_tenant_vm(
+                                            state_clone,
+                                            tid,
+                                            cname,
+                                            cplan,
+                                        )
+                                        .await;
                                     });
                                 }
                             }
@@ -1192,8 +1273,12 @@ async fn billing_status_handler(State(state): State<Arc<AdminState>>) -> Json<se
             .get_platform_config("pay2s_api_key")
             .unwrap_or_else(|| std::env::var("BIZCLAW_PAY2S_API_KEY").unwrap_or_default());
         let b = db.get_platform_config("SEPAY_BANK_ID").unwrap_or_default();
-        let a = db.get_platform_config("SEPAY_ACCOUNT_NO").unwrap_or_default();
-        let n = db.get_platform_config("SEPAY_ACCOUNT_NAME").unwrap_or_default();
+        let a = db
+            .get_platform_config("SEPAY_ACCOUNT_NO")
+            .unwrap_or_default();
+        let n = db
+            .get_platform_config("SEPAY_ACCOUNT_NAME")
+            .unwrap_or_default();
         (sepay, pay2s, b, a, n)
     };
 

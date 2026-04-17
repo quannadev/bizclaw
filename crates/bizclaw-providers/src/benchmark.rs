@@ -1,7 +1,7 @@
 use crate::router::{BrainRouter, RouterMetrics};
 use bizclaw_core::traits::Provider;
-use bizclaw_core::types::Message;
 use bizclaw_core::traits::provider::GenerateParams;
+use bizclaw_core::types::Message;
 use std::time::Instant;
 use tracing::info;
 
@@ -35,7 +35,7 @@ impl<'a> ProviderBenchmark<'a> {
         };
 
         info!("🚀 Starting provider benchmark...");
-        
+
         let start = Instant::now();
         match self.router.chat(&[test_message], &[], &params).await {
             Ok(resp) => {

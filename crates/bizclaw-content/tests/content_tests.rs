@@ -1,22 +1,25 @@
 #[cfg(test)]
 mod tests {
-    use bizclaw_content::{
-        types::{
-            Content, ContentCampaign, ContentPlatform, ContentStatus, ContentType, GenerationRequest,
-            Tone, ContentLength, ContentTemplate, TemplateVariable, ContentMetrics,
-        },
-        ContentScheduler, TemplateManager, ContentGenerator, LlmClient,
-    };
     use async_trait::async_trait;
-    use std::sync::Arc;
+    use bizclaw_content::{
+        ContentGenerator, ContentScheduler, LlmClient, TemplateManager,
+        types::{
+            Content, ContentCampaign, ContentLength, ContentMetrics, ContentPlatform,
+            ContentStatus, ContentTemplate, ContentType, GenerationRequest, TemplateVariable, Tone,
+        },
+    };
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     struct MockLlmClient;
 
     #[async_trait]
     impl LlmClient for MockLlmClient {
         async fn generate(&self, prompt: &str) -> anyhow::Result<String> {
-            Ok(format!("Generated content for: {}", &prompt[..prompt.len().min(50)]))
+            Ok(format!(
+                "Generated content for: {}",
+                &prompt[..prompt.len().min(50)]
+            ))
         }
     }
 
@@ -66,7 +69,7 @@ mod tests {
     #[test]
     fn test_content_scheduler_add_content() {
         let mut scheduler = ContentScheduler::new();
-        
+
         let content = Content {
             id: "content-1".to_string(),
             title: "Test Post".to_string(),
@@ -91,7 +94,7 @@ mod tests {
     #[test]
     fn test_content_scheduler_schedule() {
         let mut scheduler = ContentScheduler::new();
-        
+
         let content = Content {
             id: "content-2".to_string(),
             title: "Scheduled Post".to_string(),
@@ -106,9 +109,11 @@ mod tests {
         };
 
         scheduler.add_content(content).unwrap();
-        
+
         let future_time = chrono::Utc::now() + chrono::Duration::hours(2);
-        scheduler.schedule_content("content-2", future_time).unwrap();
+        scheduler
+            .schedule_content("content-2", future_time)
+            .unwrap();
 
         let content = scheduler.get_content("content-2").unwrap();
         assert_eq!(content.status, ContentStatus::Scheduled);
@@ -118,7 +123,7 @@ mod tests {
     #[test]
     fn test_content_scheduler_publish_now() {
         let mut scheduler = ContentScheduler::new();
-        
+
         let content = Content {
             id: "content-3".to_string(),
             title: "Immediate Post".to_string(),
@@ -134,7 +139,7 @@ mod tests {
 
         scheduler.add_content(content).unwrap();
         let published = scheduler.publish_now("content-3").unwrap();
-        
+
         assert_eq!(published.status, ContentStatus::Published);
     }
 
@@ -147,13 +152,21 @@ mod tests {
                 id: format!("content-{}", i),
                 title: format!("Post {}", i),
                 body: "Body".to_string(),
-                platform: if i <= 3 { ContentPlatform::Facebook } else { ContentPlatform::Zalo },
+                platform: if i <= 3 {
+                    ContentPlatform::Facebook
+                } else {
+                    ContentPlatform::Zalo
+                },
                 content_type: ContentType::Post,
                 media: vec![],
                 hashtags: vec![],
                 created_at: chrono::Utc::now(),
                 scheduled_at: None,
-                status: if i == 2 { ContentStatus::Published } else { ContentStatus::Draft },
+                status: if i == 2 {
+                    ContentStatus::Published
+                } else {
+                    ContentStatus::Draft
+                },
             };
             scheduler.add_content(content).unwrap();
         }
@@ -169,7 +182,7 @@ mod tests {
     fn test_template_manager_creation() {
         let manager = TemplateManager::new();
         let templates = manager.list_templates();
-        
+
         assert!(!templates.is_empty());
     }
 
@@ -183,7 +196,7 @@ mod tests {
 
         let result = manager.render_template("fb-product-launch", &variables);
         assert!(result.is_ok());
-        
+
         let rendered = result.unwrap();
         assert!(rendered.contains("Test Product"));
         assert!(rendered.contains("299.000đ"));
@@ -192,10 +205,10 @@ mod tests {
     #[test]
     fn test_template_manager_filter_platform() {
         let manager = TemplateManager::new();
-        
+
         let fb_templates = manager.list_templates_by_platform(&ContentPlatform::Facebook);
         assert!(!fb_templates.is_empty());
-        
+
         for t in fb_templates {
             assert_eq!(t.platform, ContentPlatform::Facebook);
         }
@@ -204,7 +217,7 @@ mod tests {
     #[test]
     fn test_template_manager_filter_category() {
         let manager = TemplateManager::new();
-        
+
         let product_templates = manager.list_templates_by_category("product");
         assert!(!product_templates.is_empty());
     }
@@ -250,7 +263,7 @@ mod tests {
     #[tokio::test]
     async fn test_content_generator() {
         let generator = ContentGenerator::new(Arc::new(MockLlmClient));
-        
+
         let request = GenerationRequest {
             content_type: ContentType::Post,
             platform: ContentPlatform::Facebook,
@@ -265,7 +278,7 @@ mod tests {
 
         let result = generator.generate_content(request).await;
         assert!(result.is_ok());
-        
+
         let content = result.unwrap();
         assert_eq!(content.platform, ContentPlatform::Facebook);
         assert!(!content.body.is_empty());
@@ -305,7 +318,7 @@ mod tests {
     fn test_optimal_times_facebook() {
         let scheduler = ContentScheduler::new();
         let times = scheduler.get_optimal_times(&ContentPlatform::Facebook);
-        
+
         assert!(!times.is_empty());
         assert!(times.len() <= 14);
     }
@@ -314,7 +327,7 @@ mod tests {
     fn test_optimal_times_tiktok() {
         let scheduler = ContentScheduler::new();
         let times = scheduler.get_optimal_times(&ContentPlatform::TikTok);
-        
+
         assert!(!times.is_empty());
     }
 }

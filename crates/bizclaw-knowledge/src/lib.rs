@@ -34,6 +34,7 @@
 
 pub mod chunker;
 pub mod embeddings;
+pub mod graph;
 pub mod mcp_server;
 pub mod multi_embed;
 pub mod nudges;
@@ -42,6 +43,8 @@ pub mod signals;
 pub mod store;
 pub mod vector_store;
 pub mod watcher;
+
+pub use graph::{Entity, EntityType, GraphService, KnowledgeGraph, RelationType, Relationship};
 
 #[cfg(feature = "pdf")]
 pub mod pdf;

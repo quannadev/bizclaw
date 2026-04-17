@@ -139,14 +139,20 @@ async fn test_tenant_delegation_isolation() {
         .active_delegation_count("tenant_b::analyst")
         .await
         .unwrap();
-    assert_eq!(b_active, 1, "Tenant B analyst should have 1 active delegation");
+    assert_eq!(
+        b_active, 1,
+        "Tenant B analyst should have 1 active delegation"
+    );
 
     // Tenant A worker should have 1 active (pending counts as active)
     let a_active = store
         .active_delegation_count("tenant_a::worker")
         .await
         .unwrap();
-    assert_eq!(a_active, 1, "Tenant A worker should have 1 active (pending) delegation");
+    assert_eq!(
+        a_active, 1,
+        "Tenant A worker should have 1 active (pending) delegation"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -185,17 +191,29 @@ async fn test_tenant_team_isolation() {
     assert_eq!(all_teams.len(), 2);
 
     // But get_team_by_name returns only the correct namespace
-    let found_a = store.get_team_by_name("tenant_a::sales_team").await.unwrap();
+    let found_a = store
+        .get_team_by_name("tenant_a::sales_team")
+        .await
+        .unwrap();
     assert!(found_a.is_some());
     assert_eq!(found_a.unwrap().members.len(), 2);
 
-    let found_b = store.get_team_by_name("tenant_b::devops_team").await.unwrap();
+    let found_b = store
+        .get_team_by_name("tenant_b::devops_team")
+        .await
+        .unwrap();
     assert!(found_b.is_some());
     assert_eq!(found_b.unwrap().members.len(), 1);
 
     // Non-existent cross-tenant lookup must return None
-    let cross = store.get_team_by_name("tenant_a::devops_team").await.unwrap();
-    assert!(cross.is_none(), "Cross-tenant team lookup should return None");
+    let cross = store
+        .get_team_by_name("tenant_a::devops_team")
+        .await
+        .unwrap();
+    assert!(
+        cross.is_none(),
+        "Cross-tenant team lookup should return None"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -308,18 +326,12 @@ async fn test_tenant_handoff_isolation() {
     store.create_handoff(&handoff_b).await.unwrap();
 
     // Tenant A session query MUST NOT return Tenant B's handoff
-    let a_active = store
-        .active_handoff("session_tenant_a_001")
-        .await
-        .unwrap();
+    let a_active = store.active_handoff("session_tenant_a_001").await.unwrap();
     assert!(a_active.is_some());
     assert_eq!(a_active.as_ref().unwrap().to_agent, "tenant_a::specialist");
 
     // Query for Tenant B session
-    let b_active = store
-        .active_handoff("session_tenant_b_001")
-        .await
-        .unwrap();
+    let b_active = store.active_handoff("session_tenant_b_001").await.unwrap();
     assert!(b_active.is_some());
     assert_eq!(b_active.as_ref().unwrap().to_agent, "tenant_b::human_agent");
 
@@ -328,10 +340,7 @@ async fn test_tenant_handoff_isolation() {
     assert!(ghost.is_none());
 
     // Clear Tenant A handoff — MUST NOT affect Tenant B
-    store
-        .clear_handoff("session_tenant_a_001")
-        .await
-        .unwrap();
+    store.clear_handoff("session_tenant_a_001").await.unwrap();
     let a_cleared = store.active_handoff("session_tenant_a_001").await.unwrap();
     assert!(a_cleared.is_none(), "Tenant A handoff should be cleared");
 
@@ -538,11 +547,17 @@ async fn test_tenant_deletion_isolation() {
     assert!(a_team.is_none(), "Tenant A team should be deleted");
 
     let a_tasks = store.list_tasks(&team_a.id).await.unwrap();
-    assert!(a_tasks.is_empty(), "Tenant A tasks should be cascade-deleted");
+    assert!(
+        a_tasks.is_empty(),
+        "Tenant A tasks should be cascade-deleted"
+    );
 
     // Tenant B team and tasks MUST survive
     let b_team = store.get_team(&team_b.id).await.unwrap();
-    assert!(b_team.is_some(), "Tenant B team MUST survive Tenant A deletion");
+    assert!(
+        b_team.is_some(),
+        "Tenant B team MUST survive Tenant A deletion"
+    );
 
     let b_tasks = store.list_tasks(&team_b.id).await.unwrap();
     assert_eq!(

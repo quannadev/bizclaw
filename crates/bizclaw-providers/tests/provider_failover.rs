@@ -25,7 +25,15 @@ fn test_all_providers_registered() {
     );
 
     // Verify critical providers are present
-    let critical = ["openai", "anthropic", "gemini", "deepseek", "minimax", "groq", "ollama"];
+    let critical = [
+        "openai",
+        "anthropic",
+        "gemini",
+        "deepseek",
+        "minimax",
+        "groq",
+        "ollama",
+    ];
     for name in &critical {
         assert!(
             provider_registry::get_provider_config(name).is_some(),
@@ -54,12 +62,19 @@ fn test_minimax_models_expanded() {
     // Verify specific model IDs
     let model_ids: Vec<&str> = config.default_models.iter().map(|m| m.id).collect();
     assert!(model_ids.contains(&"MiniMax-M2.7"), "Missing MiniMax-M2.7");
-    assert!(model_ids.contains(&"MiniMax-M2.7-highspeed"), "Missing MiniMax-M2.7-highspeed");
+    assert!(
+        model_ids.contains(&"MiniMax-M2.7-highspeed"),
+        "Missing MiniMax-M2.7-highspeed"
+    );
     assert!(model_ids.contains(&"MiniMax-M2.5"), "Missing MiniMax-M2.5");
 
     // Verify context lengths (all have 1M context)
     for model in config.default_models {
-        assert_eq!(model.context_length, 1_000_000, "{} should have 1M context", model.id);
+        assert_eq!(
+            model.context_length, 1_000_000,
+            "{} should have 1M context",
+            model.id
+        );
     }
 }
 
@@ -115,7 +130,8 @@ fn test_provider_aliases_comprehensive() {
             expected
         );
         assert_eq!(
-            config.unwrap().name, *expected,
+            config.unwrap().name,
+            *expected,
             "Alias '{}' resolved to '{}', expected '{}'",
             alias,
             config.unwrap().name,

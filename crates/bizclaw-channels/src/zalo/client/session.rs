@@ -1,8 +1,8 @@
 //! Zalo session management — cookie jar, keep-alive, reconnection, file persistence.
 
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use serde::{Deserialize, Serialize};
 
 /// Zalo session state — stores all crypto keys and session info.
 /// Serializable for file-based persistence across restarts.

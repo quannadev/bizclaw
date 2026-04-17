@@ -168,7 +168,7 @@ impl FacebookClient {
         }
 
         let url = format!("{}/{}/feed", self.base_url, page_id);
-        
+
         let response = self.client.post(&url).multipart(form).send().await?;
 
         #[derive(Deserialize)]
@@ -194,12 +194,8 @@ impl FacebookClient {
         ];
 
         let url = format!("{}/{}/photos", self.base_url, page_id);
-        
-        let response = self.client
-            .post(&url)
-            .form(&params)
-            .send()
-            .await?;
+
+        let response = self.client.post(&url).form(&params).send().await?;
 
         #[derive(Deserialize)]
         struct PhotoResponse {
@@ -234,7 +230,11 @@ impl FacebookClient {
         Ok(result.data)
     }
 
-    pub async fn get_insights(&self, metric: &str, period: &str) -> Result<Vec<FacebookInsightData>> {
+    pub async fn get_insights(
+        &self,
+        metric: &str,
+        period: &str,
+    ) -> Result<Vec<FacebookInsightData>> {
         let token = self.access_token.read().await;
         let token = token.as_ref().context("No access token")?;
 
@@ -256,7 +256,7 @@ impl FacebookClient {
         let token = token.as_ref().context("No access token")?;
 
         let url = format!("{}/{}?access_token={}", self.base_url, post_id, token);
-        
+
         let response = self.client.delete(&url).send().await?;
 
         if response.status().is_success() {
@@ -306,42 +306,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_facebook_client_not_authenticated() {
-        let client = FacebookClient::new(
-            "short".to_string(),
-            None,
-        );
+        let client = FacebookClient::new("short".to_string(), None);
         assert!(!client.is_authenticated().await);
     }
 
     #[tokio::test]
     async fn test_set_credentials() {
-        let client = FacebookClient::new(
-            "initial_token".to_string(),
-            Some("page_1".to_string()),
-        );
-        
+        let client = FacebookClient::new("initial_token".to_string(), Some("page_1".to_string()));
+
         client.set_access_token("new_token".to_string()).await;
         client.set_page_id("page_2".to_string()).await;
-        
+
         assert!(client.is_authenticated().await);
-        
+
         let page_id = client.page_id.read().await;
         assert_eq!(*page_id, Some("page_2".to_string()));
     }
 
     #[test]
     fn test_generate_auth_url() {
-        let client = FacebookClient::new(
-            "test_token".to_string(),
-            None,
-        );
-        
-        let url = client.generate_auth_url(
-            "my_app_id",
-            "https://myapp.com/callback",
-            "my_state"
-        );
-        
+        let client = FacebookClient::new("test_token".to_string(), None);
+
+        let url = client.generate_auth_url("my_app_id", "https://myapp.com/callback", "my_state");
+
         assert!(url.contains("client_id=my_app_id"));
         assert!(url.contains("redirect_uri=https://myapp.com/callback"));
     }

@@ -41,9 +41,15 @@ pub struct ZaloRecipient {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum ZaloMessage {
-    Text { text: String },
-    Image { attachment_id: String },
-    Video { attachment_id: String },
+    Text {
+        text: String,
+    },
+    Image {
+        attachment_id: String,
+    },
+    Video {
+        attachment_id: String,
+    },
     Link {
         caption: String,
         description: String,
@@ -99,19 +105,24 @@ impl ZaloClient {
         let token = token.as_ref().context("No access token")?;
 
         let url = format!("{}/v3.0/page/getprofile", self.base_url);
-        
-        let response = self.client
+
+        let response = self
+            .client
             .get(&url)
             .header("access_token", token)
             .send()
             .await?;
 
         let data: ZaloApiResponse<ZaloPageInfo> = response.json().await?;
-        
+
         data.data.context("Failed to get page info")
     }
 
-    pub async fn send_text_message(&self, user_id: &str, text: &str) -> Result<ZaloSendMessageResponse> {
+    pub async fn send_text_message(
+        &self,
+        user_id: &str,
+        text: &str,
+    ) -> Result<ZaloSendMessageResponse> {
         let token = self.access_token.read().await;
         let token = token.as_ref().context("No access token")?;
 
@@ -125,8 +136,9 @@ impl ZaloClient {
         };
 
         let url = format!("{}/v3.0/oa/message/text", self.base_url);
-        
-        let response = self.client
+
+        let response = self
+            .client
             .post(&url)
             .header("access_token", token)
             .json(&payload)
@@ -134,14 +146,18 @@ impl ZaloClient {
             .await?;
 
         let data: ZaloApiResponse<ZaloSendMessageResponse> = response.json().await?;
-        
+
         match data.error {
             Some(0) | None => Ok(data.data.unwrap_or_default()),
             Some(e) => anyhow::bail!("Zalo API error: {} - {:?}", e, data.message),
         }
     }
 
-    pub async fn send_image_message(&self, user_id: &str, attachment_id: &str) -> Result<ZaloSendMessageResponse> {
+    pub async fn send_image_message(
+        &self,
+        user_id: &str,
+        attachment_id: &str,
+    ) -> Result<ZaloSendMessageResponse> {
         let token = self.access_token.read().await;
         let token = token.as_ref().context("No access token")?;
 
@@ -155,8 +171,9 @@ impl ZaloClient {
         };
 
         let url = format!("{}/v3.0/oa/message/image", self.base_url);
-        
-        let response = self.client
+
+        let response = self
+            .client
             .post(&url)
             .header("access_token", token)
             .json(&payload)
@@ -164,7 +181,7 @@ impl ZaloClient {
             .await?;
 
         let data: ZaloApiResponse<ZaloSendMessageResponse> = response.json().await?;
-        
+
         match data.error {
             Some(0) | None => Ok(data.data.unwrap_or_default()),
             Some(e) => anyhow::bail!("Zalo API error: {} - {:?}", e, data.message),
@@ -176,13 +193,14 @@ impl ZaloClient {
         let token = token.as_ref().context("No access token")?;
 
         let url = format!("{}/v3.0/oa/upload/image", self.base_url);
-        
-        let part = reqwest::multipart::Part::bytes(image_data.to_vec())
-            .file_name(filename.to_string());
-        
+
+        let part =
+            reqwest::multipart::Part::bytes(image_data.to_vec()).file_name(filename.to_string());
+
         let form = reqwest::multipart::Form::new().part("file", part);
 
-        let response = self.client
+        let response = self
+            .client
             .post(&url)
             .header("access_token", token)
             .multipart(form)
@@ -193,14 +211,14 @@ impl ZaloClient {
         struct UploadResponse {
             data: UploadedImage,
         }
-        
+
         #[derive(Deserialize)]
         struct UploadedImage {
             attachment_id: String,
         }
 
         let data: ZaloApiResponse<UploadedImage> = response.json().await?;
-        
+
         data.data
             .map(|d| d.attachment_id)
             .context("Failed to upload image")
@@ -214,8 +232,9 @@ impl ZaloClient {
             "{}/v3.0/oa/contacts/followers?offset={}&count={}",
             self.base_url, offset, limit
         );
-        
-        let response = self.client
+
+        let response = self
+            .client
             .get(&url)
             .header("access_token", token)
             .send()
@@ -227,7 +246,7 @@ impl ZaloClient {
         }
 
         let data: ZaloApiResponse<FollowersResponse> = response.json().await?;
-        
+
         data.data
             .map(|d| d.followers)
             .context("Failed to get followers")
@@ -248,8 +267,9 @@ impl ZaloClient {
         }
 
         let url = format!("{}/v3.0/qrcode", self.base_url);
-        
-        let response = self.client
+
+        let response = self
+            .client
             .post(&url)
             .header("access_token", token)
             .json(&QrRequest { data: payload })
@@ -257,10 +277,8 @@ impl ZaloClient {
             .await?;
 
         let data: ZaloApiResponse<QrResponse> = response.json().await?;
-        
-        data.data
-            .map(|d| d.url)
-            .context("Failed to create QR link")
+
+        data.data.map(|d| d.url).context("Failed to create QR link")
     }
 }
 
@@ -321,7 +339,7 @@ mod tests {
     async fn test_set_access_token() {
         let client = ZaloClient::new_with_url("https://openapi.zalo.me");
         assert!(!client.is_authenticated().await);
-        
+
         client.set_access_token("new_token_12345".to_string()).await;
         assert!(client.is_authenticated().await);
     }
@@ -331,7 +349,7 @@ mod tests {
         let client = ZaloOABuilder::new()
             .base_url("https://custom.zalo.me")
             .build();
-        
+
         assert_eq!(client.base_url, "https://custom.zalo.me");
     }
 }

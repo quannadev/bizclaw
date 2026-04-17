@@ -4,8 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 pub mod minimax;
-pub mod flux;
-pub mod stability;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ImageGenParams {
@@ -70,7 +68,9 @@ impl MediaManager {
         if let Some(gen) = &self.image_gen {
             gen.generate_image(params).await
         } else {
-            Err(bizclaw_core::error::BizClawError::Provider("No image generator configured".into()))
+            Err(bizclaw_core::error::BizClawError::Provider(
+                "No image generator configured".into(),
+            ))
         }
     }
 
@@ -78,7 +78,9 @@ impl MediaManager {
         if let Some(gen) = &self.video_gen {
             gen.generate_video(params).await
         } else {
-            Err(bizclaw_core::error::BizClawError::Provider("No video generator configured".into()))
+            Err(bizclaw_core::error::BizClawError::Provider(
+                "No video generator configured".into(),
+            ))
         }
     }
 }

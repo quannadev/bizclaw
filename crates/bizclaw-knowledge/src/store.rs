@@ -757,16 +757,15 @@ mod tests {
             .add_document("generic.md", "Phần mềm quản lý cho doanh nghiệp", "test")
             .unwrap();
 
-        let (results, telemetry) = store.hybrid_search_boosted(
-            "BizClaw PaaS",
-            None,
-            5,
-            &SearchFilter::default(),
-        );
+        let (results, telemetry) =
+            store.hybrid_search_boosted("BizClaw PaaS", None, 5, &SearchFilter::default());
 
         assert!(telemetry.hit, "Search should be a HIT");
         assert!(telemetry.boost_applied, "TF-IDF boost should be applied");
-        assert!(telemetry.query_terms >= 2, "Should have at least 2 query terms");
+        assert!(
+            telemetry.query_terms >= 2,
+            "Should have at least 2 query terms"
+        );
         assert!(!results.is_empty());
 
         // BizClaw-specific doc should rank higher (has exact term matches)
@@ -781,7 +780,9 @@ mod tests {
     #[test]
     fn test_boosted_search_miss() {
         let store = create_test_store();
-        store.add_document("test.md", "Simple content about weather", "test").unwrap();
+        store
+            .add_document("test.md", "Simple content about weather", "test")
+            .unwrap();
 
         let (results, telemetry) = store.hybrid_search_boosted(
             "blockchain cryptocurrency NFT",

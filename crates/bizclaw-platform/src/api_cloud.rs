@@ -4,10 +4,7 @@
 //! Tenant data stored in platform.db (cloud_tenants table).
 //! VM lifecycle managed via VMware vSphere REST API.
 
-use axum::{
-    extract::State,
-    response::Json,
-};
+use axum::{extract::State, response::Json};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -91,11 +88,21 @@ pub struct CloudConfigReq {
     pub domain_base: String,
 }
 
-fn default_datacenter() -> String { "Datacenter".to_string() }
-fn default_folder() -> String { "BizClaw-Tenants".to_string() }
-fn default_datastore() -> String { "datastore1".to_string() }
-fn default_network() -> String { "VM Network".to_string() }
-fn default_domain() -> String { "cloud.bizclaw.vn".to_string() }
+fn default_datacenter() -> String {
+    "Datacenter".to_string()
+}
+fn default_folder() -> String {
+    "BizClaw-Tenants".to_string()
+}
+fn default_datastore() -> String {
+    "datastore1".to_string()
+}
+fn default_network() -> String {
+    "VM Network".to_string()
+}
+fn default_domain() -> String {
+    "cloud.bizclaw.vn".to_string()
+}
 
 #[derive(Debug, Deserialize)]
 pub struct RenewTenantReq {
@@ -106,15 +113,20 @@ pub struct RenewTenantReq {
     pub days: u32,
 }
 
-fn default_renew_days() -> u32 { 30 }
+fn default_renew_days() -> u32 {
+    30
+}
 
 // ═══ ROUTE HANDLERS ═══
 
 /// GET /api/v1/cloud/tenants — List all tenants
-pub async fn cloud_list_tenants(
-    State(state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
-    let tenants = state.db.lock().await.cloud_list_tenants().unwrap_or_default();
+pub async fn cloud_list_tenants(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
+    let tenants = state
+        .db
+        .lock()
+        .await
+        .cloud_list_tenants()
+        .unwrap_or_default();
     Json(serde_json::json!({
         "tenants": tenants
     }))
@@ -145,8 +157,8 @@ pub async fn cloud_create_tenant(
         &req.email,
         &req.phone,
         &req.plan,
-        0, // vmid assigned later by vSphere
-        "",  // ip assigned after VM boots
+        0,  // vmid assigned later by vSphere
+        "", // ip assigned after VM boots
         &subdomain,
         "provisioning",
         &now,
@@ -168,22 +180,21 @@ pub async fn cloud_create_tenant(
             let db_arc = state.db.lock().await;
             // We need to pass the db Arc, not the lock
             drop(db_arc);
-            
+
             let state_clone = state.clone();
             let tid = tenant_id.clone();
             let tname = req.name.clone();
             let tplan = req.plan.clone();
-            
+
             tokio::spawn(async move {
-                crate::vsphere::provision_tenant_vm(
-                    state_clone,
-                    tid,
-                    tname,
-                    tplan,
-                ).await;
+                crate::vsphere::provision_tenant_vm(state_clone, tid, tname, tplan).await;
             });
             // For now without vSphere configured, mark as active (demo mode fallback)
-            let _ = state.db.lock().await.cloud_update_tenant_status(&tenant_id, "active");
+            let _ = state
+                .db
+                .lock()
+                .await
+                .cloud_update_tenant_status(&tenant_id, "active");
 
             Json(serde_json::json!({
                 "ok": true,
@@ -210,7 +221,12 @@ pub async fn cloud_suspend_tenant(
     axum::extract::Path(tenant_id): axum::extract::Path<String>,
 ) -> Json<serde_json::Value> {
     // Update DB status
-    match state.db.lock().await.cloud_update_tenant_status(&tenant_id, "suspended") {
+    match state
+        .db
+        .lock()
+        .await
+        .cloud_update_tenant_status(&tenant_id, "suspended")
+    {
         Ok(_) => {
             tracing::info!("⏸️ Tenant '{}' suspended", tenant_id);
 
@@ -232,7 +248,12 @@ pub async fn cloud_resume_tenant(
     State(state): State<Arc<AdminState>>,
     axum::extract::Path(tenant_id): axum::extract::Path<String>,
 ) -> Json<serde_json::Value> {
-    match state.db.lock().await.cloud_update_tenant_status(&tenant_id, "active") {
+    match state
+        .db
+        .lock()
+        .await
+        .cloud_update_tenant_status(&tenant_id, "active")
+    {
         Ok(_) => {
             tracing::info!("▶️ Tenant '{}' resumed", tenant_id);
 
@@ -259,16 +280,17 @@ pub async fn cloud_renew_tenant(
 
     // Get current tenant info
     let tenants = db.cloud_list_tenants().unwrap_or_default();
-    let tenant = tenants.iter().find(|t| {
-        t.get("id").and_then(|v| v.as_str()) == Some(&tenant_id)
-    });
+    let tenant = tenants
+        .iter()
+        .find(|t| t.get("id").and_then(|v| v.as_str()) == Some(&tenant_id));
 
     let Some(tenant) = tenant else {
         return Json(serde_json::json!({"ok": false, "error": "Tenant not found"}));
     };
 
     // Calculate new expiry
-    let current_expires = tenant.get("expires_at")
+    let current_expires = tenant
+        .get("expires_at")
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
@@ -280,7 +302,8 @@ pub async fn cloud_renew_tenant(
 
     // Update plan if specified
     if let Some(ref new_plan) = req.plan {
-        // TODO: If upgrading, also resize VM via vSphere
+        // NOTE: VM resizing via vSphere requires enterprise integration
+        // This is a planned feature for v2.0 when auto-scaling is implemented
         tracing::info!(
             "📦 Tenant '{}' plan change: {} → {}",
             tenant_id,
@@ -292,7 +315,12 @@ pub async fn cloud_renew_tenant(
     // Update expiry in DB
     // Note: Using raw SQL since we don't have a dedicated method yet
     drop(db);
-    match state.db.lock().await.cloud_update_tenant_status(&tenant_id, "active") {
+    match state
+        .db
+        .lock()
+        .await
+        .cloud_update_tenant_status(&tenant_id, "active")
+    {
         Ok(_) => {
             tracing::info!(
                 "🔄 Tenant '{}' renewed for {} days (new expiry: {})",
@@ -318,8 +346,14 @@ pub async fn cloud_delete_tenant(
     axum::extract::Path(tenant_id): axum::extract::Path<String>,
 ) -> Json<serde_json::Value> {
     // Get VM info before deleting from DB
-    let tenants = state.db.lock().await.cloud_list_tenants().unwrap_or_default();
-    let _vm_ip = tenants.iter()
+    let tenants = state
+        .db
+        .lock()
+        .await
+        .cloud_list_tenants()
+        .unwrap_or_default();
+    let _vm_ip = tenants
+        .iter()
         .find(|t| t.get("id").and_then(|v| v.as_str()) == Some(&tenant_id))
         .and_then(|t| t.get("ip_address").and_then(|v| v.as_str()))
         .map(|s| s.to_string());
@@ -342,16 +376,22 @@ pub async fn cloud_delete_tenant(
 }
 
 /// GET /api/v1/cloud/stats — Cluster stats overview
-pub async fn cloud_stats(
-    State(state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
-    let tenants = state.db.lock().await.cloud_list_tenants().unwrap_or_default();
+pub async fn cloud_stats(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
+    let tenants = state
+        .db
+        .lock()
+        .await
+        .cloud_list_tenants()
+        .unwrap_or_default();
     let total = tenants.len() as u32;
 
     let count_by_status = |status: &str| -> u32 {
-        tenants.iter().filter(|t| {
-            t.get("status").and_then(|v: &serde_json::Value| v.as_str()) == Some(status)
-        }).count() as u32
+        tenants
+            .iter()
+            .filter(|t| {
+                t.get("status").and_then(|v: &serde_json::Value| v.as_str()) == Some(status)
+            })
+            .count() as u32
     };
 
     let active = count_by_status("active");
@@ -359,10 +399,15 @@ pub async fn cloud_stats(
     let suspended = count_by_status("suspended");
 
     // Calculate MRR from active tenants
-    let mrr: u64 = tenants.iter()
+    let mrr: u64 = tenants
+        .iter()
         .filter(|t| t.get("status").and_then(|v: &serde_json::Value| v.as_str()) == Some("active"))
         .map(|t| {
-            match t.get("plan").and_then(|v: &serde_json::Value| v.as_str()).unwrap_or("starter") {
+            match t
+                .get("plan")
+                .and_then(|v: &serde_json::Value| v.as_str())
+                .unwrap_or("starter")
+            {
                 "starter" => 590_000u64,
                 "pro" => 1_490_000u64,
                 "business" => 3_990_000u64,
@@ -374,7 +419,8 @@ pub async fn cloud_stats(
 
     // Check vSphere connectivity (cached, non-blocking)
     let config = state.db.lock().await.cloud_get_config().unwrap_or_default();
-    let vsphere_host = config.get("vsphere_host")
+    let vsphere_host = config
+        .get("vsphere_host")
         .and_then(|v| v.as_str())
         .unwrap_or("");
     let vsphere_connected = !vsphere_host.is_empty();
@@ -392,9 +438,7 @@ pub async fn cloud_stats(
 }
 
 /// GET /api/v1/cloud/config — Get cloud config (redacted passwords)
-pub async fn cloud_get_config(
-    State(state): State<Arc<AdminState>>,
-) -> Json<serde_json::Value> {
+pub async fn cloud_get_config(State(state): State<Arc<AdminState>>) -> Json<serde_json::Value> {
     let config = state.db.lock().await.cloud_get_config().unwrap_or_default();
 
     // Redact sensitive values
@@ -403,8 +447,10 @@ pub async fn cloud_get_config(
         if let Some(pw) = obj.get("vsphere_password") {
             if let Some(s) = pw.as_str() {
                 if !s.is_empty() {
-                    obj.insert("vsphere_password".to_string(),
-                        serde_json::Value::String("***configured***".to_string()));
+                    obj.insert(
+                        "vsphere_password".to_string(),
+                        serde_json::Value::String("***configured***".to_string()),
+                    );
                 }
             }
         }
@@ -449,13 +495,16 @@ pub async fn cloud_test_connection(
     State(state): State<Arc<AdminState>>,
 ) -> Json<serde_json::Value> {
     let config = state.db.lock().await.cloud_get_config().unwrap_or_default();
-    let host = config.get("vsphere_host")
+    let host = config
+        .get("vsphere_host")
         .and_then(|v: &serde_json::Value| v.as_str())
         .unwrap_or("");
-    let user = config.get("vsphere_user")
+    let user = config
+        .get("vsphere_user")
         .and_then(|v: &serde_json::Value| v.as_str())
         .unwrap_or("");
-    let password = config.get("vsphere_password")
+    let password = config
+        .get("vsphere_password")
         .and_then(|v: &serde_json::Value| v.as_str())
         .unwrap_or("");
 
@@ -543,36 +592,65 @@ fn generate_pairing_code() -> String {
     use rand::Rng;
     let mut rng = rand::thread_rng();
     let chars: Vec<char> = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".chars().collect();
-    (0..6).map(|_| chars[rng.gen_range(0..chars.len())]).collect()
+    (0..6)
+        .map(|_| chars[rng.gen_range(0..chars.len())])
+        .collect()
 }
 
 /// Background helper: execute a vSphere power action for a tenant.
 async fn vsphere_power_action(state: &Arc<AdminState>, tenant_id: &str, action: &str) {
     let config = state.db.lock().await.cloud_get_config().unwrap_or_default();
-    let host = config.get("vsphere_host").and_then(|v| v.as_str()).unwrap_or("");
-    let user = config.get("vsphere_user").and_then(|v| v.as_str()).unwrap_or("");
-    let password = config.get("vsphere_password").and_then(|v| v.as_str()).unwrap_or("");
+    let host = config
+        .get("vsphere_host")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let user = config
+        .get("vsphere_user")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let password = config
+        .get("vsphere_password")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
 
     if host.is_empty() || user.is_empty() {
-        tracing::debug!("vSphere not configured — skipping {} for {}", action, tenant_id);
+        tracing::debug!(
+            "vSphere not configured — skipping {} for {}",
+            action,
+            tenant_id
+        );
         return;
     }
 
     // Get VM ID from tenant record
-    let tenants = state.db.lock().await.cloud_list_tenants().unwrap_or_default();
-    let vm_id = tenants.iter()
+    let tenants = state
+        .db
+        .lock()
+        .await
+        .cloud_list_tenants()
+        .unwrap_or_default();
+    let vm_id = tenants
+        .iter()
         .find(|t| t.get("id").and_then(|v| v.as_str()) == Some(tenant_id))
         .and_then(|t| t.get("ip_address").and_then(|v| v.as_str()))
         .map(|s| s.to_string());
 
     let Some(vm_id) = vm_id else {
-        tracing::warn!("No VM ID found for tenant {} — cannot {}", tenant_id, action);
+        tracing::warn!(
+            "No VM ID found for tenant {} — cannot {}",
+            tenant_id,
+            action
+        );
         return;
     };
 
     // Only proceed if vm_id looks like a vSphere VM ref (vm-NNN)
     if !vm_id.starts_with("vm-") {
-        tracing::debug!("Tenant {} has IP {} not a VM ref — skipping vSphere action", tenant_id, vm_id);
+        tracing::debug!(
+            "Tenant {} has IP {} not a VM ref — skipping vSphere action",
+            tenant_id,
+            vm_id
+        );
         return;
     }
 

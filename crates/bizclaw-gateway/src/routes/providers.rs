@@ -572,11 +572,15 @@ pub async fn brain_download_model(
     let status_file = models_dir.join(format!(".dl_{}.json", filename));
 
     if dest.exists() && dest.metadata().map(|m| m.len()).unwrap_or(0) > 10 * 1024 * 1024 {
-        return Json(serde_json::json!({"ok": true, "message": "Model already downloaded", "status": "completed"}));
+        return Json(
+            serde_json::json!({"ok": true, "message": "Model already downloaded", "status": "completed"}),
+        );
     }
 
     if status_file.exists() {
-        return Json(serde_json::json!({"ok": true, "message": "Download already in progress", "status": "downloading"}));
+        return Json(
+            serde_json::json!({"ok": true, "message": "Download already in progress", "status": "downloading"}),
+        );
     }
 
     // Initialize status file
@@ -603,7 +607,10 @@ pub async fn brain_download_model(
                                 let pct = (downloaded as f64 / total as f64 * 100.0) as u32;
                                 if pct > last_pct {
                                     last_pct = pct;
-                                    let status = format!(r#"{{"progress":{}, "total":{}, "percent":{}}}"#, downloaded, total, pct);
+                                    let status = format!(
+                                        r#"{{"progress":{}, "total":{}, "percent":{}}}"#,
+                                        downloaded, total, pct
+                                    );
                                     let _ = std::fs::write(&status_file, status);
                                 }
                             }
@@ -635,7 +642,9 @@ pub async fn brain_download_status(
 
     if let Ok(content) = std::fs::read_to_string(&status_file) {
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
-            return Json(serde_json::json!({"ok": true, "status": "downloading", "progress": json}));
+            return Json(
+                serde_json::json!({"ok": true, "status": "downloading", "progress": json}),
+            );
         }
     }
 
@@ -646,4 +655,3 @@ pub async fn brain_download_status(
 
     Json(serde_json::json!({"ok": true, "status": "not_started"}))
 }
-

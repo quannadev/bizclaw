@@ -358,8 +358,9 @@ impl GatewayDb {
                 content TEXT NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
             )",
-        ).map_err(|e| format!("Migration group messages: {e}"))?;
-        
+        )
+        .map_err(|e| format!("Migration group messages: {e}"))?;
+
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS products (
                 id TEXT PRIMARY KEY,
@@ -1378,7 +1379,7 @@ impl GatewayDb {
     }
 
     // ── Zalo Group Messages ──────────────────────────────────
-    
+
     pub fn insert_group_message(
         &self,
         group_id: &str,
@@ -1400,25 +1401,29 @@ impl GatewayDb {
         limit: usize,
     ) -> Result<Vec<serde_json::Value>, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
-        let mut stmt = conn.prepare(
-            "SELECT sender_id, sender_name, content, timestamp FROM (
+        let mut stmt = conn
+            .prepare(
+                "SELECT sender_id, sender_name, content, timestamp FROM (
                 SELECT sender_id, sender_name, content, timestamp 
                 FROM group_messages 
                 WHERE group_id = ?1 
                 ORDER BY timestamp DESC LIMIT ?2
-            ) ORDER BY timestamp ASC"
-        ).map_err(|e| format!("Prepare: {e}"))?;
-        
-        let msgs = stmt.query_map(params![group_id, limit as i64], |row| {
-            Ok(serde_json::json!({
-                "sender_id": row.get::<_, String>(0)?,
-                "sender_name": row.get::<_, Option<String>>(1)?,
-                "content": row.get::<_, String>(2)?,
-                "timestamp": row.get::<_, String>(3)?,
-            }))
-        }).map_err(|e| format!("Query: {e}"))?
-        .filter_map(|r| r.ok())
-        .collect();
+            ) ORDER BY timestamp ASC",
+            )
+            .map_err(|e| format!("Prepare: {e}"))?;
+
+        let msgs = stmt
+            .query_map(params![group_id, limit as i64], |row| {
+                Ok(serde_json::json!({
+                    "sender_id": row.get::<_, String>(0)?,
+                    "sender_name": row.get::<_, Option<String>>(1)?,
+                    "content": row.get::<_, String>(2)?,
+                    "timestamp": row.get::<_, String>(3)?,
+                }))
+            })
+            .map_err(|e| format!("Query: {e}"))?
+            .filter_map(|r| r.ok())
+            .collect();
         Ok(msgs)
     }
 
@@ -1430,23 +1435,25 @@ impl GatewayDb {
         let mut stmt = conn.prepare(
             "SELECT id, sku, name, price, stock, category, description, image_url, active, created_at, updated_at FROM products ORDER BY name"
         ).map_err(|e| format!("Prepare: {e}"))?;
-        let products = stmt.query_map([], |row| {
-            Ok(serde_json::json!({
-                "id": row.get::<_, String>(0)?,
-                "sku": row.get::<_, String>(1)?,
-                "name": row.get::<_, String>(2)?,
-                "price": row.get::<_, f64>(3)?,
-                "stock": row.get::<_, i64>(4)?,
-                "category": row.get::<_, String>(5)?,
-                "description": row.get::<_, String>(6)?,
-                "image_url": row.get::<_, String>(7)?,
-                "active": row.get::<_, i32>(8)? != 0,
-                "created_at": row.get::<_, String>(9)?,
-                "updated_at": row.get::<_, String>(10)?,
-            }))
-        }).map_err(|e| format!("Query: {e}"))?
-        .filter_map(|r| r.ok())
-        .collect();
+        let products = stmt
+            .query_map([], |row| {
+                Ok(serde_json::json!({
+                    "id": row.get::<_, String>(0)?,
+                    "sku": row.get::<_, String>(1)?,
+                    "name": row.get::<_, String>(2)?,
+                    "price": row.get::<_, f64>(3)?,
+                    "stock": row.get::<_, i64>(4)?,
+                    "category": row.get::<_, String>(5)?,
+                    "description": row.get::<_, String>(6)?,
+                    "image_url": row.get::<_, String>(7)?,
+                    "active": row.get::<_, i32>(8)? != 0,
+                    "created_at": row.get::<_, String>(9)?,
+                    "updated_at": row.get::<_, String>(10)?,
+                }))
+            })
+            .map_err(|e| format!("Query: {e}"))?
+            .filter_map(|r| r.ok())
+            .collect();
         Ok(products)
     }
 
@@ -1478,7 +1485,8 @@ impl GatewayDb {
     /// Delete a product.
     pub fn delete_product(&self, id: &str) -> Result<bool, String> {
         let conn = self.conn.lock().map_err(|e| format!("Lock: {e}"))?;
-        let rows = conn.execute("DELETE FROM products WHERE id=?1", params![id])
+        let rows = conn
+            .execute("DELETE FROM products WHERE id=?1", params![id])
             .map_err(|e| format!("Delete product: {e}"))?;
         Ok(rows > 0)
     }
@@ -1505,16 +1513,18 @@ impl GatewayDb {
             "SELECT name, sku, price, stock, category, description FROM products WHERE active=1 ORDER BY category, name"
         ).map_err(|e| format!("Prepare: {e}"))?;
         let mut text = String::from("# Bảng Giá Sản Phẩm\n\n");
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, f64>(2)?,
-                row.get::<_, i64>(3)?,
-                row.get::<_, String>(4)?,
-                row.get::<_, String>(5)?,
-            ))
-        }).map_err(|e| format!("Query: {e}"))?;
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, f64>(2)?,
+                    row.get::<_, i64>(3)?,
+                    row.get::<_, String>(4)?,
+                    row.get::<_, String>(5)?,
+                ))
+            })
+            .map_err(|e| format!("Query: {e}"))?;
         for row in rows.flatten() {
             let (name, sku, price, stock, cat, desc) = row;
             text.push_str(&format!(
@@ -1525,8 +1535,6 @@ impl GatewayDb {
         Ok(text)
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {
