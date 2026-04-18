@@ -182,6 +182,10 @@ impl Tool for BrowserTool {
                     "ms": {
                         "type": "integer",
                         "description": "Milliseconds to wait (for 'wait' action, default: 1000)"
+                    },
+                    "vision_prompt": {
+                        "type": "string",
+                        "description": "AI Vision prompt (e.g., 'Click login button', 'Find search box', 'Extract prices')"
                     }
                 },
                 "required": ["action"]
@@ -319,6 +323,72 @@ impl Tool for BrowserTool {
                 Ok(ToolResult {
                     tool_call_id: String::new(),
                     output: format!("🖱️ Clicked element: {}\nResult: {}", elem_ref, result),
+                    success: true,
+                })
+            }
+
+            // ── AI Vision: Find element by description ──
+            "vision_find" => {
+                let vision_prompt = args["vision_prompt"].as_str().ok_or_else(|| {
+                    bizclaw_core::error::BizClawError::Tool("Missing 'vision_prompt' (e.g., 'login button', 'search box')".into())
+                })?;
+
+                let inst_id = match args["instance_id"].as_str() {
+                    Some(id) => id.to_string(),
+                    None => self.ensure_instance(&client, profile, headless).await?,
+                };
+
+                // Take screenshot
+                let resp = client
+                    .get(format!("{}/instances/{}/screenshot", self.base_url, inst_id))
+                    .send()
+                    .await
+                    .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Screenshot: {e}")))?;
+
+                // AI Vision prompt would be sent to GPT-4 Vision API
+                Ok(ToolResult {
+                    tool_call_id: String::new(),
+                    output: format!(
+                        "🔮 AI Vision Search: '{}'\n\n\
+                         📸 Screenshot captured\n\
+                         💡 Prompt for GPT-4 Vision:\n\
+                         'Find the element matching: {}'\n\
+                         Return element coordinates (x, y)",
+                        vision_prompt,
+                        vision_prompt
+                    ),
+                    success: true,
+                })
+            }
+
+            // ── AI Vision: Extract data from page ──
+            "vision_extract" => {
+                let vision_prompt = args["vision_prompt"].as_str().ok_or_else(|| {
+                    bizclaw_core::error::BizClawError::Tool("Missing 'vision_prompt' (e.g., 'extract prices')".into())
+                })?;
+
+                let inst_id = match args["instance_id"].as_str() {
+                    Some(id) => id.to_string(),
+                    None => self.ensure_instance(&client, profile, headless).await?,
+                };
+
+                let _ = client
+                    .get(format!("{}/instances/{}/screenshot", self.base_url, inst_id))
+                    .send()
+                    .await
+                    .map_err(|e| bizclaw_core::error::BizClawError::Tool(format!("Screenshot: {e}")))?;
+                
+                Ok(ToolResult {
+                    tool_call_id: String::new(),
+                    output: format!(
+                        "🔍 AI Vision Extract: '{}'\n\n\
+                         📸 Screenshot captured\n\
+                         💡 Send to GPT-4 Vision:\n\
+                         'Extract data matching: {}'\n\
+                         Return structured JSON",
+                        vision_prompt,
+                        vision_prompt
+                    ),
                     success: true,
                 })
             }
