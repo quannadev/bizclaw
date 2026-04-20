@@ -1,927 +1,520 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BizClaw — Trợ lý AI Chăm sóc khách hàng tự động</title>
-<meta name="description" content="BizClaw — Giải pháp AI giúp shop bán hàng nhàn hơn. Tự động trả lời tin nhắn Zalo/FB 24/7, thiết lập dễ dàng, quản lý dữ liệu an toàn.">
-<meta property="og:title" content="BizClaw — Trợ lý AI Chăm sóc khách hàng">
-<meta property="og:description" content="Tự động hóa nhắn tin Zalo, báo cáo doanh thu mỗi ngày. Dành cho nhà bán hàng nhỏ gọn và tiện lợi.">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://bizclaw.vn">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#ffffff;--bg2:#f8fafb;--bg3:#f1f5f4;
-  --surface:#ffffff;--card:#ffffff;--border:#e2e8f0;--border-light:#f1f5f9;
-  --text:#0f172a;--text2:#475569;--muted:#94a3b8;
-  --green:#10b981;--green2:#059669;--green-light:rgba(16,185,129,.08);--green-glow:rgba(16,185,129,.12);
-  --emerald:#34d399;--teal:#14b8a6;
-  --blue:#3b82f6;--violet:#8b5cf6;--rose:#f43f5e;--amber:#f59e0b;
-  --grad-green:linear-gradient(135deg,#10b981,#059669);
-  --grad-teal:linear-gradient(135deg,#14b8a6,#10b981,#34d399);
-  --grad-hero:linear-gradient(135deg,#ecfdf5 0%,#f0fdf4 30%,#ffffff 60%,#f0f9ff 100%);
-  --shadow-sm:0 1px 3px rgba(0,0,0,.04),0 1px 2px rgba(0,0,0,.06);
-  --shadow-md:0 4px 6px rgba(0,0,0,.04),0 2px 4px rgba(0,0,0,.06);
-  --shadow-lg:0 10px 25px rgba(0,0,0,.06),0 4px 10px rgba(0,0,0,.04);
-  --shadow-xl:0 20px 50px rgba(0,0,0,.08),0 10px 20px rgba(0,0,0,.04);
-  --radius:16px;--radius-lg:24px;--radius-xl:32px;
-}
-html{scroll-behavior:smooth;font-size:16px}
-body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;line-height:1.7;-webkit-font-smoothing:antialiased}
-
-/* ─── NAV ─── */
-nav{position:fixed;top:0;width:100%;z-index:100;padding:12px 0;transition:all .4s cubic-bezier(.4,0,.2,1)}
-nav.scrolled{background:rgba(255,255,255,.85);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%);border-bottom:1px solid var(--border-light);box-shadow:0 1px 3px rgba(0,0,0,.04)}
-.nav-inner{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.logo-icon{width:36px;height:36px;background:var(--grad-green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(16,185,129,.25)}
-.logo-text{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:21px;color:var(--text);letter-spacing:-.5px}
-.nav-links{display:flex;gap:32px;align-items:center}
-.nav-links a{color:var(--text2);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s;position:relative}
-.nav-links a:hover{color:var(--text)}
-.nav-right{display:flex;gap:10px;align-items:center}
-.btn-ghost{background:none;border:none;color:var(--text2);padding:8px 16px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;transition:all .2s}
-.btn-ghost:hover{color:var(--text);background:var(--bg2)}
-.btn-green{background:var(--grad-green);color:#fff;padding:10px 24px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;transition:all .3s;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(16,185,129,.25)}
-.btn-green:hover{transform:translateY(-1px);box-shadow:0 8px 25px rgba(16,185,129,.35)}
-.btn-outline-green{background:none;color:var(--green2);padding:10px 24px;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none;transition:all .3s;border:1.5px solid var(--green);display:inline-flex;align-items:center;gap:6px}
-.btn-outline-green:hover{background:var(--green-light);transform:translateY(-1px)}
-
-/* ─── HERO ─── */
-.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:120px 24px 60px;background:var(--grad-hero)}
-.hero::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background-image:radial-gradient(circle at 1px 1px,rgba(16,185,129,.04) 1px,transparent 0);background-size:40px 40px;pointer-events:none}
-.hero-glow{position:absolute;width:600px;height:600px;border-radius:50%;filter:blur(120px);pointer-events:none}
-.hero-glow-1{background:rgba(16,185,129,.1);top:-200px;right:-100px}
-.hero-glow-2{background:rgba(20,184,166,.08);bottom:-200px;left:-100px}
-.hero-content{max-width:860px;text-align:center;position:relative;z-index:1}
-.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 18px 6px 8px;background:var(--green-light);border:1px solid rgba(16,185,129,.15);border-radius:30px;font-size:13px;color:var(--green2);margin-bottom:32px;font-weight:500}
-.hero-badge .dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;display:block}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
-h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(40px,6.5vw,76px);font-weight:800;line-height:1.05;margin-bottom:24px;letter-spacing:-3px;color:var(--text)}
-h1 .grad{background:var(--grad-green);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero-desc{font-size:clamp(16px,2vw,20px);color:var(--text2);max-width:580px;margin:0 auto 40px;line-height:1.7;font-weight:400}
-.hero-actions{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:60px}
-
-/* Hero Stats */
-.hero-stats{display:flex;gap:48px;justify-content:center;flex-wrap:wrap}
-.hero-stat{text-align:center}
-.hero-stat .num{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,3vw,42px);font-weight:800;color:var(--text);letter-spacing:-1px}
-.hero-stat .label{font-size:13px;color:var(--muted);margin-top:2px;font-weight:500}
-
-/* Hero Demo Card */
-.hero-demo{margin-top:72px;position:relative}
-.demo-card{max-width:700px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);overflow:hidden;position:relative}
-.demo-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad-teal)}
-.demo-header{display:flex;align-items:center;gap:12px;padding:18px 24px;border-bottom:1px solid var(--border-light)}
-.demo-dots{display:flex;gap:6px}
-.demo-dots span{width:10px;height:10px;border-radius:50%;background:var(--border)}
-.demo-dots span:nth-child(1){background:#ff5f57}
-.demo-dots span:nth-child(2){background:#ffbd2e}
-.demo-dots span:nth-child(3){background:#28c840}
-.demo-title{font-size:13px;font-weight:600;color:var(--text2);margin-left:auto}
-.demo-body{padding:24px;display:flex;gap:16px;min-height:260px}
-.demo-sidebar{width:180px;border-right:1px solid var(--border-light);padding-right:16px;display:flex;flex-direction:column;gap:6px}
-.demo-agent{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;font-size:13px;font-weight:500;cursor:default;transition:background .2s}
-.demo-agent.active{background:var(--green-light);color:var(--green2)}
-.demo-agent .agent-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.demo-agent .agent-dot.green{background:var(--green)}
-.demo-agent .agent-dot.blue{background:var(--blue)}
-.demo-agent .agent-dot.violet{background:var(--violet)}
-.demo-agent .agent-dot.amber{background:var(--amber)}
-.demo-agent .agent-dot.rose{background:var(--rose)}
-.demo-chat{flex:1;display:flex;flex-direction:column;gap:12px}
-.chat-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;animation:fadeInMsg .5s ease-out both}
-.chat-msg.user{align-self:flex-end;background:var(--grad-green);color:#fff;border-bottom-right-radius:4px}
-.chat-msg.bot{align-self:flex-start;background:var(--bg2);color:var(--text);border-bottom-left-radius:4px}
-.chat-msg .bot-name{font-size:11px;font-weight:600;color:var(--green2);margin-bottom:4px}
-.chat-msg .bot-status{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:rgba(16,185,129,.08);border-radius:8px;margin-top:6px;font-size:11px;color:var(--green2)}
-@keyframes fadeInMsg{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-
-/* ─── SECTION COMMON ─── */
-section{padding:100px 24px}
-.container{max-width:1200px;margin:0 auto}
-.section-tag{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:var(--green-light);border-radius:20px;font-size:12px;font-weight:600;color:var(--green2);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
-.section-title{font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,4vw,48px);font-weight:800;margin-bottom:16px;letter-spacing:-1.5px;color:var(--text);line-height:1.15}
-.section-desc{font-size:17px;color:var(--text2);max-width:560px;line-height:1.7;margin-bottom:56px}
-.section-center{text-align:center}
-.section-center .section-desc{margin-left:auto;margin-right:auto}
-
-/* ─── FEATURES ─── */
-#features{background:var(--bg)}
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.feature-card{background:var(--card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:32px;transition:all .4s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
-.feature-card:hover{border-color:rgba(16,185,129,.3);transform:translateY(-6px);box-shadow:var(--shadow-lg)}
-.feature-card:hover .feature-icon-wrap{transform:scale(1.05)}
-.feature-icon-wrap{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:18px;transition:transform .3s}
-.fi-green{background:rgba(16,185,129,.1)}
-.fi-blue{background:rgba(59,130,246,.1)}
-.fi-violet{background:rgba(139,92,246,.1)}
-.fi-amber{background:rgba(245,158,11,.1)}
-.fi-rose{background:rgba(244,63,94,.1)}
-.fi-teal{background:rgba(20,184,166,.1)}
-.feature-card h3{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:8px;letter-spacing:-.3px}
-.feature-card p{font-size:14px;color:var(--text2);line-height:1.65}
-
-/* ─── PLATFORM CARDS ─── */
-#platforms{background:var(--bg2)}
-.platform-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.platform-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px 28px;text-align:center;transition:all .4s;position:relative;overflow:hidden}
-.platform-card:hover{transform:translateY(-8px);box-shadow:var(--shadow-xl)}
-.platform-card.featured{border:2px solid var(--green)}
-.platform-card.featured::before{content:'⭐ Phổ biến';position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:var(--grad-green);padding:4px 18px;border-radius:0 0 12px 12px;font-size:11px;font-weight:600;color:#fff}
-.pf-icon{width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 16px}
-.pf-tag{display:inline-block;padding:4px 14px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:12px}
-.pf-tag-green{background:rgba(16,185,129,.1);color:var(--green2);border:1px solid rgba(16,185,129,.2)}
-.pf-tag-blue{background:rgba(59,130,246,.1);color:var(--blue);border:1px solid rgba(59,130,246,.2)}
-.pf-tag-violet{background:rgba(139,92,246,.1);color:var(--violet);border:1px solid rgba(139,92,246,.2)}
-.platform-card h3{font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;margin-bottom:4px}
-.pf-price{font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:800;margin:8px 0 4px}
-.pf-price.green{color:var(--green)}
-.pf-price.teal{color:var(--teal)}
-.pf-period{font-size:14px;color:var(--muted);margin-bottom:20px}
-.pf-features{list-style:none;text-align:left}
-.pf-features li{padding:6px 0;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:8px}
-.pf-features li::before{content:'✓';color:var(--green);font-weight:700;font-size:13px}
-
-/* ─── HOW IT WORKS ─── */
-#how{background:var(--bg)}
-.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;counter-reset:step}
-.step-card{background:var(--card);border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:32px 24px;position:relative;counter-increment:step;transition:all .4s}
-.step-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:rgba(16,185,129,.3)}
-.step-num{font-family:'Space Grotesk',sans-serif;font-size:48px;font-weight:800;color:rgba(16,185,129,.1);line-height:1;margin-bottom:12px}
-.step-card h4{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:700;margin-bottom:8px}
-.step-card p{font-size:13px;color:var(--text2);line-height:1.6}
-.step-code{background:var(--bg2);border-radius:10px;padding:12px 14px;font-family:'SF Mono','Fira Code',monospace;font-size:12px;color:var(--green2);margin-top:12px;line-height:1.7;overflow-x:auto}
-
-/* ─── SHOWCASE INTERACTIVE ─── */
-.showcase-layout{display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start;margin-top:32px}
-.showcase-tabs{display:flex;flex-direction:column;gap:8px}
-.sc-tab{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;border:1px solid var(--border-light);background:var(--card);cursor:pointer;transition:all .3s;user-select:none}
-.sc-tab:hover{border-color:rgba(16,185,129,.25);transform:translateX(4px)}
-.sc-tab.active{border-color:var(--green);box-shadow:0 0 16px rgba(16,185,129,.15),inset 0 0 0 1px rgba(16,185,129,.1);background:linear-gradient(135deg,rgba(16,185,129,.04),var(--card))}
-.sc-tab-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.sc-tab-title{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px}
-.sc-tab.active .sc-tab-title{color:var(--green2)}
-.sc-tab-desc{font-size:12px;color:var(--text2)}
-.showcase-preview{background:var(--card);border-radius:16px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-xl)}
-.sc-preview-header{background:var(--bg2);padding:12px 18px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--border-light)}
-.sc-preview-title{color:var(--text2);font-size:12px;font-family:'SF Mono','Fira Code',monospace;letter-spacing:.5px}
-.sc-preview-body{padding:28px;min-height:300px;position:relative}
-.sc-panel{display:none;animation:scFadeIn .4s ease}
-.sc-panel.active{display:block}
-@keyframes scFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.sc-flow-label{font-size:11px;font-weight:700;color:var(--text2);letter-spacing:1.5px;margin-bottom:12px}
-.sc-steps{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
-.sc-step{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--text2);padding:8px 12px;border-radius:10px;background:var(--bg2);border:1px solid transparent;transition:all .3s}
-.sc-step.done{color:var(--text1);border-color:rgba(16,185,129,.15)}
-.sc-step.active{color:var(--text1);background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.25)}
-.sc-check{display:inline-flex;width:20px;height:20px;border-radius:50%;background:rgba(16,185,129,.12);color:#10b981;font-size:12px;align-items:center;justify-content:center;font-weight:700}
-.sc-circle{display:inline-block;width:20px;height:20px;border-radius:50%;border:2px solid var(--border)}
-.sc-spinner{display:inline-block;width:20px;height:20px;border-radius:50%;border:2px solid transparent;border-top-color:#10b981;border-right-color:#10b981;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.sc-tools{display:flex;gap:8px;flex-wrap:wrap}
-.sc-tools span{background:rgba(16,185,129,.08);color:#10b981;padding:5px 12px;border-radius:8px;font-size:11px;font-weight:600;border:1px solid rgba(16,185,129,.12)}
-.grad{background:linear-gradient(135deg,var(--green2),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-@media(max-width:768px){.showcase-layout{grid-template-columns:1fr;gap:16px}.showcase-tabs{flex-direction:row;overflow-x:auto;padding-bottom:8px}.sc-tab{min-width:200px}}
-
-/* ─── CHAT DEMO ─── */
-#agents-demo{background:var(--bg2)}
-.agent-demo-container{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);overflow:hidden;max-width:800px;margin:0 auto}
-.agent-demo-header{border-bottom:1px solid var(--border-light);padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
-.agent-demo-tabs{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.agent-tab{padding:8px 16px;font-size:12px;font-weight:600;background:var(--bg2);border:none;cursor:pointer;transition:all .2s;color:var(--text2)}
-.agent-tab.active{background:var(--grad-green);color:#fff}
-.agent-demo-body{padding:24px;min-height:320px;display:flex;flex-direction:column;gap:14px}
-
-/* ─── PRICING - CLOUD ─── */
-#pricing{background:var(--bg2)}
-.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.price-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px 28px;text-align:center;transition:all .4s;position:relative}
-.price-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg)}
-.price-card.popular{border:2px solid var(--green);box-shadow:0 0 60px rgba(16,185,129,.08)}
-.price-card.popular::before{content:'⭐ Phổ biến';position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--grad-green);padding:4px 18px;border-radius:20px;font-size:11px;font-weight:600;color:#fff}
-.price-tier{font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
-.price-amount{font-family:'Space Grotesk',sans-serif;font-size:42px;font-weight:800;color:var(--text);margin:8px 0;letter-spacing:-1px}
-.price-period{font-size:14px;color:var(--muted);margin-bottom:24px}
-.price-features{list-style:none;text-align:left;margin-bottom:28px}
-.price-features li{padding:6px 0;font-size:14px;display:flex;align-items:center;gap:8px;color:var(--text2)}
-.price-features li::before{content:'✓';color:var(--green);font-weight:700;font-size:13px}
-
-/* ─── PROVIDERS ─── */
-.providers-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:40px}
-.provider-pill{background:var(--bg2);border:1px solid var(--border-light);border-radius:10px;padding:10px 18px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;transition:all .25s;color:var(--text2)}
-.provider-pill:hover{border-color:var(--green);color:var(--green2);background:var(--green-light);transform:translateY(-2px)}
-
-/* ─── CTA ─── */
-#cta{background:var(--grad-hero);position:relative}
-#cta::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(16,185,129,.03) 1px,transparent 0);background-size:40px 40px;pointer-events:none}
-.cta-box{max-width:640px;margin:0 auto;text-align:center;position:relative;z-index:1}
-
-/* ─── FOOTER ─── */
-footer{border-top:1px solid var(--border-light);background:var(--bg)}
-.footer-inner{max-width:1200px;margin:0 auto;padding:48px 24px 32px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:32px}
-.footer-brand{max-width:300px}
-.footer-brand .logo{margin-bottom:12px}
-.footer-brand p{font-size:13px;color:var(--muted);line-height:1.6}
-.footer-links{display:flex;gap:48px}
-.footer-col h4{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:14px}
-.footer-col a{display:block;font-size:14px;color:var(--text2);text-decoration:none;padding:4px 0;transition:color .2s}
-.footer-col a:hover{color:var(--green2)}
-.footer-bottom{max-width:1200px;margin:0 auto;padding:16px 24px;border-top:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
-.footer-tech{display:flex;gap:8px;flex-wrap:wrap}
-.footer-tech span{background:var(--bg2);border:1px solid var(--border-light);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500}
-
-/* ─── ANIMATIONS ─── */
-.fade-up{opacity:0;transform:translateY(32px);transition:all .7s cubic-bezier(.16,1,.3,1)}
-.fade-up.vis{opacity:1;transform:translateY(0)}
-.fade-up[style*="--i"]{transition-delay:calc(var(--i,0)*100ms)}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-@keyframes typing{0%{width:0}100%{width:100%}}
-
-/* Parallax hero glows */
-@keyframes heroGlow1{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(80px,40px) scale(1.1)}50%{transform:translate(-40px,80px) scale(.9)}75%{transform:translate(40px,-40px) scale(1.05)}}
-@keyframes heroGlow2{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(-60px,-30px) scale(1.15)}66%{transform:translate(60px,50px) scale(.85)}}
-.hero-glow-1{animation:heroGlow1 20s ease-in-out infinite}
-.hero-glow-2{animation:heroGlow2 25s ease-in-out infinite}
-
-/* Gradient shimmer on hero text */
-@keyframes shimmer{0%{background-position:200% center}100%{background-position:-200% center}}
-h1 .grad{background:linear-gradient(90deg,#10b981 0%,#34d399 25%,#059669 50%,#14b8a6 75%,#10b981 100%);background-size:400% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 6s linear infinite}
-
-/* Hero badge pulse glow */
-@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,.2)}50%{box-shadow:0 0 0 8px rgba(16,185,129,0)}}
-.hero-badge{animation:badgePulse 3s ease-in-out infinite}
-
-/* Floating hero image */
-@keyframes heroFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(.5deg)}75%{transform:translateY(8px) rotate(-.5deg)}}
-.hero-content img{animation:heroFloat 6s ease-in-out infinite}
-
-/* Nav link hover underline */
-.nav-links a::after{content:'';position:absolute;bottom:-4px;left:0;width:0;height:2px;background:var(--grad-green);border-radius:2px;transition:width .3s cubic-bezier(.4,0,.2,1)}
-.nav-links a:hover::after{width:100%}
-
-/* Feature card hover glow */
-.feature-card::after{content:'';position:absolute;inset:0;border-radius:inherit;opacity:0;transition:opacity .4s;background:radial-gradient(600px circle at var(--mouse-x,50%) var(--mouse-y,50%),rgba(16,185,129,.06),transparent 40%);pointer-events:none}
-.feature-card:hover::after{opacity:1}
-
-/* Provider pill hover glow */
-.provider-pill{transition:all .3s cubic-bezier(.4,0,.2,1)}
-.provider-pill:hover{box-shadow:0 4px 16px rgba(16,185,129,.15);transform:translateY(-3px)}
-
-/* Counter number animation */
-@keyframes countUp{from{opacity:0;transform:translateY(16px) scale(.8)}to{opacity:1;transform:translateY(0) scale(1)}}
-.hero-stat .num{animation:countUp .8s cubic-bezier(.16,1,.3,1) both}
-.hero-stats .hero-stat:nth-child(1) .num{animation-delay:.1s}
-.hero-stats .hero-stat:nth-child(2) .num{animation-delay:.2s}
-.hero-stats .hero-stat:nth-child(3) .num{animation-delay:.3s}
-.hero-stats .hero-stat:nth-child(4) .num{animation-delay:.4s}
-
-/* Button hover micro-interactions */
-.btn-green{transition:all .3s cubic-bezier(.4,0,.2,1);position:relative;overflow:hidden}
-.btn-green::after{content:'';position:absolute;top:50%;left:50%;width:0;height:0;border-radius:50%;background:rgba(255,255,255,.15);transform:translate(-50%,-50%);transition:width .5s,height .5s}
-.btn-green:hover::after{width:300px;height:300px}
-.btn-green:active{transform:translateY(0) scale(.98)}
-
-/* CTA box subtle border animation */
-@keyframes borderGlow{0%,100%{border-color:rgba(16,185,129,.15)}50%{border-color:rgba(16,185,129,.35)}}
-.cta-box{border:1px solid rgba(16,185,129,.15);border-radius:var(--radius-xl);padding:48px;background:var(--card);box-shadow:var(--shadow-lg);animation:borderGlow 4s ease-in-out infinite}
-
-/* Smooth scroll-linked section reveals */
-section{transition:background .6s ease}
-
-/* Demo card typing animation */
-@keyframes cursorBlink{0%,100%{border-right-color:transparent}50%{border-right-color:var(--green)}}
-
-/* Platform card shine effect on hover — uses ::after to avoid conflict with .featured::before label */
-.platform-card::after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(135deg,transparent 40%,rgba(16,185,129,.04) 50%,transparent 60%);opacity:0;transition:opacity .4s;pointer-events:none}
-.platform-card:hover::after{opacity:1}
-
-/* Step card connector line */
-.step-card::after{content:'';position:absolute;top:50%;right:-10px;width:20px;height:2px;background:linear-gradient(90deg,var(--border),transparent);pointer-events:none}
-.step-card:last-child::after{display:none}
-
-/* ─── RESPONSIVE ─── */
-@media(max-width:768px){
-  .nav-links,.footer-links{display:none}
-  .features-grid,.platform-grid,.pricing-grid{grid-template-columns:1fr}
-  .steps-grid{grid-template-columns:1fr 1fr}
-  .demo-sidebar{display:none}
-  .hero{padding:100px 16px 60px}
-  section{padding:60px 16px}
-  .hero-stats{gap:20px}
-  .footer-inner{flex-direction:column}
-  .step-card::after{display:none}
-}
-@media(max-width:480px){
-  .steps-grid{grid-template-columns:1fr}
-  h1{letter-spacing:-1.5px}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BizClaw - Trợ lý AI 24/7 cho doanh nghiệp Việt</title>
+    <meta name="description" content="Nền tảng AI Agent tự động hóa cho doanh nghiệp SME. Kết nối Zalo, Telegram, Facebook. Tự viết content, tự trả lời khách hàng.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .float-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
 </head>
-<body>
+<body class="bg-gray-50">
 
-<!-- NAV -->
-<nav id="navbar">
-  <div class="nav-inner">
-    <a href="#" class="logo">
-      <div class="logo-icon">⚡</div>
-      <span class="logo-text">BizClaw</span>
-    </a>
-    <div class="nav-links">
-      <a href="#features" data-vi="Tính năng" data-en="Features">Tính năng</a>
-      <a href="#showcase" data-vi="Cách hoạt động" data-en="How it works">Cách hoạt động</a>
-      <a href="#demo-access" data-vi="🧪 Demo" data-en="🧪 Demo">🧪 Demo</a>
-      <a href="https://github.com/nguyenduchoai/bizclaw" target="_blank">Khách hàng</a>
-    </div>
-    <div class="nav-right">
-      <button class="btn-ghost" onclick="toggleLang()">🌐 EN</button>
-      <a href="#" onclick="goLogin()" class="btn-ghost" data-vi="Đăng nhập" data-en="Login">Đăng nhập</a>
-      <a href="https://github.com/nguyenduchoai/bizclaw" target="_blank" class="btn-green">⭐ GitHub</a>
-    </div>
-  </div>
-</nav>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-glow hero-glow-1"></div>
-  <div class="hero-glow hero-glow-2"></div>
-  <div class="hero-content">
-    <div class="hero-badge"><span class="dot"></span> <span data-vi="Giải pháp AI chăm sóc khách hàng tự động" data-en="Automated AI Customer Support">Giải pháp AI chăm sóc khách hàng tự động</span></div>
-    <h1>
-      <span data-vi="Trợ lý AI Bán Hàng" data-en="AI Sales Assistant">Trợ lý AI Bán Hàng</span><br>
-      <span class="grad" data-vi="Tự Động 24/7" data-en="Automated 24/7">Tự Động 24/7</span>
-    </h1>
-    <p class="hero-desc" data-vi="Giúp chủ shop tối ưu thời gian, tự động trả lời tin nhắn Zalo/Messenger ngay lập tức. Hệ thống vận hành độc lập, dễ thiết lập, không cần kiến thức kỹ thuật." data-en="Help shop owners save time with instant Zalo/FB replies. Independent system, easy to use, no technical knowledge needed.">Giúp chủ shop tối ưu thời gian, tự động trả lời tin nhắn Zalo/Messenger ngay lập tức. Hệ thống vận hành độc lập, dễ thiết lập, không cần kiến thức kỹ thuật.</p>
-    <div class="hero-actions">
-      <a href="#" onclick="goLogin()" class="btn-green" data-vi="🚀 Đăng nhập Dashboard" data-en="🚀 Login to Dashboard">🚀 Đăng nhập Dashboard</a>
-      <a href="#demo-access" class="btn-outline-green" data-vi="⭐ Trải nghiệm Demo" data-en="⭐ Try Demo">⭐ Trải nghiệm Demo</a>
-    </div>
-    <div class="hero-stats">
-      <div class="hero-stat"><div class="num">100%</div><div class="label" data-vi="Tự động Zalo/FB" data-en="Zalo/FB Automate">Tự động Zalo/FB</div></div>
-      <div class="hero-stat"><div class="num">0</div><div class="label" data-vi="Không giới hạn tin nhắn" data-en="Unlimited Messages">Không giới hạn tin nhắn</div></div>
-      <div class="hero-stat"><div class="num">Bảo mật</div><div class="label">Cloud máy chủ riêng</div></div>
-      <div class="hero-stat"><div class="num" data-vi="24/7" data-en="24/7">24/7</div><div class="label" data-vi="Sẵn sàng" data-en="Ready">Sẵn sàng</div></div>
-    </div>
-    <div style="margin-top:48px">
-      <img src="img/hero.png" alt="BizClaw Dashboard" style="max-width:560px;width:100%;border-radius:20px;box-shadow:var(--shadow-xl)">
-    </div>
-
-    <!-- Chat Demo -->
-    <div class="hero-demo fade-up">
-      <div class="demo-card">
-        <div class="demo-header">
-          <div class="demo-dots"><span></span><span></span><span></span></div>
-          <div class="demo-title">BizClaw Dashboard</div>
-        </div>
-        <div class="demo-body">
-          <div class="demo-sidebar">
-            <div class="demo-agent active"><span class="agent-dot green"></span> Research</div>
-            <div class="demo-agent"><span class="agent-dot blue"></span> Dev</div>
-            <div class="demo-agent"><span class="agent-dot violet"></span> Writer</div>
-            <div class="demo-agent"><span class="agent-dot amber"></span> Analyst</div>
-            <div class="demo-agent"><span class="agent-dot rose"></span> Monitor</div>
-          </div>
-          <div class="demo-chat">
-            <div class="chat-msg user" style="animation-delay:.2s">Tìm hiểu và tóm tắt paper về RAG mới nhất trên Arxiv</div>
-            <div class="chat-msg bot" style="animation-delay:.8s">
-              <div class="bot-name">🟢 Research · Gemini Flash</div>
-              Tìm được 5 papers mới nhất về RAG (2026). Đã tóm tắt và lưu vào Knowledge Base.
-              <div class="bot-status">✅ 5 papers · 3 summaries · uploaded to KB</div>
+    <!-- Navigation -->
+    <nav class="fixed w-full bg-white/90 backdrop-blur-sm z-50 border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🦞</span>
+                    <span class="text-xl font-bold">BizClaw</span>
+                </div>
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-gray-600 hover:text-purple-600">Tính năng</a>
+                    <a href="#channels" class="text-gray-600 hover:text-purple-600">Kênh</a>
+                    <a href="#pricing" class="text-gray-600 hover:text-purple-600">Bảng giá</a>
+                    <a href="#demo" class="text-gray-600 hover:text-purple-600">Demo</a>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/nguyenduchoai/bizclaw-cloud" class="text-gray-600 hover:text-purple-600">GitHub</a>
+                    <a href="#quickstart" class="gradient-bg text-white px-4 py-2 rounded-lg hover:opacity-90">Bắt đầu ngay</a>
+                </div>
             </div>
-            <div class="chat-msg user" style="animation-delay:1.4s">Viết unit test cho module auth, cover edge cases</div>
-            <div class="chat-msg bot" style="animation-delay:2s">
-              <div class="bot-name">🔵 Dev · Claude Sonnet</div>
-              Đã tạo 12 test cases cho auth module. Coverage tăng từ 45% lên 92%. 3 edge cases được xử lý.
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-32 pb-20 px-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center max-w-4xl mx-auto">
+                <div class="inline-flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm mb-6">
+                    <span class="pulse-animation">●</span>
+                    <span>Phiên bản 1.1.7 - Production Ready</span>
+                </div>
+                <h1 class="text-5xl md:text-6xl font-extrabold mb-6 leading-tight">
+                    <span class="gradient-text">Nhân viên AI</span><br>
+                    làm việc <span class="gradient-text">24/7</span><br>
+                    cho doanh nghiệp bạn
+                </h1>
+                <p class="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+                    Không cần biết lập trình. Không cần thuê nhân viên. 
+                    BizClaw tự động trả lời khách, viết content, 
+                    và chăm sóc khách hàng <strong>mọi lúc mọi nơi</strong>.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <a href="#quickstart" class="gradient-bg text-white px-8 py-4 rounded-xl text-lg font-semibold hover:opacity-90 shadow-lg shadow-purple-300">
+                        🚀 Dùng thử miễn phí
+                    </a>
+                    <a href="#demo" class="bg-white border-2 border-purple-200 text-purple-700 px-8 py-4 rounded-xl text-lg font-semibold hover:border-purple-400">
+                        📺 Xem demo 2 phút
+                    </a>
+                </div>
+                <div class="mt-12 flex items-center justify-center gap-8 text-sm text-gray-500">
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        <span>18+ AI Providers</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        <span>12+ Kênh</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        <span>40+ Tools</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-500">✓</span>
+                        <span>100% Private</span>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- FEATURES -->
-<section id="features">
-  <div class="container">
-    <div class="section-tag">✨ Tính năng SME</div>
-    <div class="section-title" data-vi="Mọi thứ doanh nghiệp<br>cần ở 1 AI Server" data-en="Everything your business<br>needs in an AI Server">Mọi thứ doanh nghiệp<br>cần ở 1 AI Server</div>
-    <div class="section-desc" data-vi="Dễ dàng cài đặt. Giao việc bằng nút bấm. Trả lời tự động như ý. Dữ liệu kinh doanh 100% an toàn bảo mật." data-en="Easy to install. Delegate with a single click. Auto replies just the way you want. 100% secure business data.">Dễ dàng cài đặt. Giao việc bằng nút bấm. Trả lời tự động như ý. Dữ liệu kinh doanh 100% an toàn bảo mật.</div>
-    <div class="features-grid">
-      <div class="feature-card fade-up" style="--i:0">
-        <div class="feature-icon-wrap fi-green">🧠</div>
-        <h3>Multi-Agent Orchestration</h3>
-        <p data-vi="Agents tự phối hợp: Delegation, Handoff, Evaluate Loop, Quality Gates. Mỗi agent chọn provider riêng — tiết kiệm 60-80% chi phí API." data-en="Agents coordinate: Delegation, Handoff, Evaluate Loop, Quality Gates. Each agent picks its own provider — save 60-80% API costs.">Agents tự phối hợp: Delegation, Handoff, Evaluate Loop, Quality Gates. Mỗi agent chọn provider riêng — tiết kiệm 60-80% chi phí API.</p>
-      </div>
-      <div class="feature-card fade-up" style="--i:1">
-        <div class="feature-icon-wrap fi-blue">💬</div>
-        <h3 data-vi="Mama Tổng Quản & Tự Động" data-en="Mama Orchestrator & Auto-Reply">Mama Tổng Quản & Tự Động</h3>
-        <p data-vi="AI Mama nhận lệnh qua Zalo. Agent CSKH tự động trả lời khách hàng 24/7 trên Zalo, Messenger, Telegram qua Notification Inline (không cướp màn hình)." data-en="AI Mama receives commands via Zalo. CSKH Agent auto-replies 24/7 on Zalo, Messenger, Telegram via Notification Inline.">AI Mama nhận lệnh qua Zalo. Agent CSKH tự động trả lời khách hàng 24/7 trên Zalo, Messenger, Telegram qua Notification Inline (không cướp màn hình).</p>
-      </div>
-      <div class="feature-card fade-up" style="--i:2">
-        <div class="feature-icon-wrap fi-violet">🔌</div>
-        <h3>19+ Tools & 15 Providers</h3>
-        <p data-vi="OpenAI, Anthropic, Gemini... cùng 19 công cụ mạnh mẽ (DB Query, API Connector, Zalo Tool...) và hỗ trợ MCP mở rộng." data-en="OpenAI, Anthropic, Gemini... with 19 native tools (DB Query, API Connector...) and MCP extensions.">OpenAI, Anthropic, Gemini... cùng 19 công cụ mạnh mẽ (DB Query, API Connector, Zalo Tool...) và hỗ trợ MCP mở rộng.</p>
-      </div>
-      <div class="feature-card fade-up" style="--i:3">
-        <div class="feature-icon-wrap fi-teal">📚</div>
-        <h3 data-vi="Knowledge Base + PDF RAG" data-en="Knowledge Base + PDF RAG">Knowledge Base + PDF RAG</h3>
-        <p data-vi="Upload PDF, TXT, MD → pdf_oxide trích xuất → FTS5 indexing → Agent tự tìm kiếm. Hỗ trợ drag & drop." data-en="Upload PDF, TXT, MD → pdf_oxide extraction → FTS5 indexing → Agent auto-search. Drag & drop support.">Upload PDF, TXT, MD → pdf_oxide trích xuất → FTS5 indexing → Agent tự tìm kiếm. Hỗ trợ drag & drop.</p>
-      </div>
-      <div class="feature-card fade-up" style="--i:4">
-        <div class="feature-icon-wrap fi-rose">🔒</div>
-        <h3 data-vi="Bảo mật Enterprise" data-en="Enterprise Security">Bảo mật Enterprise</h3>
-        <p data-vi="Command allowlist, JWT + bcrypt, AES-256 encryption, HMAC-SHA256, tenant isolation, audit logging. Dữ liệu luôn thuộc về bạn." data-en="Command allowlist, JWT + bcrypt, AES-256 encryption, HMAC-SHA256, tenant isolation, audit logging. Your data stays yours.">Command allowlist, JWT + bcrypt, AES-256 encryption, HMAC-SHA256, tenant isolation, audit logging. Dữ liệu luôn thuộc về bạn.</p>
-      </div>
-      <div class="feature-card fade-up" style="--i:5">
-        <div class="feature-icon-wrap fi-amber">🔗</div>
-        <h3>MCP Servers</h3>
-        <p data-vi="Kết nối hàng trăm MCP servers: GitHub, Postgres, Brave Search, Puppeteer, Memory... Thêm/xoá ngay trên Dashboard." data-en="Connect hundreds of MCP servers: GitHub, Postgres, Brave Search, Puppeteer, Memory... Add/remove from Dashboard.">Kết nối hàng trăm MCP servers: GitHub, Postgres, Brave Search, Puppeteer, Memory... Thêm/xoá ngay trên Dashboard.</p>
-      </div>
-    </div>
-    <!-- v0.3 Features with gradient border -->
-    <div class="features-grid" style="margin-top:24px">
-      <div class="feature-card fade-up" style="--i:6;border-image:linear-gradient(135deg,#f43f5e,#f59e0b,#10b981) 1;border-width:2px;border-style:solid">
-        <div class="feature-icon-wrap fi-rose">🧠</div>
-        <h3>ReMe Memory v0.3</h3>
-        <p data-vi="4 loại bộ nhớ: Personal, Task, Tool, Working — Agent nhớ mọi thứ, tìm kiếm hybrid thông minh." data-en="4 memory types: Personal, Task, Tool, Working — Agent remembers everything, smart hybrid search.">4 loại bộ nhớ: Personal, Task, Tool, Working — Agent nhớ mọi thứ, tìm kiếm hybrid thông minh.</p>
-      </div>
-      <div class="feature-card fade-up" style="--i:7;border-image:linear-gradient(135deg,#f43f5e,#f59e0b,#10b981) 1;border-width:2px;border-style:solid">
-        <div class="feature-icon-wrap fi-amber">🔧</div>
-        <h3>Skills System v0.3</h3>
-        <p data-vi="10 skills tích hợp sẵn + tạo skills riêng — drop file, auto-load, multi-language." data-en="10 built-in skills + create custom ones — drop file, auto-load, multi-language.">10 skills tích hợp sẵn + tạo skills riêng — drop file, auto-load, multi-language.</p>
-      </div>
-      <div class="feature-card fade-up" style="--i:8;border-image:linear-gradient(135deg,#f43f5e,#f59e0b,#10b981) 1;border-width:2px;border-style:solid">
-        <div class="feature-icon-wrap fi-green">🚀</div>
-        <h3>AI CI/CD Workflows</h3>
-        <p data-vi="Tự động hóa code & deploy: Gõ @/git để commit chuẩn xác, @/bizclaw-deploy để zero-downtime VPS." data-en="Automate code & deploy: Type @/git for standardized commits, @/bizclaw-deploy for zero-downtime VPS.">Tự động hóa code & deploy: Gõ @/git để commit chuẩn xác, @/bizclaw-deploy để zero-downtime VPS.</p>
-      </div>
-    </div>
-    <div class="providers-row fade-up" style="--i:7">
-      <div class="provider-pill">🤖 OpenAI</div>
-      <div class="provider-pill">🧠 Anthropic</div>
-      <div class="provider-pill">💎 Gemini</div>
-      <div class="provider-pill">🌊 DeepSeek</div>
-      <div class="provider-pill">⚡ Groq</div>
-      <div class="provider-pill">🦙 Ollama</div>
-      <div class="provider-pill">🔀 OpenRouter</div>
-      <div class="provider-pill">🎯 MiniMax</div>
-      <div class="provider-pill">🚀 xAI</div>
-      <div class="provider-pill">🌬️ Mistral</div>
-    </div>
-  </div>
-</section>
-
-<!-- COST SAVING -->
-<section id="cost-saving" style="background:var(--bg2)">
-  <div class="container">
-    <div class="section-tag">💡 Tối ưu</div>
-    <div class="section-title" data-vi="Mỗi Agent<br>chọn Provider riêng" data-en="Each Agent picks<br>its own Provider">Mỗi Agent<br>chọn Provider riêng</div>
-    <div class="section-desc" data-vi="Thay vì dùng 1 provider cho tất cả, hãy tối ưu theo vai trò từng agent — tiết kiệm đáng kể chi phí API." data-en="Instead of using 1 provider for all, optimize by role — save significantly on API costs.">Thay vì dùng 1 provider cho tất cả, hãy tối ưu theo vai trò từng agent — tiết kiệm đáng kể chi phí API.</div>
-    <div style="max-width:700px;margin:32px auto;overflow-x:auto">
-      <table style="width:100%;border-collapse:collapse;background:var(--card);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-md)">
-        <thead>
-          <tr style="border-bottom:2px solid var(--border)">
-            <th style="padding:14px 16px;text-align:left;font-size:14px;font-weight:600">Agent</th>
-            <th style="padding:14px 16px;text-align:left;font-size:14px;font-weight:600;color:var(--green)">Provider</th>
-            <th style="padding:14px 16px;text-align:center;font-size:14px;font-weight:600" data-vi="Chi phí" data-en="Cost">Chi phí</th>
-            <th style="padding:14px 16px;text-align:left;font-size:14px;font-weight:600" data-vi="Lý do" data-en="Why">Lý do</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:12px 16px;font-size:14px" data-vi="🌐 Dịch thuật" data-en="🌐 Translation">🌐 Dịch thuật</td>
-            <td style="padding:12px 16px;font-size:14px;color:var(--green);font-weight:500">Ollama/qwen3</td>
-            <td style="padding:12px 16px;font-size:14px;text-align:center;font-weight:700">$0</td>
-            <td style="padding:12px 16px;font-size:13px;color:var(--text2)" data-vi="Miễn phí, chạy local" data-en="Free, runs locally">Miễn phí, chạy local</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:12px 16px;font-size:14px">💻 Full-Stack Dev</td>
-            <td style="padding:12px 16px;font-size:14px;color:var(--green);font-weight:500">Claude Sonnet</td>
-            <td style="padding:12px 16px;font-size:14px;text-align:center;font-weight:700">$$$</td>
-            <td style="padding:12px 16px;font-size:13px;color:var(--text2)" data-vi="Cần model mạnh nhất" data-en="Needs strongest model">Cần model mạnh nhất</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:12px 16px;font-size:14px">📱 Social Media</td>
-            <td style="padding:12px 16px;font-size:14px;color:var(--green);font-weight:500">Gemini Flash</td>
-            <td style="padding:12px 16px;font-size:14px;text-align:center;font-weight:700">$</td>
-            <td style="padding:12px 16px;font-size:13px;color:var(--text2)" data-vi="Nhanh, giá rẻ" data-en="Fast, cheap">Nhanh, giá rẻ</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:12px 16px;font-size:14px" data-vi="📊 Kế toán" data-en="📊 Accounting">📊 Kế toán</td>
-            <td style="padding:12px 16px;font-size:14px;color:var(--green);font-weight:500">DeepSeek Chat</td>
-            <td style="padding:12px 16px;font-size:14px;text-align:center;font-weight:700">$$</td>
-            <td style="padding:12px 16px;font-size:13px;color:var(--text2)" data-vi="Chất lượng / giá tốt nhất" data-en="Best quality/price ratio">Chất lượng / giá tốt nhất</td>
-          </tr>
-          <tr style="border-bottom:1px solid var(--border-light)">
-            <td style="padding:12px 16px;font-size:14px">🎧 Helpdesk</td>
-            <td style="padding:12px 16px;font-size:14px;color:var(--green);font-weight:500">Groq/Llama 3.3</td>
-            <td style="padding:12px 16px;font-size:14px;text-align:center;font-weight:700">$</td>
-            <td style="padding:12px 16px;font-size:13px;color:var(--text2)" data-vi="Latency thấp nhất" data-en="Lowest latency">Latency thấp nhất</td>
-          </tr>
-          <tr>
-            <td style="padding:12px 16px;font-size:14px" data-vi="🔒 Nội bộ" data-en="🔒 Internal">🔒 Nội bộ</td>
-            <td style="padding:12px 16px;font-size:14px;color:var(--green);font-weight:500">Brain Engine</td>
-            <td style="padding:12px 16px;font-size:14px;text-align:center;font-weight:700">$0</td>
-            <td style="padding:12px 16px;font-size:13px;color:var(--text2)" data-vi="Offline, bảo mật tuyệt đối" data-en="Offline, absolute security">Offline, bảo mật tuyệt đối</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="display:flex;gap:24px;justify-content:center;flex-wrap:wrap;margin-top:32px">
-      <div class="hero-stat fade-up" style="--i:0;background:var(--card);padding:20px 28px;border-radius:var(--radius);box-shadow:var(--shadow-sm)"><div class="num" style="color:var(--green)">60-80%</div><div class="label" data-vi="Tiết kiệm chi phí API" data-en="API cost savings">Tiết kiệm chi phí API</div></div>
-      <div class="hero-stat fade-up" style="--i:1;background:var(--card);padding:20px 28px;border-radius:var(--radius);box-shadow:var(--shadow-sm)"><div class="num" style="color:var(--green)">15</div><div class="label" data-vi="Nhà cung cấp hỗ trợ" data-en="Supported providers">Nhà cung cấp hỗ trợ</div></div>
-      <div class="hero-stat fade-up" style="--i:2;background:var(--card);padding:20px 28px;border-radius:var(--radius);box-shadow:var(--shadow-sm)"><div class="num" style="color:var(--green)">∞</div><div class="label" data-vi="Agent, mỗi agent 1 provider" data-en="Agents, each its own provider">Agent, mỗi agent 1 provider</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- PRICING -->
-
-
-<!-- SHOWCASE — Interactive 2-column layout inspired by bizino.ai -->
-<section id="showcase" style="background:var(--bg2)">
-  <div class="container">
-    <div class="section-center">
-      <div class="section-tag" data-vi="🎯 Showcase" data-en="🎯 Showcase">🎯 Showcase</div>
-      <div class="section-title" data-vi="Giao việc. Theo dõi.<br><span class='grad'>Để AI hoàn thành.</span>" data-en="Assign tasks. Monitor.<br><span class='grad'>Let AI finish.</span>">Giao việc. Theo dõi.<br><span class="grad">Để AI hoàn thành.</span></div>
-      <div class="section-desc" data-vi="Mỗi Agent là chuyên gia trong lĩnh vực của họ — click để xem quy trình xử lý." data-en="Each Agent is an expert in their field — click to see the workflow.">Mỗi Agent là chuyên gia trong lĩnh vực của họ — click để xem quy trình xử lý.</div>
-    </div>
-    <div class="showcase-layout fade-up" style="--i:0">
-      <!-- LEFT: Tabs -->
-      <div class="showcase-tabs">
-        <div class="sc-tab active" onclick="showCase(0)">
-          <div class="sc-tab-icon" style="background:rgba(16,185,129,.1);color:#10b981">⚙️</div>
-          <div>
-            <div class="sc-tab-title" data-vi="Trợ lý Email & Lịch" data-en="Email & Calendar Assistant">Trợ lý Email & Lịch</div>
-            <div class="sc-tab-desc" data-vi="Tự động hóa email, lịch, báo cáo sáng" data-en="Automate email, calendar, morning reports">Tự động hóa email, lịch, báo cáo sáng</div>
-          </div>
-        </div>
-        <div class="sc-tab" onclick="showCase(1)">
-          <div class="sc-tab-icon" style="background:rgba(59,130,246,.1);color:#3b82f6">💬</div>
-          <div>
-            <div class="sc-tab-title" data-vi="Trợ lý CSKH Zalo" data-en="Zalo Support Agent">Trợ lý CSKH Zalo</div>
-            <div class="sc-tab-desc" data-vi="Tự động trả lời, báo giá qua Zalo/FB" data-en="Auto reply, quote via Zalo/FB">Tự động trả lời, báo giá qua Zalo/FB</div>
-          </div>
-        </div>
-        <div class="sc-tab" onclick="showCase(2)">
-          <div class="sc-tab-icon" style="background:rgba(245,158,11,.1);color:#f59e0b">📋</div>
-          <div>
-            <div class="sc-tab-title" data-vi="Quản lý công việc" data-en="Task Management">Quản lý công việc</div>
-            <div class="sc-tab-desc" data-vi="Timeblock, scoring, tổng hợp cuộc họp" data-en="Timeblock, scoring, meeting summaries">Timeblock, scoring, tổng hợp cuộc họp</div>
-          </div>
-        </div>
-        <div class="sc-tab" onclick="showCase(3)">
-          <div class="sc-tab-icon" style="background:rgba(16,185,129,.1);color:#10b981">🏠</div>
-          <div>
-            <div class="sc-tab-title" data-vi="Smart Home & Sức khỏe" data-en="Smart Home & Health">Smart Home & Sức khỏe</div>
-            <div class="sc-tab-desc" data-vi="IoT, Garmin, Home Assistant, Pi" data-en="IoT, Garmin, Home Assistant, Pi">IoT, Garmin, Home Assistant, Pi</div>
-          </div>
-        </div>
-        <div class="sc-tab" onclick="showCase(4)">
-          <div class="sc-tab-icon" style="background:rgba(139,92,246,.1);color:#8b5cf6">👨‍👩‍👧</div>
-          <div>
-            <div class="sc-tab-title" data-vi="Trợ lý Gia đình" data-en="Family Assistant">Trợ lý Gia đình</div>
-            <div class="sc-tab-desc" data-vi="Thực đơn, mua sắm, lịch học con" data-en="Meal plans, shopping, kids' schedule">Thực đơn, mua sắm, lịch học con</div>
-          </div>
-        </div>
-        <div class="sc-tab" onclick="showCase(5)">
-          <div class="sc-tab-icon" style="background:rgba(16,185,129,.1);color:#10b981">🤖</div>
-          <div>
-            <div class="sc-tab-title" data-vi="Đội ngũ Multi-Agent" data-en="Multi-Agent Team">Đội ngũ Multi-Agent</div>
-            <div class="sc-tab-desc" data-vi="15+ agents, rollcall, auto-skills" data-en="15+ agents, rollcall, auto-skills">15+ agents, rollcall, auto-skills</div>
-          </div>
-        </div>
-      </div>
-      <!-- RIGHT: Preview Panel -->
-      <div class="showcase-preview">
-        <div class="sc-preview-header">
-          <div class="demo-dots"><span></span><span></span><span></span></div>
-          <span class="sc-preview-title">● BIZCLAW OS v0.3 // <span id="sc-agent-name">EMAIL ASSISTANT</span></span>
-        </div>
-        <div class="sc-preview-body" id="sc-preview-body">
-          <!-- Panel 0: Email -->
-          <div class="sc-panel active" data-panel="0">
-            <div class="sc-flow-label" data-vi="QUY TRÌNH XỬ LÝ" data-en="PROCESS FLOW">QUY TRÌNH XỬ LÝ</div>
-            <p style="font-size:14px;color:var(--text2);margin-bottom:16px" data-vi="Tự động kiểm tra email, lọc spam, quản lý lịch và gửi báo cáo sáng." data-en="Auto-check email, filter spam, manage calendar and send morning reports.">Tự động kiểm tra email, lọc spam, quản lý lịch và gửi báo cáo sáng.</p>
-            <div class="sc-steps">
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Kết nối Gmail API" data-en="Connect Gmail API">Kết nối Gmail API</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Lọc 47 spam, 12 quan trọng" data-en="Filter 47 spam, 12 important">Lọc 47 spam, 12 quan trọng</span></div>
-              <div class="sc-step active"><span class="sc-spinner"></span> <span data-vi="Đang tạo báo cáo sáng..." data-en="Creating morning report...">Đang tạo báo cáo sáng...</span></div>
-              <div class="sc-step"><span class="sc-circle"></span> <span data-vi="Gửi qua Zalo + Telegram" data-en="Send via Zalo + Telegram">Gửi qua Zalo + Telegram</span></div>
+    <!-- Demo Video Section -->
+    <section id="demo" class="py-20 bg-gray-900">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-white mb-4">Xem BizClaw hoạt động</h2>
+                <p class="text-gray-400">Chỉ 2 phút để hiểu cách BizClaw thay đổi cách bạn làm việc</p>
             </div>
-            <div class="sc-tools"><span>Gmail</span><span>Calendar</span><span>Zalo</span><span>Telegram</span></div>
-          </div>
-          <!-- Panel 1: Sales -->
-          <div class="sc-panel" data-panel="1">
-            <div class="sc-flow-label" data-vi="QUY TRÌNH XỬ LÝ" data-en="PROCESS FLOW">QUY TRÌNH XỬ LÝ</div>
-            <p style="font-size:14px;color:var(--text2);margin-bottom:16px" data-vi="Tự động tiếp nhận tin nhắn, phân tích nhu cầu và báo giá chốt đơn." data-en="Auto receive messages, analyze needs and quote for closing.">Tự động tiếp nhận tin nhắn, phân tích nhu cầu và báo giá chốt đơn.</p>
-            <div class="sc-steps">
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Khách nhắn hỏi giá sản phẩm" data-en="Customer asks for price">Khách nhắn hỏi giá sản phẩm</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Đọc file PDF kiến thức nội bộ" data-en="Read internal knowledge PDF">Đọc file PDF kiến thức nội bộ</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Trả lời khách chuẩn giọng điệu shop" data-en="Reply with brand voice">Trả lời khách chuẩn giọng điệu shop</span></div>
-              <div class="sc-step active"><span class="sc-spinner"></span> <span data-vi="Đang đẩy data vào nhóm Zalo báo cáo..." data-en="Pushing data to report group...">Đang đẩy data vào nhóm Zalo báo cáo...</span></div>
+            <div class="aspect-video bg-gray-800 rounded-2xl flex items-center justify-center border-2 border-gray-700">
+                <div class="text-center">
+                    <div class="text-6xl mb-4">▶️</div>
+                    <p class="text-gray-400">Video demo đang được chuẩn bị</p>
+                    <p class="text-gray-500 text-sm mt-2">Đăng ký để được thông báo khi có video</p>
+                </div>
             </div>
-            <div class="sc-tools"><span>Zalo OA</span><span>Knowledge Base</span><span>CRM</span></div>
-          </div>
-          <!-- Panel 2: Productivity -->
-          <div class="sc-panel" data-panel="2">
-            <div class="sc-flow-label" data-vi="QUY TRÌNH XỬ LÝ" data-en="PROCESS FLOW">QUY TRÌNH XỬ LÝ</div>
-            <p style="font-size:14px;color:var(--text2);margin-bottom:16px" data-vi="Quản lý công việc thông minh: scoring, timeblock, tổng hợp." data-en="Smart task management: scoring, timeblock, summaries.">Quản lý công việc thông minh: scoring, timeblock, tổng hợp.</p>
-            <div class="sc-steps">
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Chấm điểm 23 tasks (urgency × importance)" data-en="Score 23 tasks (urgency × importance)">Chấm điểm 23 tasks (urgency × importance)</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Timeblock vào Google Calendar" data-en="Timeblock into Google Calendar">Timeblock vào Google Calendar</span></div>
-              <div class="sc-step active"><span class="sc-spinner"></span> <span data-vi="Tóm tắt 122 slides cho meeting 2pm..." data-en="Summarizing 122 slides for 2pm meeting...">Tóm tắt 122 slides cho meeting 2pm...</span></div>
-              <div class="sc-step"><span class="sc-circle"></span> <span data-vi="Xóa 10,000 email cũ" data-en="Delete 10,000 old emails">Xóa 10,000 email cũ</span></div>
-            </div>
-            <div class="sc-tools"><span>Google Calendar</span><span>Notion</span><span>Gemini Flash</span></div>
-          </div>
-          <!-- Panel 3: Smart Home -->
-          <div class="sc-panel" data-panel="3">
-            <div class="sc-flow-label" data-vi="QUY TRÌNH XỬ LÝ" data-en="PROCESS FLOW">QUY TRÌNH XỬ LÝ</div>
-            <p style="font-size:14px;color:var(--text2);margin-bottom:16px" data-vi="Kết nối IoT, theo dõi sức khỏe, điều khiển nhà thông minh." data-en="Connect IoT, health tracking, smart home control.">Kết nối IoT, theo dõi sức khỏe, điều khiển nhà thông minh.</p>
-            <div class="sc-steps">
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Sync Garmin: HR 72bpm, Sleep 7h12m" data-en="Sync Garmin: HR 72bpm, Sleep 7h12m">Sync Garmin: HR 72bpm, Sleep 7h12m</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Bật đèn phòng khách, 24°C" data-en="Turn on living room light, 24°C">Bật đèn phòng khách, 24°C</span></div>
-              <div class="sc-step active"><span class="sc-spinner"></span> <span data-vi="Đang check camera an ninh..." data-en="Checking security cameras...">Đang check camera an ninh...</span></div>
-              <div class="sc-step"><span class="sc-circle"></span> <span data-vi="Gửi nhắc uống nước 2h/lần" data-en="Send water reminder every 2h">Gửi nhắc uống nước 2h/lần</span></div>
-            </div>
-            <div class="sc-tools"><span>Home Assistant</span><span>Garmin</span><span>Raspberry Pi</span></div>
-          </div>
-          <!-- Panel 4: Family -->
-          <div class="sc-panel" data-panel="4">
-            <div class="sc-flow-label" data-vi="QUY TRÌNH XỬ LÝ" data-en="PROCESS FLOW">QUY TRÌNH XỬ LÝ</div>
-            <p style="font-size:14px;color:var(--text2);margin-bottom:16px" data-vi="Quản lý gia đình: thực đơn, mua sắm, lịch học." data-en="Family management: meal plans, shopping, school schedule.">Quản lý gia đình: thực đơn, mua sắm, lịch học.</p>
-            <div class="sc-steps">
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Lên thực đơn thứ 2-7 (cân bằng dinh dưỡng)" data-en="Plan Mon-Sat menu (balanced nutrition)">Lên thực đơn thứ 2-7 (cân bằng dinh dưỡng)</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Danh sách mua sắm → CoopMart (kệ 3, 7, 12)" data-en="Shopping list → CoopMart (aisle 3, 7, 12)">Danh sách mua sắm → CoopMart (kệ 3, 7, 12)</span></div>
-              <div class="sc-step active"><span class="sc-spinner"></span> <span data-vi="Đang nhắc: Kiểm tra Toán con Bi ngày mai..." data-en="Reminder: Bi's Math test tomorrow...">Đang nhắc: Kiểm tra Toán con Bi ngày mai...</span></div>
-              <div class="sc-step"><span class="sc-circle"></span> <span data-vi="Dự báo: mưa → gợi ý nấu lẩu" data-en="Forecast: rain → suggest hot pot">Dự báo: mưa → gợi ý nấu lẩu</span></div>
-            </div>
-            <div class="sc-tools"><span>Notion</span><span>Weather API</span><span>Zalo</span></div>
-          </div>
-          <!-- Panel 5: Multi-Agent -->
-          <div class="sc-panel" data-panel="5">
-            <div class="sc-flow-label" data-vi="QUY TRÌNH XỬ LÝ" data-en="PROCESS FLOW">QUY TRÌNH XỬ LÝ</div>
-            <p style="font-size:14px;color:var(--text2);margin-bottom:16px" data-vi="Điều phối 15+ agents, mỗi agent có vai trò và provider riêng." data-en="Orchestrate 15+ agents, each with its own role and provider.">Điều phối 15+ agents, mỗi agent có vai trò và provider riêng.</p>
-            <div class="sc-steps">
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Rollcall: 15/15 agents online ✅" data-en="Rollcall: 15/15 agents online ✅">Rollcall: 15/15 agents online ✅</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Strategy Agent → phân tích thị trường Q1" data-en="Strategy Agent → Q1 market analysis">Strategy Agent → phân tích thị trường Q1</span></div>
-              <div class="sc-step done"><span class="sc-check">✓</span> <span data-vi="Dev Agent → ship 3 features trong đêm" data-en="Dev Agent → shipped 3 features overnight">Dev Agent → ship 3 features trong đêm</span></div>
-              <div class="sc-step active"><span class="sc-spinner"></span> <span data-vi="Marketing Agent đang tạo kế hoạch content..." data-en="Marketing Agent creating content plan...">Marketing Agent đang tạo kế hoạch content...</span></div>
-            </div>
-            <div class="sc-tools"><span>Claude</span><span>Gemini</span><span>DeepSeek</span><span>Ollama</span><span>Groq</span></div>
-          </div>
         </div>
-      </div>
-    </div>
-  </div>
-</section>
+    </section>
 
-<!-- TECHNOLOGY -->
-<section id="tech">
-  <div class="container">
-    <div class="section-center">
-      <div class="section-tag" data-vi="⚙️ CÔNG NGHỆ" data-en="⚙️ TECHNOLOGY">⚙️ CÔNG NGHỆ</div>
-      <div class="section-title" data-vi="Xây dựng bằng công nghệ<br>hàng đầu" data-en="Built with leading<br>technology">Xây dựng bằng công nghệ<br>hàng đầu</div>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:800px;margin:0 auto">
-      <div class="provider-pill">🦀 Rust</div>
-      <div class="provider-pill">🏎️ Tokio</div>
-      <div class="provider-pill">🌐 Axum</div>
-      <div class="provider-pill">🗄️ SQLite</div>
-      <div class="provider-pill">🐘 PostgreSQL</div>
-      <div class="provider-pill">🤖 GGUF</div>
-      <div class="provider-pill">🚀 SIMD</div>
-      <div class="provider-pill">🔐 JWT + bcrypt</div>
-      <div class="provider-pill">🔌 WebSocket</div>
-      <div class="provider-pill">🔗 MCP Protocol</div>
-      <div class="provider-pill">🐳 Docker</div>
-      <div class="provider-pill">📱 Android (Kotlin/Compose)</div>
-      <div class="provider-pill">♿ Accessibility Service</div>
-      <div class="provider-pill">📦 18 Crates</div>
-    </div>
-  </div>
-</section>
-
-
-<!-- DEMO ACCESS -->
-<section id="demo-access" style="background:var(--bg)">
-  <div class="container">
-    <div class="section-center">
-      <div class="section-tag" data-vi="🧪 THỬ NGHIỆM" data-en="🧪 TRY IT">🧪 THỬ NGHIỆM</div>
-      <div class="section-title" data-vi="Trải nghiệm ngay<br>không cần cài đặt" data-en="Try it now<br>no installation needed">Trải nghiệm ngay<br>không cần cài đặt</div>
-      <div class="section-desc" data-vi="Demo server chạy trên VPS thật — dành cho cộng đồng học tập, nghiên cứu và thử nghiệm trước khi tự host." data-en="Demo server running on real VPS — for community learning, research and experimentation before self-hosting.">Demo server chạy trên VPS thật — dành cho cộng đồng học tập, nghiên cứu và thử nghiệm trước khi tự host.</div>
-    </div>
-    <div style="max-width:580px;margin:0 auto">
-      <div style="background:var(--card);border:2px solid var(--green);border-radius:var(--radius-xl);padding:36px;box-shadow:var(--shadow-xl);position:relative;overflow:hidden" class="fade-up">
-        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:var(--grad-teal)"></div>
-        <div style="text-align:center;margin-bottom:24px">
-          <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.08);padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;color:var(--green2);text-transform:uppercase;letter-spacing:1px" data-vi="🎓 Mục đích học tập & thử nghiệm" data-en="🎓 For learning & experimentation">🎓 Mục đích học tập & thử nghiệm</div>
-        </div>
-        <div style="display:grid;gap:14px;margin-bottom:24px">
-          <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--bg2);border-radius:14px;border:1px solid var(--border-light)">
-            <span style="font-size:20px">🌐</span>
-            <div>
-              <div style="font-size:12px;color:var(--muted);font-weight:500" data-vi="Dashboard" data-en="Dashboard">Dashboard</div>
-              <a href="https://apps.bizclaw.vn" target="_blank" style="font-size:15px;font-weight:600;color:var(--green2);text-decoration:none">apps.bizclaw.vn</a>
+    <!-- Features Section -->
+    <section id="features" class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Tại sao doanh nghiệp <span class="gradient-text">tin dùng</span> BizClaw?</h2>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Tất cả trong một: AI Agent thông minh, đa kênh, tự động hóa hoàn toàn
+                </p>
             </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--bg2);border-radius:14px;border:1px solid var(--border-light)">
-            <span style="font-size:20px">📧</span>
-            <div>
-              <div style="font-size:12px;color:var(--muted);font-weight:500">Email</div>
-              <code style="font-size:15px;font-weight:600;color:var(--text);background:none;padding:0">admin@bizclaw.vn</code>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border hover:shadow-xl transition">
+                    <div class="text-4xl mb-4">🤖</div>
+                    <h3 class="text-xl font-bold mb-3">AI Agent Thông Minh</h3>
+                    <p class="text-gray-600">Hiểu ý khách, trả lời tự nhiên bằng tiếng Việt. Học từ mỗi cuộc trò chuyện để phục vụ tốt hơn.</p>
+                </div>
+                
+                <!-- Feature 2 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border hover:shadow-xl transition">
+                    <div class="text-4xl mb-4">💬</div>
+                    <h3 class="text-xl font-bold mb-3">12+ Kênh Kết nối</h3>
+                    <p class="text-gray-600">Zalo, Telegram, Facebook, Instagram, TikTok, WhatsApp... Tất cả trong một dashboard.</p>
+                </div>
+                
+                <!-- Feature 3 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border hover:shadow-xl transition">
+                    <div class="text-4xl mb-4">✍️</div>
+                    <h3 class="text-xl font-bold mb-3">Tự Viết Content</h3>
+                    <p class="text-gray-600">Tạo bài viết bán hàng, quảng cáo, caption chỉ trong vài giây. Có emoji, hashtags.</p>
+                </div>
+                
+                <!-- Feature 4 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border hover:shadow-xl transition">
+                    <div class="text-4xl mb-4">⏰</div>
+                    <h3 class="text-xl font-bold mb-3">24/7 Không Nghỉ</h3>
+                    <p class="text-gray-600">Trả lời khách lúc 3h sáng, ngày lễ, Tết. Không cần thuê nhân viên offline.</p>
+                </div>
+                
+                <!-- Feature 5 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border hover:shadow-xl transition">
+                    <div class="text-4xl mb-4">🔒</div>
+                    <h3 class="text-xl font-bold mb-3">Bảo Mật Tuyệt đối</h3>
+                    <p class="text-gray-600">AES-256 encryption, vault riêng, prompt injection detection. Dữ liệu 100% của bạn.</p>
+                </div>
+                
+                <!-- Feature 6 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border hover:shadow-xl transition">
+                    <div class="text-4xl mb-4">🔌</div>
+                    <h3 class="text-xl font-bold mb-3">18+ AI Providers</h3>
+                    <p class="text-gray-600">OpenAI, Anthropic, Gemini, DeepSeek, Groq... Tự động chọn model tốt nhất, giá rẻ nhất.</p>
+                </div>
             </div>
-          </div>
-          <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--bg2);border-radius:14px;border:1px solid var(--border-light)">
-            <span style="font-size:20px">🔑</span>
-            <div>
-              <div style="font-size:12px;color:var(--muted);font-weight:500" data-vi="Mật khẩu" data-en="Password">Mật khẩu</div>
-              <code style="font-size:15px;font-weight:600;color:var(--text);background:none;padding:0">BizClaw@Demo2026</code>
+        </div>
+    </section>
+
+    <!-- Channels Section -->
+    <section id="channels" class="py-20 bg-gray-900">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold text-white mb-4">Kết nối <span class="gradient-text">mọi kênh</span></h2>
+                <p class="text-xl text-gray-400">BizClaw hỗ trợ tất cả các kênh phổ biến tại Việt Nam</p>
             </div>
-          </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">💬</div>
+                    <div class="font-semibold">Zalo OA</div>
+                    <div class="text-sm text-gray-400">Official Account</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">📱</div>
+                    <div class="font-semibold">Telegram</div>
+                    <div class="text-sm text-gray-400">Bot API</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">👥</div>
+                    <div class="font-semibold">Facebook</div>
+                    <div class="text-sm text-gray-400">Page / Messenger</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">📸</div>
+                    <div class="font-semibold">Instagram</div>
+                    <div class="text-sm text-gray-400">DM / Comments</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">🎵</div>
+                    <div class="font-semibold">TikTok</div>
+                    <div class="text-sm text-gray-400">Comments / DM</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">🛒</div>
+                    <div class="font-semibold">Shopee</div>
+                    <div class="text-sm text-gray-400">Chat / Orders</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">💼</div>
+                    <div class="font-semibold">Slack</div>
+                    <div class="text-sm text-gray-400">Team Chat</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">🎮</div>
+                    <div class="font-semibold">Discord</div>
+                    <div class="text-sm text-gray-400">Server / DM</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">📧</div>
+                    <div class="font-semibold">Email</div>
+                    <div class="text-sm text-gray-400">IMAP/SMTP</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">🌐</div>
+                    <div class="font-semibold">Webhook</div>
+                    <div class="text-sm text-gray-400">Custom API</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">💬</div>
+                    <div class="font-semibold">WhatsApp</div>
+                    <div class="text-sm text-gray-400">Business</div>
+                </div>
+                <div class="bg-gray-800 p-6 rounded-xl text-center hover:bg-gray-700 transition">
+                    <div class="text-4xl mb-2">➕</div>
+                    <div class="font-semibold">Thêm...</div>
+                    <div class="text-sm text-gray-400">Custom kênh</div>
+                </div>
+            </div>
         </div>
-        <a href="https://apps.bizclaw.vn" target="_blank" class="btn-green" style="width:100%;justify-content:center;padding:14px;font-size:16px;border-radius:14px" data-vi="🚀 Đăng nhập Demo ngay" data-en="🚀 Login to Demo now">🚀 Đăng nhập Demo ngay</a>
-        <div style="margin-top:20px;padding:14px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:12px">
-          <div style="font-size:12px;color:var(--text2);line-height:1.7">
-            <span style="font-weight:600;color:#d97706" data-vi="⚠️ Lưu ý:" data-en="⚠️ Notes:">⚠️ Lưu ý:</span>
-            <span data-vi="Tài khoản Admin dùng chung · Không nhập API Key thật · Reset định kỳ" data-en="Shared Admin account · Don't enter real API Keys · Periodic reset"> Tài khoản Admin dùng chung · Không nhập API Key thật · Reset định kỳ</span>
-          </div>
+    </section>
+
+    <!-- Use Cases -->
+    <section class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Phù hợp với <span class="gradient-text">mọi ngành</span></h2>
+                <p class="text-xl text-gray-600">Từ quán cafe nhỏ đến doanh nghiệp lớn</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="bg-gradient-to-br from-purple-500 to-pink-500 p-6 rounded-2xl text-white">
+                    <div class="text-3xl mb-3">🛒</div>
+                    <h3 class="text-lg font-bold mb-2">Bán lẻ Online</h3>
+                    <p class="text-sm opacity-90">Shopee, TikTok Shop, Facebook Marketplace</p>
+                    <p class="text-sm mt-3 font-semibold">Tự trả lời hỏi về sản phẩm, size, giá</p>
+                </div>
+                <div class="bg-gradient-to-br from-orange-500 to-red-500 p-6 rounded-2xl text-white">
+                    <div class="text-3xl mb-3">🍜</div>
+                    <h3 class="text-lg font-bold mb-2">F&B - Nhà hàng</h3>
+                    <p class="text-sm opacity-90">Quán cafe, nhà hàng, quán ăn</p>
+                    <p class="text-sm mt-3 font-semibold">Đặt bàn, gửi menu, xác nhận order</p>
+                </div>
+                <div class="bg-gradient-to-br from-blue-500 to-cyan-500 p-6 rounded-2xl text-white">
+                    <div class="text-3xl mb-3">🏨</div>
+                    <h3 class="text-lg font-bold mb-2">Khách sạn - Homestay</h3>
+                    <p class="text-sm opacity-90">Nhà nghỉ, resort, Airbnb</p>
+                    <p class="text-sm mt-3 font-semibold">Booking tự động, check-in/out</p>
+                </div>
+                <div class="bg-gradient-to-br from-green-500 to-emerald-500 p-6 rounded-2xl text-white">
+                    <div class="text-3xl mb-3">💼</div>
+                    <h3 class="text-lg font-bold mb-2">Dịch vụ B2B</h3>
+                    <p class="text-sm opacity-90">Agency, tư vấn, bất động sản</p>
+                    <p class="text-sm mt-3 font-semibold">Báo giá tự động, lịch hẹn</p>
+                </div>
+            </div>
         </div>
-      </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section id="quickstart" class="py-20 bg-gradient-to-br from-purple-900 to-indigo-900">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-white mb-4">Bắt đầu trong <span class="text-yellow-400">5 phút</span></h2>
+                <p class="text-xl text-gray-300">Không cần biết lập trình. Không cần server.</p>
+            </div>
+            
+            <div class="bg-gray-900 rounded-2xl p-8 font-mono text-sm">
+                <div class="text-gray-400 mb-4"># 1. Tải về (macOS / Linux / Windows)</div>
+                <div class="bg-gray-800 rounded-lg p-4 mb-6 overflow-x-auto">
+                    <code class="text-green-400">curl -fsSL https://bizclaw.vn/install.sh | bash</code>
+                </div>
+                
+                <div class="text-gray-400 mb-4"># 2. Khởi động</div>
+                <div class="bg-gray-800 rounded-lg p-4 mb-6 overflow-x-auto">
+                    <code class="text-green-400">./bizclaw-desktop</code>
+                </div>
+                
+                <div class="text-gray-400 mb-4"># 3. Kết nối Zalo / Telegram</div>
+                <div class="bg-gray-800 rounded-lg p-4 mb-6 overflow-x-auto">
+                    <code class="text-green-400">Settings → Channels → Zalo → Scan QR</code>
+                </div>
+                
+                <div class="text-gray-400 mb-4"># Xong! Gửi tin nhắn cho Bot</div>
+                <div class="bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-4">
+                    <p class="text-yellow-300">💡 <strong>Tip:</strong> Gặp vấn đề? Xem <a href="#" class="underline">hướng dẫn chi tiết</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-20">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Giá cả <span class="gradient-text">đơn giản</span></h2>
+                <p class="text-xl text-gray-600">Bắt đầu miễn phí. Nâng cấp khi cần.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <!-- Free -->
+                <div class="bg-white p-8 rounded-2xl border-2 hover:border-purple-300 transition">
+                    <h3 class="text-xl font-bold mb-2">Miễn phí</h3>
+                    <p class="text-gray-500 mb-6">Dùng thử không giới hạn</p>
+                    <div class="text-4xl font-bold mb-6">0đ<span class="text-lg font-normal text-gray-500">/tháng</span></div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> 1 Kênh</li>
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> 100 messages/tháng</li>
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> 1 AI Agent</li>
+                        <li class="flex items-center gap-2"><span class="text-gray-300">✗</span> <span class="text-gray-400">Content generation</span></li>
+                    </ul>
+                    <a href="#" class="block text-center bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200">Bắt đầu miễn phí</a>
+                </div>
+                
+                <!-- Pro -->
+                <div class="bg-gradient-to-br from-purple-600 to-indigo-600 p-8 rounded-2xl text-white relative transform scale-105 shadow-2xl">
+                    <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black text-sm font-bold px-4 py-1 rounded-full">PHỔ BIẾN NHẤT</div>
+                    <h3 class="text-xl font-bold mb-2">Pro</h3>
+                    <p class="opacity-80 mb-6">Cho doanh nghiệp growing</p>
+                    <div class="text-4xl font-bold mb-6">499K<span class="text-lg font-normal opacity-80">/tháng</span></div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> 5 Kênh</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> 5,000 messages/tháng</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> 5 AI Agents</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Content generation</li>
+                        <li class="flex items-center gap-2"><span class="text-green-400">✓</span> Priority support</li>
+                    </ul>
+                    <a href="#" class="block text-center bg-white text-purple-600 py-3 rounded-lg font-semibold hover:bg-gray-100">Mua ngay</a>
+                </div>
+                
+                <!-- Enterprise -->
+                <div class="bg-white p-8 rounded-2xl border-2 hover:border-purple-300 transition">
+                    <h3 class="text-xl font-bold mb-2">Enterprise</h3>
+                    <p class="text-gray-500 mb-6">Cho team lớn</p>
+                    <div class="text-4xl font-bold mb-6">1.99M<span class="text-lg font-normal text-gray-500">/tháng</span></div>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Unlimited channels</li>
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Unlimited messages</li>
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Unlimited agents</li>
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Custom integration</li>
+                        <li class="flex items-center gap-2"><span class="text-green-500">✓</span> Dedicated support</li>
+                    </ul>
+                    <a href="#" class="block text-center bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200">Liên hệ</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="py-20 bg-gray-100">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Khách hàng <span class="gradient-text">nói gì</span></h2>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="bg-white p-8 rounded-2xl shadow">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4">★★★★★</div>
+                    <p class="text-gray-600 mb-6">"Trước tôi phải thuê 2 nhân viên chăm sóc Zalo. Giờ BizClaw làm hết, tiết kiệm 15 triệu/tháng."</p>
+                    <div class="font-semibold">Chị Lan</div>
+                    <div class="text-sm text-gray-500">Chủ shop thời trang, TP.HCM</div>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4">★★★★★</div>
+                    <p class="text-gray-600 mb-6">"Khách đặt bàn tự động lúc 11h đêm. Sáng hôm sau tôi chỉ cần xác nhận. Tiện lắm!"</p>
+                    <div class="font-semibold">Anh Tuấn</div>
+                    <div class="text-sm text-gray-500">Chủ nhà hàng, Đà Nẵng</div>
+                </div>
+                <div class="bg-white p-8 rounded-2xl shadow">
+                    <div class="flex items-center gap-1 text-yellow-400 mb-4">★★★★★</div>
+                    <p class="text-gray-600 mb-6">"Tôi bán homestay, khách hỏi phòng liên tục. BizClaw trả lời nhanh, đúng thông tin, không cần tôi cầm điện thoại."</p>
+                    <div class="font-semibold">Chị Hương</div>
+                    <div class="text-sm text-gray-500">Chủ homestay, Vũng Tàu</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 gradient-bg">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-4xl font-bold text-white mb-6">Sẵn sàng có <span class="text-yellow-300">nhân viên AI</span> riêng?</h2>
+            <p class="text-xl text-white/80 mb-8">Dùng thử miễn phí 14 ngày. Không cần credit card.</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#quickstart" class="bg-white text-purple-600 px-8 py-4 rounded-xl text-lg font-semibold hover:bg-gray-100 shadow-lg">
+                    🚀 Bắt đầu ngay
+                </a>
+                <a href="https://github.com/nguyenduchoai/bizclaw-cloud" class="border-2 border-white text-white px-8 py-4 rounded-xl text-lg font-semibold hover:bg-white/10">
+                    ⭐ Star trên GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-2xl">🦞</span>
+                        <span class="text-xl font-bold text-white">BizClaw</span>
+                    </div>
+                    <p class="text-sm">Trợ lý AI 24/7 cho doanh nghiệp Việt Nam.</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-white mb-4">Sản phẩm</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="hover:text-white">Tính năng</a></li>
+                        <li><a href="#pricing" class="hover:text-white">Bảng giá</a></li>
+                        <li><a href="#" class="hover:text-white">API</a></li>
+                        <li><a href="#" class="hover:text-white">Integrations</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-white mb-4">Tài liệu</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" class="hover:text-white">Getting Started</a></li>
+                        <li><a href="#" class="hover:text-white">Documentation</a></li>
+                        <li><a href="#" class="hover:text-white">API Reference</a></li>
+                        <li><a href="#" class="hover:text-white">Examples</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-white mb-4">Cộng đồng</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="https://github.com/nguyenduchoai/bizclaw-cloud" class="hover:text-white">GitHub</a></li>
+                        <li><a href="#" class="hover:text-white">Discord</a></li>
+                        <li><a href="#" class="hover:text-white">Twitter</a></li>
+                        <li><a href="#" class="hover:text-white">Facebook</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
+                <p class="text-sm">© 2024 BizClaw. All rights reserved.</p>
+                <div class="flex gap-4 mt-4 md:mt-0">
+                    <a href="#" class="hover:text-white">Privacy</a>
+                    <a href="#" class="hover:text-white">Terms</a>
+                    <a href="#" class="hover:text-white">Contact</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Live Demo Modal -->
+    <div id="demo-modal" class="fixed inset-0 bg-black/80 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h3 class="text-xl font-bold">Live Demo</h3>
+                <button onclick="closeDemo()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+            </div>
+            <div class="p-6">
+                <div class="bg-gray-100 rounded-xl p-8 text-center">
+                    <p class="text-gray-600">Đang tải demo...</p>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-</section>
 
-<!-- CTA -->
-<section id="cta">
-  <div class="container">
-    <div class="cta-box fade-up">
-      <div class="section-tag">🚀</div>
-      <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-1.5px;margin-bottom:16px" data-vi="Sẵn sàng thử nghiệm?" data-en="Ready to experiment?">Sẵn sàng thử nghiệm?</h2>
-      <p style="font-size:17px;color:var(--text2);max-width:480px;margin:0 auto 32px" data-vi="Bắt đầu miễn phí ngay hôm nay. Clone, build, và vibe coding!" data-en="Start for free today. Clone, build, and vibe code!">Bắt đầu miễn phí ngay hôm nay. Clone, build, và vibe coding!</p>
-      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
-        <a href="#" onclick="goLogin()" class="btn-green" data-vi="🚀 Dùng thử Demo" data-en="🚀 Try Demo">🚀 Dùng thử Demo</a>
-        <a href="https://github.com/nguyenduchoai/bizclaw" target="_blank" class="btn-outline-green" data-vi="⭐ Xem mã nguồn" data-en="⭐ View source">⭐ Xem mã nguồn</a>
-      </div>
-    </div>
-  </div>
-</section>
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
 
-<!-- FOOTER -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-brand">
-      <a href="#" class="logo" style="margin-bottom:12px">
-        <div class="logo-icon">⚡</div>
-        <span class="logo-text">BizClaw</span>
-      </a>
-      <p data-vi="Nền tảng AI Agent mã nguồn mở. Dự án tự học, thử nghiệm AI và vibe coding với Rust." data-en="Open source AI Agent platform. A self-learning, AI experimentation and vibe coding project with Rust.">Nền tảng AI Agent mã nguồn mở. Dự án tự học, thử nghiệm AI và vibe coding với Rust.</p>
-    </div>
-    <div class="footer-links">
-      <div class="footer-col">
-        <h4>Dự án</h4>
-        <a href="#features">Tính năng</a>
-        <a href="#platforms">Ứng dụng</a>
-        <a href="#demo-access">Demo</a>
-        <a href="/hub">🛒 Hub</a>
-      <a href="https://github.com/nguyenduchoai/bizclaw" target="_blank">GitHub</a>
-      </div>
-      <div class="footer-col">
-        <h4>Cộng đồng</h4>
-        <a href="https://github.com/nguyenduchoai/bizclaw/issues" target="_blank">Báo lỗi</a>
-        <a href="https://github.com/nguyenduchoai/bizclaw/discussions" target="_blank">Thảo luận</a>
-        <a href="https://www.facebook.com/bizclaw.vn" target="_blank">Facebook</a>
-      </div>
-    </div>
-  </div>
-  <div class="footer-bottom">
-    <span>© 2026 BizClaw · MIT License</span>
-    <div class="footer-tech">
-      <span>Rust</span>
-      <span>Axum</span>
-      <span>15+ AI Providers</span>
-      <span>Zalo Native</span>
-    </div>
-  </div>
-</footer>
+        function openDemo() {
+            document.getElementById('demo-modal').classList.remove('hidden');
+            document.getElementById('demo-modal').classList.add('flex');
+        }
 
-<script>
-// Scroll nav
-window.addEventListener('scroll',()=>{
-  document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>50);
-});
+        function closeDemo() {
+            document.getElementById('demo-modal').classList.add('hidden');
+            document.getElementById('demo-modal').classList.remove('flex');
+        }
 
-// Intersection Observer for animations
-const obs=new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');obs.unobserve(e.target)}});
-},{threshold:.1,rootMargin:'0px 0px -60px 0px'});
-document.querySelectorAll('.fade-up').forEach(el=>obs.observe(el));
-
-// Language toggle
-let lang='vi';
-function toggleLang(){
-  lang=lang==='vi'?'en':'vi';
-  document.querySelectorAll('[data-vi]').forEach(el=>{
-    if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'){el.placeholder=el.getAttribute('data-'+lang)||el.placeholder}
-    else{el.innerHTML=el.getAttribute('data-'+lang)||el.innerHTML}
-  });
-  document.querySelector('.btn-ghost').textContent=lang==='vi'?'🌐 EN':'🌐 VI';
-}
-
-// Login redirect
-function goLogin(){
-  const host=location.hostname;
-  if(host.includes('bizclaw.vn'))location.href='https://apps.bizclaw.vn/admin';
-  else if(host.includes('viagent.vn'))location.href='https://apps.viagent.vn/admin';
-  else location.href='/admin';
-}
-
-// Contact order
-function contactOrder(plan){
-  const msg=encodeURIComponent('Xin chào! Tôi muốn đăng ký gói '+plan+' trên BizClaw.');
-  window.open('https://zalo.me/0888468988?text='+msg,'_blank');
-}
-
-// Showcase tab switching
-const scAgentNames=['EMAIL ASSISTANT','ZALO SALES AGENT','TASK MANAGER','SMART HOME','FAMILY AGENT','MULTI-AGENT TEAM'];
-function showCase(idx){
-  document.querySelectorAll('.sc-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
-  document.querySelectorAll('.sc-panel').forEach(p=>p.classList.remove('active'));
-  const panel=document.querySelector('.sc-panel[data-panel="'+idx+'"]');
-  if(panel)panel.classList.add('active');
-  const name=document.getElementById('sc-agent-name');
-  if(name)name.textContent=scAgentNames[idx]||'AGENT';
-}
-
-// Mouse-follow glow on feature cards
-document.querySelectorAll('.feature-card').forEach(card=>{
-  card.addEventListener('mousemove',e=>{
-    const rect=card.getBoundingClientRect();
-    card.style.setProperty('--mouse-x',((e.clientX-rect.left)/rect.width*100)+'%');
-    card.style.setProperty('--mouse-y',((e.clientY-rect.top)/rect.height*100)+'%');
-  });
-});
-
-// Parallax hero glow on scroll
-window.addEventListener('scroll',()=>{
-  const s=window.scrollY;
-  const g1=document.querySelector('.hero-glow-1');
-  const g2=document.querySelector('.hero-glow-2');
-  if(g1)g1.style.transform=`translateY(${s*.15}px)`;
-  if(g2)g2.style.transform=`translateY(${s*.1}px)`;
-},{passive:true});
-
-// Animate numbers counting up
-function animateCounters(){
-  document.querySelectorAll('.hero-stat .num').forEach(el=>{
-    const text=el.textContent;
-    const match=text.match(/(\d+)/);
-    if(!match)return;
-    const target=parseInt(match[1]);
-    const suffix=text.replace(match[0],'');
-    const prefix=text.substring(0,text.indexOf(match[0]));
-    let current=0;
-    const duration=1500;
-    const step=Math.ceil(target/60);
-    const timer=setInterval(()=>{
-      current+=step;
-      if(current>=target){current=target;clearInterval(timer)}
-      el.textContent=prefix+current+suffix;
-    },duration/60);
-  });
-}
-
-// Run counters when hero section is visible
-const heroObs=new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting){animateCounters();heroObs.unobserve(e.target)}
-  });
-},{threshold:.3});
-const heroEl=document.querySelector('.hero-stats');
-if(heroEl)heroObs.observe(heroEl);
-
-// Smooth reveal for sections on scroll
-const sectionObs=new IntersectionObserver((entries)=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting){
-      e.target.style.opacity='1';
-      e.target.style.transform='translateY(0)';
-    }
-  });
-},{threshold:.05,rootMargin:'0px 0px -40px 0px'});
-document.querySelectorAll('section').forEach(s=>{
-  s.style.opacity='0';s.style.transform='translateY(20px)';
-  s.style.transition='opacity .8s ease, transform .8s ease';
-  sectionObs.observe(s);
-});
-// Make hero visible immediately
-const heroSection=document.querySelector('.hero');
-if(heroSection){heroSection.style.opacity='1';heroSection.style.transform='none'}
-</script>
+        // Close modal on escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeDemo();
+        });
+    </script>
 </body>
 </html>
