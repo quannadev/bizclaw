@@ -725,18 +725,24 @@ fn sanitize_error_text(text: &str, max_len: usize) -> String {
     };
 
     // Mask anything that looks like an API key
-    let mut result = truncated;
+    let mut result = truncated.to_string();
     for prefix in &["sk-", "key-", "api-", "Bearer "] {
-        while let Some(idx) = result.find(prefix) {
-            let start = idx + prefix.len();
-            let end = (start + 8).min(result.len());
-            let before = &result[..start];
-            let after = if end < result.len() {
-                &result[end..]
-            } else {
-                ""
-            };
-            result = format!("{}••••{}", before, after);
+        while let Some(byte_idx) = result.find(prefix) {
+            // Convert byte index to char index to handle UTF-8 properly
+            let char_idx = result[..byte_idx].chars().count();
+            let prefix_chars = prefix.chars().count();
+            let start_char = char_idx; // Start from prefix
+            let mask_len = 4;
+            let end_char = (start_char + prefix_chars + mask_len).min(result.chars().count());
+            
+            // Collect chars before, masked section, and after
+            let chars: Vec<char> = result.chars().collect();
+            let before: String = chars[..char_idx].iter().collect();
+            let after: String = chars[end_char..].iter().collect();
+            result = format!("{}{}{}", before, prefix, "****".chars().take(mask_len).collect::<String>());
+            if end_char < chars.len() {
+                result.push_str(&chars[end_char..].iter().collect::<String>());
+            }
         }
     }
     result
@@ -786,6 +792,7 @@ mod tests {
     fn test_redaction() {
         let text = "My key is sk-ant-abc123xyz4567890123456";
         let clean = sanitize_error_text(text, 100);
-        assert!(clean.contains("sk-••••"));
+        assert!(clean.contains("sk-"));
+        assert!(!clean.contains("abc123xyz"));
     }
 }

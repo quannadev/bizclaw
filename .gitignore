@@ -27,6 +27,7 @@ credentials.json
 .agents/
 .gemini/
 plans/
+.trae/
 
 # Internal DEV files — NOT for public repo
 GEMINI.md
