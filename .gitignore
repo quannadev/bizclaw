@@ -1,10 +1,14 @@
 # Build
 /target
+*.exe
+*.dSYM
 
 # Editor
 *.swp
 *.swo
+*~
 .DS_Store
+.vscode/settings.json
 
 # Environment & secrets
 .env
@@ -23,11 +27,8 @@
 credentials.json
 
 # Non-production — AI dev toolkit (local only)
-.agent/
-.agents/
-.gemini/
-plans/
-.trae/
+/.plans/
+/data/agent-team/
 
 # Internal DEV files — NOT for public repo
 GEMINI.md
@@ -35,11 +36,8 @@ GETTING_STARTED.md
 update.sh
 
 # Deploy & infra scripts — contain VPS IP, credentials
-deploy-landing.sh
 deploy*.sh
-scripts/
 !scripts/install.sh
-!scripts/bump-version.sh
 
 # Production infrastructure — NEVER commit to public
 deploy/nginx/
@@ -47,31 +45,8 @@ docker-compose.prod.yml
 
 # OS
 Thumbs.db
-mission-control/
 
-# Sensitive deploy workflow (credentials)
-_agents/workflows/deploy.md
-dist/
-Bizino-Dev_Kit-main/
-*.apk
-/dashboard/
-.env.local
-
-# Local Git tokens and credentials
-.git/.git_token
-.git/.gh_token
-
-# Security sensitive
-*.pem
-*.key
-*.crt
-*.p12
-*.pfx
-
-# Audit reports
-cargo-audit-report.*
-trivy-results.*
-
-# Coverage reports with potential secrets
-coverage/
-*.lcov
+# Temporary files
+*.tmp
+*.bak
+*.backup
