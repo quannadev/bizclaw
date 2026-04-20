@@ -1,194 +1,517 @@
-// GalleryPage — extracted from app.js for modularity
-// Uses window globals from index.html (Preact + HTM)
-const { h, html, useState, useEffect, useContext, useCallback, useRef, useMemo } = window;
-import { t, authFetch, authHeaders, StatsCard } from '/static/dashboard/shared.js';
+// BizClaw Agent Templates Gallery — Pre-built workflows for popular use cases
+const { html, useState, useEffect, useCallback } = window;
+import { authFetch, t } from '/static/dashboard/shared.js';
 
-function GalleryPage({ lang }) {
-  const { showToast } = useContext(AppContext);
-  const [allSkills,setAllSkills] = useState([]);
-  const [loading,setLoading] = useState(true);
-  const [selectedCat,setSelectedCat] = useState(null);
-  const [selectedSkill,setSelectedSkill] = useState(null);
-  const [cloning,setCloning] = useState(false);
-  const [search,setSearch] = useState('');
-  const [showForm,setShowForm] = useState(false);
-  const [gForm,setGForm] = useState({name:'',icon:'🤖',cat:'productivity',desc:'',role:'assistant',prompt:''});
+const TEMPLATES = [
+  {
+    id: 'zalo-support',
+    icon: '💬',
+    name: 'Zalo Support Agent',
+    description: 'Trả lời tin nhắn Zalo tự động 24/7 với khả năng chuyển human khi cần',
+    category: 'customer-service',
+    tags: ['Zalo', 'Support', '24/7', 'Vietnam'],
+    setup: '5 phút',
+    difficulty: 'easy',
+    agents: [
+      { name: 'Support Agent', role: 'primary', model: 'gemini/gemini-2.0-flash' }
+    ],
+    channels: ['zalo'],
+    tools: ['zalo_tool', 'knowledge_search', 'product_lookup'],
+    workflow: 'sequential',
+    config: {
+      system_prompt: 'Bạn là nhân viên chăm sóc khách hàng của cửa hàng. Trả lời lịch sự, nhanh chóng. Nếu câu hỏi phức tạp hoặc khách hàng yêu cầu nói chuyện với người, chuyển sang human handoff.',
+      response_tone: 'friendly',
+      max_tokens: 500
+    },
+    featured: true
+  },
+  {
+    id: 'facebook-sales',
+    icon: '📘',
+    name: 'Facebook Sales Bot',
+    description: 'Tự động trả lời tin nhắn Facebook, trả lời câu hỏi về sản phẩm và giá cả',
+    category: 'sales',
+    tags: ['Facebook', 'Sales', 'E-commerce', 'Products'],
+    setup: '10 phút',
+    difficulty: 'easy',
+    agents: [
+      { name: 'Sales Agent', role: 'primary', model: 'openai/gpt-4o-mini' }
+    ],
+    channels: ['facebook'],
+    tools: ['product_lookup', 'price_check', 'inventory_status'],
+    workflow: 'sequential',
+    config: {
+      system_prompt: 'Bạn là nhân viên bán hàng chuyên nghiệp. Tư vấn sản phẩm, báo giá, và hướng dẫn đặt hàng.',
+      auto_replies: ['Chào bạn!', 'Cảm ơn đã liên hệ', 'Sản phẩm này đang có khuyến mãi']
+    },
+    featured: true
+  },
+  {
+    id: 'restaurant-booking',
+    icon: '🍜',
+    name: 'Restaurant Booking Agent',
+    description: 'Đặt bàn tự động, gửi menu hàng ngày, xác nhận đơn hàng',
+    category: 'booking',
+    tags: ['Restaurant', 'Booking', 'F&B', 'Zalo'],
+    setup: '15 phút',
+    difficulty: 'medium',
+    agents: [
+      { name: 'Booking Agent', role: 'primary', model: 'gemini/gemini-2.0-flash' },
+      { name: 'Reminder Agent', role: 'scheduler', model: 'gemini/gemini-2.0-flash' }
+    ],
+    channels: ['zalo'],
+    tools: ['calendar', 'menu_lookup', 'booking_create', 'notification_send'],
+    workflow: 'conditional',
+    config: {
+      system_prompt: 'Bạn là lễ tân nhà hàng. Tiếp nhận đặt bàn, xác nhận thông tin, gửi nhắc nhở trước giờ đến.',
+      working_hours: '09:00-22:00',
+      languages: ['vi', 'en']
+    },
+    featured: false
+  },
+  {
+    id: 'hotel-booking',
+    icon: '🏨',
+    name: 'Hotel Concierge Agent',
+    description: 'Xác nhận booking từ Booking.com, Agoda, chăm sóc khách 24/7',
+    category: 'booking',
+    tags: ['Hotel', 'Concierge', 'Booking', 'Multi-channel'],
+    setup: '20 phút',
+    difficulty: 'medium',
+    agents: [
+      { name: 'Concierge', role: 'primary', model: 'gemini/gemini-2.0-flash' },
+      { name: 'Review Manager', role: 'secondary', model: 'openai/gpt-4o-mini' }
+    ],
+    channels: ['zalo', 'telegram', 'webhook'],
+    tools: ['booking_sync', 'room_availability', 'checkout_reminder', 'review_request'],
+    workflow: 'fan-out',
+    config: {
+      system_prompt: 'Bạn là quản gia khách sạn cao cấp. Chào đón khách, giải đáp thắc mắc, hỗ trợ 24/7.',
+      sync_platforms: ['booking.com', 'agoda', 'airbnb']
+    },
+    featured: false
+  },
+  {
+    id: 'lead-qualification',
+    icon: '🎯',
+    name: 'Lead Qualification Pipeline',
+    description: 'Sàng lọc và phân loại leads tự động từ nhiều nguồn',
+    category: 'marketing',
+    tags: ['Lead', 'CRM', 'Qualification', 'Automation'],
+    setup: '15 phút',
+    difficulty: 'medium',
+    agents: [
+      { name: 'Lead Collector', role: 'collector', model: 'gemini/gemini-2.0-flash' },
+      { name: 'Lead Qualifier', role: 'processor', model: 'openai/gpt-4o' },
+      { name: 'Lead Router', role: 'router', model: 'gemini/gemini-2.0-flash' }
+    ],
+    channels: ['zalo', 'facebook', 'webhook'],
+    tools: ['lead_scoring', 'crm_update', 'email_notification', 'slack_alert'],
+    workflow: 'sequential',
+    config: {
+      qualification_questions: [
+        'Bạn đang quan tâm đến sản phẩm gì?',
+        'Ngân sách dự kiến là bao nhiêu?',
+        'Thời gian triển khai mong muốn?'
+      ],
+      score_thresholds: { hot: 80, warm: 50, cold: 20 }
+    },
+    featured: true
+  },
+  {
+    id: 'content-creator',
+    icon: '✍️',
+    name: 'Content Creation Pipeline',
+    description: 'Tạo nội dung đa nền tảng: Facebook, Zalo, Email từ một brief',
+    category: 'marketing',
+    tags: ['Content', 'Social Media', 'Multi-platform', 'Automation'],
+    setup: '10 phút',
+    difficulty: 'easy',
+    agents: [
+      { name: 'Content Strategist', role: 'planner', model: 'openai/gpt-4o' },
+      { name: 'Copywriter', role: 'writer', model: 'gemini/gemini-2.0-flash' },
+      { name: 'Image Selector', role: 'asset', model: 'gemini/gemini-2.0-flash' }
+    ],
+    channels: ['zalo', 'facebook', 'email'],
+    tools: ['content_generate', 'image_search', 'hashtag_suggest', 'schedule_post'],
+    workflow: 'sequential',
+    config: {
+      platforms: ['facebook', 'zalo', 'email'],
+      content_tones: ['formal', 'friendly', 'casual'],
+      auto_schedule: true
+    },
+    featured: true
+  },
+  {
+    id: 'ecommerce-support',
+    icon: '🛒',
+    name: 'E-commerce Support Agent',
+    description: 'Hỗ trợ đơn hàng, tracking vận chuyển, xử lý khiếu nại',
+    category: 'customer-service',
+    tags: ['E-commerce', 'Order', 'Tracking', 'Support'],
+    setup: '15 phút',
+    difficulty: 'medium',
+    agents: [
+      { name: 'Order Support', role: 'primary', model: 'gemini/gemini-2.0-flash' },
+      { name: 'Complaint Handler', role: 'escalation', model: 'openai/gpt-4o' }
+    ],
+    channels: ['zalo', 'facebook', 'shopee'],
+    tools: ['order_lookup', 'tracking_status', 'refund_request', 'rating_response'],
+    workflow: 'conditional',
+    config: {
+      auto_tracking: true,
+      refund_threshold: 500000,
+      escalation_keywords: ['khiếu nại', 'hoàn tiền', 'không hài lòng']
+    },
+    featured: false
+  },
+  {
+    id: 'appointment-reminder',
+    icon: '📅',
+    name: 'Appointment & Reminder System',
+    description: 'Đặt lịch hẹn, gửi nhắc nhở tự động qua Zalo, SMS, Email',
+    category: 'scheduling',
+    tags: ['Appointment', 'Reminder', 'Scheduling', 'Spa', 'Clinic'],
+    setup: '10 phút',
+    difficulty: 'easy',
+    agents: [
+      { name: 'Appointment Agent', role: 'primary', model: 'gemini/gemini-2.0-flash' }
+    ],
+    channels: ['zalo', 'sms', 'email'],
+    tools: ['calendar_check', 'appointment_create', 'reminder_send', 'confirmation_request'],
+    workflow: 'sequential',
+    config: {
+      reminder_times: ['24h', '2h', '30min'],
+      working_hours: '08:00-20:00',
+      services: ['massage', 'spa', 'clinic', 'salon']
+    },
+    featured: false
+  },
+  {
+    id: 'market-research',
+    icon: '🔍',
+    name: 'Market Research Agent',
+    description: 'Thu thập và phân tích thông tin thị trường, đối thủ cạnh tranh',
+    category: 'research',
+    tags: ['Research', 'Market', 'Analysis', 'Competitor'],
+    setup: '5 phút',
+    difficulty: 'easy',
+    agents: [
+      { name: 'Research Agent', role: 'primary', model: 'openai/gpt-4o' }
+    ],
+    channels: ['internal'],
+    tools: ['web_search', 'web_fetch', 'competitor_analysis', 'report_generate'],
+    workflow: 'sequential',
+    config: {
+      research_topics: ['pricing', 'features', 'reviews', 'trends'],
+      report_format: 'markdown',
+      schedule: 'weekly'
+    },
+    featured: false
+  },
+  {
+    id: 'social-media-manager',
+    icon: '📱',
+    name: 'Social Media Manager',
+    description: 'Quản lý đăng bài, phản hồi comments, inbox messages đa nền tảng',
+    category: 'marketing',
+    tags: ['Social Media', 'Multi-platform', 'Auto-reply', 'Content'],
+    setup: '20 phút',
+    difficulty: 'medium',
+    agents: [
+      { name: 'Content Publisher', role: 'publisher', model: 'gemini/gemini-2.0-flash' },
+      { name: 'Inbox Manager', role: 'inbox', model: 'openai/gpt-4o-mini' },
+      { name: 'Comment Responder', role: 'comments', model: 'gemini/gemini-2.0-flash' }
+    ],
+    channels: ['facebook', 'instagram', 'zalo'],
+    tools: ['post_schedule', 'inbox_aggregate', 'comment_reply', 'dm_respond'],
+    workflow: 'parallel',
+    config: {
+      platforms: ['facebook', 'instagram', 'zalo'],
+      response_tone: 'friendly_professional',
+      auto_posting: true,
+      content_library: 'shared'
+    },
+    featured: false
+  }
+];
 
-  const load = async () => { try{const r=await authFetch('/api/v1/gallery');const d=await r.json();setAllSkills(d.skills||[]);}catch(e){} setLoading(false); };
-  useEffect(()=>{ load(); },[]);
+const CATEGORIES = [
+  { id: 'all', icon: '🌟', name: 'Tất cả' },
+  { id: 'customer-service', icon: '💬', name: 'Chăm sóc khách' },
+  { id: 'sales', icon: '💰', name: 'Bán hàng' },
+  { id: 'marketing', icon: '📢', name: 'Marketing' },
+  { id: 'booking', icon: '📅', name: 'Đặt lịch' },
+  { id: 'scheduling', icon: '⏰', name: 'Nhắc nhở' },
+  { id: 'research', icon: '🔬', name: 'Nghiên cứu' }
+];
 
-  const catMap = {
-    hr:{icon:'🧑‍💼',label:'Nhân sự (HR)'},sales:{icon:'💰',label:'Kinh doanh'},finance:{icon:'📊',label:'Tài chính'},
-    operations:{icon:'🏭',label:'Vận hành'},legal:{icon:'⚖️',label:'Pháp lý'},'customer-service':{icon:'📞',label:'CSKH'},
-    marketing:{icon:'📣',label:'Marketing'},ecommerce:{icon:'🛒',label:'Thương mại ĐT'},management:{icon:'💼',label:'Quản lý'},
-    admin:{icon:'📝',label:'Hành chính'},it:{icon:'💻',label:'IT'},analytics:{icon:'📧',label:'Phân tích'},
-    training:{icon:'🎓',label:'Đào tạo'},productivity:{icon:'⚡',label:'Năng suất'}
-  };
+export function GalleryPage({ config, lang }) {
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [installing, setInstalling] = useState(null);
 
-  const categories = [...new Set(allSkills.map(s=>s.cat))].filter(Boolean).sort();
-  const catCounts = {};
-  categories.forEach(c => { catCounts[c] = allSkills.filter(s=>s.cat===c).length; });
-
-  const filtered = allSkills.filter(s => {
-    if(selectedCat && s.cat !== selectedCat) return false;
-    if(search) {
-      const q = search.toLowerCase();
-      return (s.name||'').toLowerCase().includes(q) || (s.desc||'').toLowerCase().includes(q) || (s.cat||'').toLowerCase().includes(q);
-    }
-    return true;
+  const filteredTemplates = TEMPLATES.filter(t => {
+    const matchesCategory = selectedCategory === 'all' || t.category === selectedCategory;
+    const matchesSearch = !searchQuery || 
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesCategory && matchesSearch;
   });
 
-  const cloneAsAgent = async (skill) => {
-    setCloning(true);
+  const handleInstall = async (template) => {
+    setInstalling(template.id);
     try {
-      const r = await authFetch('/api/v1/agents', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          name: skill.id || skill.name.toLowerCase().replace(/\s+/g,'-'),
-          role: skill.role || 'assistant',
-          description: skill.desc || skill.name,
-          system_prompt: skill.prompt || '',
-          provider: '',
-          model: ''
-        })
+      const res = await authFetch('/api/v1/templates/install', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(template)
       });
-      const d = await r.json();
-      if(d.ok) {
-        showToast('✅ Đã tạo agent "'+skill.name+'" từ Gallery!','success');
-        setSelectedSkill(null);
+      if (res.ok) {
+        window.toastManager?.success(`Đã cài đặt template "${template.name}"!`);
       } else {
-        showToast('❌ '+(d.error||'Lỗi tạo agent'),'error');
+        window.toastManager?.error('Cài đặt thất bại. Vui lòng thử lại.');
       }
-    } catch(e) { showToast('❌ '+e.message,'error'); }
-    setCloning(false);
+    } catch (e) {
+      window.toastManager?.error('Lỗi kết nối. Vui lòng thử lại.');
+    }
+    setInstalling(null);
   };
 
-  const createTemplate = async () => {
-    if(!gForm.name.trim()) { showToast('⚠️ Nhập tên template','error'); return; }
-    try {
-      const r = await authFetch('/api/v1/gallery', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({id:gForm.name.toLowerCase().replace(/\s+/g,'-'), ...gForm})
-      });
-      const d=await r.json();
-      if(d.ok||d.id) { showToast('✅ Đã tạo template: '+gForm.name,'success'); setShowForm(false); setGForm({name:'',icon:'🤖',cat:'productivity',desc:'',role:'assistant',prompt:''}); load(); }
-      else showToast('❌ '+(d.error||'Lỗi'),'error');
-    } catch(e) { showToast('❌ '+e.message,'error'); }
-  };
-
-  const deleteTemplate = async (id, name) => {
-    if(!confirm('Xoá template "'+name+'"?')) return;
-    try {
-      const r = await authFetch('/api/v1/gallery/'+encodeURIComponent(id), {method:'DELETE'});
-      const d=await r.json();
-      if(d.ok) { showToast('🗑️ Đã xoá: '+name,'success'); load(); }
-      else showToast('❌ '+(d.error||'Lỗi'),'error');
-    } catch(e) { showToast('❌ '+e.message,'error'); }
-  };
-
-  if(loading) return html`<div style="text-align:center;padding:60px;color:var(--text2)">⏳ Loading Gallery...</div>`;
-
-  // Detail view
-  if(selectedSkill) {
-    const s = selectedSkill;
-    return html`<div>
-      <div class="page-header"><div><h1>📦 ${s.icon||'📦'} ${s.name}</h1><div class="sub">${s.desc}</div></div>
-        <button class="btn btn-outline" onClick=${()=>setSelectedSkill(null)}>← Quay lại</button>
+  return html`
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="color:var(--text1);margin:0">📦 Agent Templates</h2>
+        <div style="display:flex;gap:8px">
+          <input 
+            type="search" 
+            placeholder="Tìm kiếm template..." 
+            value=${searchQuery}
+            onInput=${e => setSearchQuery(e.target.value)}
+            style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1)"
+          />
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="card">
-          <h3 style="margin-bottom:12px">📋 Thông tin</h3>
-          <div style="display:grid;gap:8px;font-size:13px">
-            <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="color:var(--text2)">Danh mục</span><span class="badge badge-blue">${(catMap[s.cat]||{}).label||s.cat}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="color:var(--text2)">Vai trò</span><span class="badge">${s.role||'assistant'}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="color:var(--text2)">Tác giả</span><span>${s.author||'bizclaw'}</span></div>
-            <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg2);border-radius:6px"><span style="color:var(--text2)">ID</span><span style="font-family:var(--mono);font-size:12px">${s.id}</span></div>
-          </div>
-          <div style="margin-top:16px">
-            <button class="btn" style="background:var(--grad1);color:#fff;padding:10px 24px;width:100%;font-size:14px" onClick=${()=>cloneAsAgent(s)} disabled=${cloning}>
-              ${cloning ? '⏳ Đang tạo...' : '🤖 Clone thành Agent'}
-            </button>
-            <div style="font-size:11px;color:var(--text2);text-align:center;margin-top:6px">Tạo agent mới với System Prompt từ template này</div>
+
+      <!-- Categories -->
+      <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap">
+        ${CATEGORIES.map(cat => html`
+          <button 
+            onClick=${() => setSelectedCategory(cat.id)}
+            style="
+              padding:8px 16px;border-radius:20px;border:1px solid ${selectedCategory === cat.id ? 'var(--accent)' : 'var(--border)'};
+              background:${selectedCategory === cat.id ? 'var(--accent)' : 'transparent'};
+              color:${selectedCategory === cat.id ? '#fff' : 'var(--text2)'};
+              cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px
+            "
+          >
+            ${cat.icon} ${cat.name}
+          </button>
+        `)}
+      </div>
+
+      <!-- Featured Templates -->
+      ${selectedCategory === 'all' && !searchQuery && html`
+        <div style="margin-bottom:32px">
+          <h3 style="margin:0 0 16px;color:var(--text1);font-size:16px">⭐ Được khuyên dùng</h3>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            ${TEMPLATES.filter(t => t.featured).slice(0, 3).map(t => TemplateCard({ template: t, onSelect: setSelectedTemplate, onInstall: handleInstall, installing }))}
           </div>
         </div>
-        <div class="card">
-          <h3 style="margin-bottom:12px">💬 System Prompt</h3>
-          <div style="padding:14px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);font-size:13px;line-height:1.8;white-space:pre-wrap;max-height:400px;overflow-y:auto;font-family:var(--mono)">${s.prompt||'(Chưa có prompt)'}</div>
-        </div>
-      </div>
-    </div>`;
-  }
+      `}
 
-  return html`<div>
-    <div class="page-header"><div><h1>📦 ${t('gallery.title',lang)}</h1><div class="sub">${t('gallery.subtitle',lang)} — ${allSkills.length} mẫu agent, ${categories.length} danh mục</div></div>
-      <button class="btn" style="background:var(--grad1);color:#fff;padding:8px 18px" onClick=${()=>setShowForm(!showForm)}>+ Tạo Template</button>
-    </div>
-    <div class="stats">
-      <${StatsCard} label="Templates" value=${allSkills.length} color="accent" icon="📦" />
-      <${StatsCard} label="Danh mục" value=${categories.length} color="blue" icon="📁" />
-      <${StatsCard} label=${selectedCat?(catMap[selectedCat]||{}).label||selectedCat:'Tất cả'} value=${filtered.length} color="green" icon="🔍" />
-    </div>
-
-    ${showForm && html`
-      <div class="card" style="margin-bottom:14px;border:1px solid var(--accent)">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <h3>📦 Tạo Template mới</h3>
-          <button class="btn btn-outline btn-sm" onClick=${()=>setShowForm(false)}>✕ Đóng</button>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
-          <label>Tên<input style="width:100%;padding:8px;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px" value=${gForm.name} onInput=${e=>setGForm(f=>({...f,name:e.target.value}))} placeholder="My Agent Template" /></label>
-          <label>Danh mục
-            <select style="width:100%;padding:8px;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;cursor:pointer" value=${gForm.cat} onChange=${e=>setGForm(f=>({...f,cat:e.target.value}))}>
-              ${categories.map(c=>html`<option key=${c} value=${c}>${(catMap[c]||{}).label||c}</option>`)}
-              <option value="custom">Custom</option>
-            </select>
-          </label>
-          <label style="grid-column:span 2">Mô tả<input style="width:100%;padding:8px;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px" value=${gForm.desc} onInput=${e=>setGForm(f=>({...f,desc:e.target.value}))} placeholder="What this template does..." /></label>
-          <label style="grid-column:span 2">System Prompt<textarea style="width:100%;padding:8px;margin-top:4px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;min-height:100px;resize:vertical;font-family:var(--mono)" value=${gForm.prompt} onInput=${e=>setGForm(f=>({...f,prompt:e.target.value}))} placeholder="You are an expert in..." /></label>
-        </div>
-        <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn btn-outline" onClick=${()=>setShowForm(false)}>Huỷ</button>
-          <button class="btn" style="background:var(--grad1);color:#fff;padding:8px 20px" onClick=${createTemplate}>💾 Tạo</button>
-        </div>
-      </div>
-    `}
-
-    <div style="margin-bottom:14px"><input type="text" placeholder="🔍 Tìm template... (tên, mô tả, danh mục)" value=${search} onInput=${e=>setSearch(e.target.value)}
-      style="width:100%;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px" /></div>
-
-    <div class="card" style="margin-bottom:14px">
-      <h3 style="margin-bottom:10px">📁 Danh mục ${selectedCat?html` — <span style="color:var(--accent)">${(catMap[selectedCat]||{}).label||selectedCat}</span> <button class="btn btn-outline btn-sm" style="margin-left:8px" onClick=${()=>setSelectedCat(null)}>✕ Xoá filter</button>`:''}</h3>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        ${categories.map(c=>html`<button key=${c} class="btn ${selectedCat===c?'':'btn-outline'} btn-sm" style="${selectedCat===c?'background:var(--grad1);color:#fff':''};display:flex;align-items:center;gap:4px"
-          onClick=${()=>setSelectedCat(selectedCat===c?null:c)}>
-          <span>${(catMap[c]||{}).icon||'📁'}</span> ${(catMap[c]||{}).label||c} <span class="badge" style="font-size:10px">${catCounts[c]}</span>
-        </button>`)}
-      </div>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-bottom:12px">🤖 Templates (${filtered.length})</h3>
-      ${filtered.length===0?html`<div style="text-align:center;padding:30px;color:var(--text2)">Không tìm thấy template phù hợp.</div>`:html`
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">
-        ${filtered.map(s=>html`<div key=${s.id||s.name} style="padding:12px 14px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all 0.15s"
-          onClick=${()=>setSelectedSkill(s)} onMouseOver=${e=>{e.currentTarget.style.borderColor='var(--accent)';e.currentTarget.style.transform='translateY(-1px)'}} onMouseOut=${e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.transform='none'}}>
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-            <span style="font-size:28px">${s.icon||'📦'}</span>
-            <div style="flex:1;min-width:0">
-              <strong style="font-size:13px;display:block">${s.name}</strong>
-              <span class="badge" style="font-size:10px;margin-top:2px">${(catMap[s.cat]||{}).label||s.cat}</span>
+      <!-- All Templates -->
+      <div>
+        <h3 style="margin:0 0 16px;color:var(--text1);font-size:16px">
+          ${selectedCategory === 'all' ? 'Tất cả Templates' : CATEGORIES.find(c => c.id === selectedCategory)?.name}
+          <span style="color:var(--text2);font-weight:normal;font-size:14px"> (${filteredTemplates.length})</span>
+        </h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px">
+          ${filteredTemplates.length === 0 ? html`
+            <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text2)">
+              <div style="font-size:48px;margin-bottom:12px">🔍</div>
+              <p>Không tìm thấy template phù hợp</p>
             </div>
-            <div style="display:flex;gap:4px">
-              <button class="btn btn-outline btn-sm" onClick=${e=>{e.stopPropagation();cloneAsAgent(s)}} title="Clone thành Agent">🤖+</button>
-              <button class="btn btn-outline btn-sm" style="color:var(--red)" onClick=${e=>{e.stopPropagation();deleteTemplate(s.id,s.name)}} title="Xoá">🗑</button>
-            </div>
-          </div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${s.desc||''}</div>
-        </div>`)}
-      </div>`}
+          ` : filteredTemplates.map(t => TemplateCard({ template: t, onSelect: setSelectedTemplate, onInstall: handleInstall, installing }))}
+        </div>
+      </div>
+
+      <!-- Template Detail Modal -->
+      ${selectedTemplate ? TemplateModal({ template: selectedTemplate, onClose: () => setSelectedTemplate(null), onInstall: handleInstall, installing }) : null}
     </div>
-  </div>`;
+  `;
 }
 
+function TemplateCard({ template, onSelect, onInstall, installing }) {
+  return html`
+    <div 
+      class="card" 
+      style="cursor:pointer;transition:transform 0.2s;position:relative;overflow:hidden"
+      onClick=${() => onSelect(template)}
+      onMouseEnter=${e => e.currentTarget.style.transform = 'translateY(-2px)'}
+      onMouseLeave=${e => e.currentTarget.style.transform = 'translateY(0)'}
+    >
+      ${template.featured ? html`
+        <div style="position:absolute;top:8px;right:8px;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">
+          ⭐ Featured
+        </div>
+      ` : null}
+      
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:48px;height:48px;background:var(--bg2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px">
+          ${template.icon}
+        </div>
+        <div>
+          <h4 style="margin:0;font-size:15px;color:var(--text1)">${template.name}</h4>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+            <span style="font-size:11px;color:var(--text2)">⏱️ ${template.setup}</span>
+            <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:${template.difficulty === 'easy' ? 'var(--green)' : 'var(--orange)'};color:#fff">
+              ${template.difficulty === 'easy' ? 'Dễ' : 'Trung bình'}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <p style="margin:0 0 12px;font-size:13px;color:var(--text2);line-height:1.5">
+        ${template.description}
+      </p>
+      
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px">
+        ${template.tags.slice(0, 3).map(tag => html`
+          <span style="font-size:11px;padding:2px 8px;background:var(--bg2);border-radius:4px;color:var(--text2)">
+            ${tag}
+          </span>
+        `)}
+        ${template.tags.length > 3 ? html`<span style="font-size:11px;color:var(--text2)">+${template.tags.length - 3}</span>` : null}
+      </div>
 
-export { GalleryPage };
+      <div style="display:flex;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--border)">
+        <button 
+          class="btn-secondary" 
+          onClick=${e => { e.stopPropagation(); onSelect(template); }}
+          style="flex:1;padding:8px"
+        >
+          Xem chi tiết
+        </button>
+        <button 
+          class="btn-primary" 
+          onClick=${e => { e.stopPropagation(); onInstall(template); }}
+          disabled=${installing === template.id}
+          style="flex:1;padding:8px"
+        >
+          ${installing === template.id ? 'Đang cài...' : 'Cài đặt'}
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function TemplateModal({ template, onClose, onInstall, installing }) {
+  return html`
+    <div 
+      class="modal-overlay" 
+      onClick=${onClose}
+      style="
+        position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;
+        display:flex;align-items:center;justify-content:center;padding:20px
+      "
+    >
+      <div 
+        class="modal-content" 
+        onClick=${e => e.stopPropagation()}
+        style="
+          background:var(--surface);border-radius:16px;max-width:700px;width:100%;
+          max-height:85vh;overflow-y:auto;padding:24px
+        "
+      >
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:56px;height:56px;background:var(--bg2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px">
+              ${template.icon}
+            </div>
+            <div>
+              <h3 style="margin:0;color:var(--text1)">${template.name}</h3>
+              <div style="display:flex;gap:8px;margin-top:4px">
+                ${template.tags.map(tag => html`
+                  <span style="font-size:11px;padding:2px 8px;background:var(--bg2);border-radius:4px;color:var(--text2)">${tag}</span>
+                `)}
+              </div>
+            </div>
+          </div>
+          <button onClick=${onClose} style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text2)">✕</button>
+        </div>
+
+        <p style="color:var(--text2);line-height:1.6;margin-bottom:24px">${template.description}</p>
+
+        <!-- Setup Info -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
+          <div style="background:var(--bg2);padding:12px;border-radius:8px;text-align:center">
+            <div style="font-size:20px;margin-bottom:4px">⏱️</div>
+            <div style="font-size:11px;color:var(--text2)">Thời gian setup</div>
+            <div style="font-weight:600;color:var(--text1)">${template.setup}</div>
+          </div>
+          <div style="background:var(--bg2);padding:12px;border-radius:8px;text-align:center">
+            <div style="font-size:20px;margin-bottom:4px">📊</div>
+            <div style="font-size:11px;color:var(--text2)">Độ khó</div>
+            <div style="font-weight:600;color:var(--text1)">${template.difficulty === 'easy' ? 'Dễ' : 'Trung bình'}</div>
+          </div>
+          <div style="background:var(--bg2);padding:12px;border-radius:8px;text-align:center">
+            <div style="font-size:20px;margin-bottom:4px">🤖</div>
+            <div style="font-size:11px;color:var(--text2)">Số Agent</div>
+            <div style="font-weight:600;color:var(--text1)">${template.agents.length}</div>
+          </div>
+        </div>
+
+        <!-- Agents -->
+        <h4 style="margin:0 0 12px;color:var(--text1)">🤖 Agents</h4>
+        <div style="margin-bottom:24px">
+          ${template.agents.map((agent, i) => html`
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border-radius:8px;margin-bottom:8px">
+              <div style="width:32px;height:32px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600">
+                ${i + 1}
+              </div>
+              <div style="flex:1">
+                <div style="font-weight:600;color:var(--text1)">${agent.name}</div>
+                <div style="font-size:12px;color:var(--text2)">${agent.role} • ${agent.model}</div>
+              </div>
+              <span style="font-size:11px;padding:2px 8px;background:var(--accent);color:#fff;border-radius:4px">${agent.role}</span>
+            </div>
+          `)}
+        </div>
+
+        <!-- Channels -->
+        <h4 style="margin:0 0 12px;color:var(--text1)">📱 Channels</h4>
+        <div style="display:flex;gap:8px;margin-bottom:24px">
+          ${template.channels.map(ch => html`
+            <span style="font-size:12px;padding:4px 12px;background:var(--bg2);border-radius:4px;color:var(--text1)">${ch}</span>
+          `)}
+        </div>
+
+        <!-- Tools -->
+        <h4 style="margin:0 0 12px;color:var(--text1)">🛠️ Tools</h4>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px">
+          ${template.tools.map(tool => html`
+            <span style="font-size:11px;padding:4px 10px;background:var(--bg2);border-radius:4px;color:var(--text2)">${tool}</span>
+          `)}
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex;gap:12px;padding-top:20px;border-top:1px solid var(--border)">
+          <button class="btn-secondary" onClick=${onClose} style="flex:1;padding:12px">
+            Đóng
+          </button>
+          <button 
+            class="btn-primary" 
+            onClick=${() => { onInstall(template); onClose(); }}
+            disabled=${installing === template.id}
+            style="flex:1;padding:12px"
+          >
+            ${installing === template.id ? 'Đang cài đặt...' : 'Cài đặt Template'}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
