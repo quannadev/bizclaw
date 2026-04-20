@@ -113,13 +113,12 @@ impl ReportGenerator {
                 text: "Tổng quan".to_string(),
             },
             DocumentElement::Paragraph {
-                text: format!("Trong kỳ báo cáo, doanh nghiệp đã đạt được những kết quả sau:"),
+                text: "Trong kỳ báo cáo, doanh nghiệp đã đạt được những kết quả sau:".to_string(),
                 style: None,
             },
         ];
 
-        let summary_data = vec![
-            vec!["Chỉ tiêu".to_string(), "Giá trị".to_string()],
+        let summary_data = [vec!["Chỉ tiêu".to_string(), "Giá trị".to_string()],
             vec![
                 "Tổng doanh thu".to_string(),
                 format!("{} VNĐ", format_currency(summary.total_revenue)),
@@ -131,8 +130,7 @@ impl ReportGenerator {
             vec![
                 "Giá trị trung bình/đơn".to_string(),
                 format!("{} VNĐ", format_currency(summary.average_order_value)),
-            ],
-        ];
+            ]];
 
         content.push(DocumentElement::Table {
             headers: summary_data[0].clone(),
@@ -202,7 +200,7 @@ impl ReportGenerator {
         start_date: chrono::DateTime<Utc>,
         end_date: chrono::DateTime<Utc>,
     ) -> ReportSection {
-        let mut content = vec![DocumentElement::Heading {
+        let content = vec![DocumentElement::Heading {
             level: 2,
             text: "Biến động theo ngày".to_string(),
         }];
@@ -319,7 +317,7 @@ fn format_currency(amount: f64) -> String {
     let len = amount_str.len();
 
     for (i, c) in amount_str.chars().enumerate() {
-        if i > 0 && (len - i) % 3 == 0 {
+        if i > 0 && (len - i).is_multiple_of(3) {
             s.push('.');
         }
         s.push(c);

@@ -50,6 +50,12 @@ struct PreparsedArgs {
     args: Vec<String>,
 }
 
+impl Default for PreparsedCommandsTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PreparsedCommandsTool {
     pub fn new() -> Self {
         Self {
@@ -266,16 +272,14 @@ Sử dụng /skill install <name> để cài đặt.
     }
 
     fn uptime(&self) -> String {
-        if let Ok(uptime) = std::fs::read_to_string("/proc/uptime") {
-            if let Some(first) = uptime.split_whitespace().next() {
-                if let Ok(seconds) = first.parse::<f64>() {
+        if let Ok(uptime) = std::fs::read_to_string("/proc/uptime")
+            && let Some(first) = uptime.split_whitespace().next()
+                && let Ok(seconds) = first.parse::<f64>() {
                     let days = (seconds / 86400.0) as u64;
                     let hours = ((seconds % 86400.0) / 3600.0) as u64;
                     let mins = ((seconds % 3600.0) / 60.0) as u64;
                     return format!("{} days, {} hours, {} minutes", days, hours, mins);
                 }
-            }
-        }
         "System uptime: unavailable".to_string()
     }
 
@@ -293,7 +297,7 @@ Sử dụng /skill install <name> để cài đặt.
 
         let mut entries: Vec<_> = entries.filter_map(|e| e.ok()).collect();
 
-        entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+        entries.sort_by_key(|a| a.file_name());
 
         for entry in entries.iter().take(50) {
             let name = entry.file_name();
@@ -633,7 +637,7 @@ impl Tool for PreparsedCommandsTool {
         let result = self
             .execute_command(&parsed.command, &parsed.args)
             .await
-            .map_err(|e| BizClawError::Tool(e))?;
+            .map_err(BizClawError::Tool)?;
 
         Ok(ToolResult {
             tool_call_id: "preparsed".to_string(),

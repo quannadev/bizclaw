@@ -94,8 +94,8 @@ impl ContentScheduler {
         self.content_store
             .values()
             .filter(|c| {
-                let platform_match = platform.map_or(true, |p| &c.platform == p);
-                let status_match = status.map_or(true, |s| &c.status == s);
+                let platform_match = platform.is_none_or(|p| &c.platform == p);
+                let status_match = status.is_none_or(|s| &c.status == s);
                 platform_match && status_match
             })
             .collect()

@@ -40,11 +40,10 @@ pub async fn update_pipeline_config(
     State(state): State<Arc<AppState>>,
     Json(config): Json<PipelineConfig>,
 ) -> Json<serde_json::Value> {
-    if let Ok(json) = serde_json::to_string(&config) {
-        if state.db.set_setting("social_pipeline_cfg", &json).is_ok() {
+    if let Ok(json) = serde_json::to_string(&config)
+        && state.db.set_setting("social_pipeline_cfg", &json).is_ok() {
             return Json(serde_json::json!({"ok": true}));
         }
-    }
     Json(serde_json::json!({"ok": false, "error": "Failed to save pipeline config"}))
 }
 

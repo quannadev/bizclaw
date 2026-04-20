@@ -35,6 +35,12 @@ pub struct TaskDag {
     node_map: HashMap<String, NodeIndex>,
 }
 
+impl Default for TaskDag {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TaskDag {
     pub fn new() -> Self {
         Self {
@@ -90,7 +96,7 @@ impl TaskDag {
                 let mut incoming = self
                     .graph
                     .neighbors_directed(idx, petgraph::Direction::Incoming);
-                while let Some(pred_idx) = incoming.next() {
+                for pred_idx in incoming {
                     if self.graph[pred_idx].status != TaskStatus::Completed {
                         ready_to_run = false;
                         break;

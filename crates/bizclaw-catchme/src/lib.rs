@@ -63,11 +63,10 @@ impl CatchMeEngine {
                 }
             };
             while let Some(evt) = rx.recv().await {
-                if let Some(ref s) = store {
-                    if let Err(e) = s.insert_event(&evt) {
+                if let Some(ref s) = store
+                    && let Err(e) = s.insert_event(&evt) {
                         tracing::warn!("CatchMe event persist failed: {}", e);
                     }
-                }
             }
         });
 

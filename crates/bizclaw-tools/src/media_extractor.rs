@@ -19,6 +19,12 @@ pub struct MediaMetadata {
 
 pub struct MediaExtractorTool {}
 
+impl Default for MediaExtractorTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MediaExtractorTool {
     pub fn new() -> Self {
         std::fs::create_dir_all("/tmp/bizclaw_media").ok();

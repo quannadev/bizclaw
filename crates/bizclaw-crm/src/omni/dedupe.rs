@@ -53,8 +53,8 @@ impl DedupeEngine {
 
         for i in 0..n {
             for j in (i + 1)..n {
-                if let Some(score) = self.calculate_match_score(&contacts[i], &contacts[j]) {
-                    if score >= self.thresholds.composite {
+                if let Some(score) = self.calculate_match_score(&contacts[i], &contacts[j])
+                    && score >= self.thresholds.composite {
                         matches.push(DedupeMatch {
                             contact_a: i,
                             contact_b: j,
@@ -62,7 +62,6 @@ impl DedupeEngine {
                             match_type: self.get_match_type(&contacts[i], &contacts[j]),
                         });
                     }
-                }
             }
         }
 
@@ -162,7 +161,7 @@ impl DedupeEngine {
                 addresses.push(c.address.clone().unwrap());
             }
             if c.dob.is_some() {
-                dobs.push(c.dob.clone().unwrap());
+                dobs.push(c.dob.unwrap());
             }
             if c.gender.is_some() {
                 genders.push(c.gender.clone().unwrap());

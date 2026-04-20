@@ -73,6 +73,7 @@ pub enum DocumentElement {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ParagraphStyle {
     pub bold: bool,
     pub italic: bool,
@@ -96,17 +97,6 @@ pub struct TableStyle {
     pub striped: Option<bool>,
 }
 
-impl Default for ParagraphStyle {
-    fn default() -> Self {
-        Self {
-            bold: false,
-            italic: false,
-            font_size: None,
-            color: None,
-            alignment: None,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Report {
@@ -210,6 +200,7 @@ pub enum CellValue {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct CellStyle {
     pub bold: bool,
     pub background_color: Option<String>,
@@ -218,17 +209,6 @@ pub struct CellStyle {
     pub alignment: Option<TextAlignment>,
 }
 
-impl Default for CellStyle {
-    fn default() -> Self {
-        Self {
-            bold: false,
-            background_color: None,
-            text_color: None,
-            number_format: None,
-            alignment: None,
-        }
-    }
-}
 
 impl Cell {
     pub fn text(s: impl Into<String>) -> Self {

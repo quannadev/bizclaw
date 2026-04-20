@@ -423,33 +423,27 @@ impl Default for HotConfig {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+#[derive(Default)]
 pub enum BrainMode {
     CloudFirst,
+    #[default]
     LocalFirst,
     CloudOnly,
     LocalOnly,
 }
 
-impl Default for BrainMode {
-    fn default() -> Self {
-        Self::LocalFirst
-    }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum RoutingStrategy {
     RoundRobin,
     LeastLatency,
     CostAware,
+    #[default]
     PriorityBased,
 }
 
-impl Default for RoutingStrategy {
-    fn default() -> Self {
-        Self::PriorityBased
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RateLimitConfig {

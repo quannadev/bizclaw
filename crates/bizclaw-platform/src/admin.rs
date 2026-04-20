@@ -805,9 +805,9 @@ async fn pay2s_webhook_handler(
                                     }
 
                                     // Auto-activate the owner user if they are pending
-                                    if let Some(owner_id) = tenant.owner_id {
-                                        if let Ok(Some(user)) = db.get_user_by_id(&owner_id) {
-                                            if user.status == "pending" {
+                                    if let Some(owner_id) = tenant.owner_id
+                                        && let Ok(Some(user)) = db.get_user_by_id(&owner_id)
+                                            && user.status == "pending" {
                                                 tracing::info!(
                                                     "🔓 Auto-activating pending user {} after payment",
                                                     user.email
@@ -815,8 +815,6 @@ async fn pay2s_webhook_handler(
                                                 let _ = db.update_user_status(&user.id, "active");
                                                 let _ = db.update_user_role(&user.id, "admin");
                                             }
-                                        }
-                                    }
 
                                     let _ = db.log_event(
                                         "plan_activated",
@@ -837,8 +835,8 @@ async fn pay2s_webhook_handler(
                                     amount
                                 );
                                 let _ = db.complete_payment(&tx_ref, &cloud_id);
-                                if let Ok(tenants) = db.cloud_list_tenants() {
-                                    if let Some(ct) = tenants.iter().find(|t| {
+                                if let Ok(tenants) = db.cloud_list_tenants()
+                                    && let Some(ct) = tenants.iter().find(|t| {
                                         t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)
                                     }) {
                                         let cplan = ct
@@ -866,7 +864,6 @@ async fn pay2s_webhook_handler(
                                             .await;
                                         });
                                     }
-                                }
                             } else {
                                 tracing::warn!(
                                     "⚠️ Pay2S payment ref '{}' did not match any local or cloud tenant",
@@ -1108,9 +1105,9 @@ async fn sepay_webhook_handler(
                                 }
 
                                 // Auto-activate the owner user if they are pending
-                                if let Some(owner_id) = tenant.owner_id {
-                                    if let Ok(Some(user)) = db.get_user_by_id(&owner_id) {
-                                        if user.status == "pending" {
+                                if let Some(owner_id) = tenant.owner_id
+                                    && let Ok(Some(user)) = db.get_user_by_id(&owner_id)
+                                        && user.status == "pending" {
                                             tracing::info!(
                                                 "🔓 Auto-activating pending user {} after payment",
                                                 user.email
@@ -1118,8 +1115,6 @@ async fn sepay_webhook_handler(
                                             let _ = db.update_user_status(&user.id, "active");
                                             let _ = db.update_user_role(&user.id, "admin");
                                         }
-                                    }
-                                }
 
                                 let _ = db.log_event(
                                     "plan_activated",
@@ -1139,8 +1134,8 @@ async fn sepay_webhook_handler(
                                 amount
                             );
                             let _ = db.complete_payment(&tx_ref, &cloud_id);
-                            if let Ok(tenants) = db.cloud_list_tenants() {
-                                if let Some(ct) = tenants.iter().find(|t| {
+                            if let Ok(tenants) = db.cloud_list_tenants()
+                                && let Some(ct) = tenants.iter().find(|t| {
                                     t.get("id").and_then(|v| v.as_str()) == Some(&cloud_id)
                                 }) {
                                     let cplan = ct
@@ -1168,7 +1163,6 @@ async fn sepay_webhook_handler(
                                         .await;
                                     });
                                 }
-                            }
                         } else {
                             tracing::warn!(
                                 "⚠️ SePay payment ref '{}' did not match any local or cloud tenant",
@@ -1233,21 +1227,19 @@ async fn set_billing_config_handler(
 ) -> Json<serde_json::Value> {
     let db = state.db.lock().await;
 
-    if let Some(sepay) = req.sepay_api_key {
-        if let Err(e) = db.set_platform_config("sepay_api_key", &sepay) {
+    if let Some(sepay) = req.sepay_api_key
+        && let Err(e) = db.set_platform_config("sepay_api_key", &sepay) {
             return Json(
                 serde_json::json!({"ok": false, "error": format!("Failed to save SePay config: {}", e)}),
             );
         }
-    }
 
-    if let Some(pay2s) = req.pay2s_api_key {
-        if let Err(e) = db.set_platform_config("pay2s_api_key", &pay2s) {
+    if let Some(pay2s) = req.pay2s_api_key
+        && let Err(e) = db.set_platform_config("pay2s_api_key", &pay2s) {
             return Json(
                 serde_json::json!({"ok": false, "error": format!("Failed to save Pay2S config: {}", e)}),
             );
         }
-    }
 
     if let Some(val) = req.sepay_bank_name {
         let _ = db.set_platform_config("SEPAY_BANK_ID", &val);

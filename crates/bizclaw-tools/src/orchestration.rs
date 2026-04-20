@@ -218,9 +218,7 @@ impl Tool for HandoffTool {
 
             return Ok(ToolResult {
                 tool_call_id: String::new(),
-                output: format!(
-                    "Đã yêu cầu chuyển tới nhân viên. Hệ thống đã báo nhân viên. Hãy trả lời báo với khách là 'Đã chuyển thông tin tới đội ngũ, sẽ có người liên hệ sớm'."
-                ),
+                output: "Đã yêu cầu chuyển tới nhân viên. Hệ thống đã báo nhân viên. Hãy trả lời báo với khách là 'Đã chuyển thông tin tới đội ngũ, sẽ có người liên hệ sớm'.".to_string(),
                 success: true,
             });
         }

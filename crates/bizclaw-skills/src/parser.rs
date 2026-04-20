@@ -148,7 +148,7 @@ impl SkillManifest {
         };
 
         fn get_str(map: &serde_yaml::Mapping, key: &str) -> String {
-            map.get(&Value::String(key.to_string()))
+            map.get(Value::String(key.to_string()))
                 .and_then(|v| match v {
                     Value::String(s) => Some(s.clone()),
                     Value::Number(n) => Some(n.to_string()),
@@ -165,7 +165,7 @@ impl SkillManifest {
         }
 
         fn get_vec_str(map: &serde_yaml::Mapping, key: &str) -> Vec<String> {
-            map.get(&Value::String(key.to_string()))
+            map.get(Value::String(key.to_string()))
                 .and_then(|v| match v {
                     Value::Sequence(seq) => Some(
                         seq.iter()

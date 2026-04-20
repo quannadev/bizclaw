@@ -51,8 +51,7 @@ impl SecretStore {
 
         let json_str = if self.encrypt {
             let raw = content.trim();
-            if raw.starts_with("GCM:") {
-                let encrypted = &raw[4..];
+            if let Some(encrypted) = raw.strip_prefix("GCM:") {
                 decrypt_aes256_gcm(encrypted, &self.key)?
             } else if raw.starts_with("CBC:") {
                 tracing::warn!(

@@ -47,11 +47,10 @@ pub async fn execute_local_harrier_embed(
     let is_ollama = url.contains("11434") || url.contains("/api/embeddings");
 
     let mut req = client.post(&url);
-    if let Some(key) = api_key {
-        if !key.is_empty() {
+    if let Some(key) = api_key
+        && !key.is_empty() {
             req = req.header("Authorization", format!("Bearer {}", key));
         }
-    }
 
     // Adapt payload based on Ollama / OpenAI
     let payload = if is_ollama {

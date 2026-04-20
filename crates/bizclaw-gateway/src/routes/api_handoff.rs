@@ -83,13 +83,11 @@ fn get_settings_path(state: &AppState) -> std::path::PathBuf {
 
 pub fn load_handoff_settings(state: &AppState) -> HandoffSettings {
     let path = get_settings_path(state);
-    if path.exists() {
-        if let Ok(content) = fs::read_to_string(&path) {
-            if let Ok(settings) = serde_json::from_str(&content) {
+    if path.exists()
+        && let Ok(content) = fs::read_to_string(&path)
+            && let Ok(settings) = serde_json::from_str(&content) {
                 return settings;
             }
-        }
-    }
     HandoffSettings::default()
 }
 
@@ -150,10 +148,8 @@ pub async fn list_handoff_queue(State(state): State<Arc<AppState>>) -> Json<serd
         })
         .unwrap();
 
-    for t in iter {
-        if let Ok(ticket) = t {
-            queue.push(ticket);
-        }
+    for ticket in iter.flatten() {
+        queue.push(ticket);
     }
 
     Json(serde_json::json!({ "queue": queue }))
@@ -337,7 +333,7 @@ pub async fn execute_handoff(
                         });
                         let client = reqwest::Client::new();
                         let _ = client
-                            .post(&format!(
+                            .post(format!(
                                 "https://api.telegram.org/bot{}/sendMessage",
                                 token
                             ))

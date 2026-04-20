@@ -16,7 +16,6 @@ use bizclaw_core::error::{BizClawError, Result};
 use bizclaw_core::traits::provider::{GenerateParams, Provider};
 use bizclaw_core::types::{Message, ModelInfo, ProviderResponse, ToolDefinition, Usage};
 use bizclaw_security::redactor::SecretRedactor;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::Instant;
@@ -317,8 +316,8 @@ impl Provider for BrainRouter {
         };
 
         // 2. Try primary path
-        if use_local {
-            if let Some(local) = &self.local_provider {
+        if use_local
+            && let Some(local) = &self.local_provider {
                 match local.chat(messages, tools, params).await {
                     Ok(resp) => return Ok(resp),
                     Err(e) => {
@@ -327,7 +326,6 @@ impl Provider for BrainRouter {
                     }
                 }
             }
-        }
 
         // 3. Try Cloud Providers (with redaction)
         let redacted_messages = self.redact_messages(messages);
@@ -370,12 +368,11 @@ impl Provider for BrainRouter {
         }
 
         // 4. Ultimate Fallback: if cloud fails and we were CloudFirst, try Local
-        if !use_local && self.routing.local_fallback {
-            if let Some(local) = &self.local_provider {
+        if !use_local && self.routing.local_fallback
+            && let Some(local) = &self.local_provider {
                 tracing::info!("Cloud providers exhausted. Final fallback to Local LLM.");
                 return local.chat(messages, tools, params).await;
             }
-        }
 
         Err(BizClawError::Provider(
             "All providers exhausted or unavailable".into(),
@@ -384,11 +381,10 @@ impl Provider for BrainRouter {
 
     async fn list_models(&self) -> Result<Vec<ModelInfo>> {
         let mut all_models = Vec::new();
-        if let Some(local) = &self.local_provider {
-            if let Ok(models) = local.list_models().await {
+        if let Some(local) = &self.local_provider
+            && let Ok(models) = local.list_models().await {
                 all_models.extend(models);
             }
-        }
         for entry in &self.providers {
             if let Ok(models) = entry.provider.list_models().await {
                 all_models.extend(models);
@@ -399,11 +395,10 @@ impl Provider for BrainRouter {
 
     async fn health_check(&self) -> Result<bool> {
         // If any provider is healthy, we are healthy
-        if let Some(local) = &self.local_provider {
-            if let Ok(true) = local.health_check().await {
+        if let Some(local) = &self.local_provider
+            && let Ok(true) = local.health_check().await {
                 return Ok(true);
             }
-        }
         for entry in &self.providers {
             if entry.state.read().unwrap().health != CircuitState::Unhealthy {
                 return Ok(true);

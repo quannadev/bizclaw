@@ -738,7 +738,7 @@ fn sanitize_error_text(text: &str, max_len: usize) -> String {
             // Collect chars before, masked section, and after
             let chars: Vec<char> = result.chars().collect();
             let before: String = chars[..char_idx].iter().collect();
-            let after: String = chars[end_char..].iter().collect();
+            let _after: String = chars[end_char..].iter().collect();
             result = format!("{}{}{}", before, prefix, "****".chars().take(mask_len).collect::<String>());
             if end_char < chars.len() {
                 result.push_str(&chars[end_char..].iter().collect::<String>());

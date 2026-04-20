@@ -139,6 +139,7 @@ impl ProviderResponse {
 
 /// Token usage statistics.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct Usage {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
@@ -154,18 +155,6 @@ pub struct Usage {
     pub thinking_tokens: u32,
 }
 
-impl Default for Usage {
-    fn default() -> Self {
-        Self {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0,
-            cache_creation_input_tokens: 0,
-            cache_read_input_tokens: 0,
-            thinking_tokens: 0,
-        }
-    }
-}
 
 impl Usage {
     /// Estimate cost in USD based on provider pricing (per 1M tokens).

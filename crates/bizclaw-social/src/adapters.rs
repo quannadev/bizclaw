@@ -8,7 +8,6 @@ use async_trait::async_trait;
 use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, error, info};
 
 #[async_trait]
 pub trait SocialPoster: Send + Sync {
@@ -179,22 +178,22 @@ impl MultiPlatformPoster {
         }
     }
 
-    pub fn with_zalo(mut self, client: ZaloClient) -> Self {
+    pub fn with_zalo(self, client: ZaloClient) -> Self {
         self.adapter.register_zalo(client);
         self
     }
 
-    pub fn with_tiktok(mut self, client: TikTokClient) -> Self {
+    pub fn with_tiktok(self, client: TikTokClient) -> Self {
         self.adapter.register_tiktok(client);
         self
     }
 
-    pub fn with_facebook(mut self, client: FacebookClient) -> Self {
+    pub fn with_facebook(self, client: FacebookClient) -> Self {
         self.adapter.register_facebook(client);
         self
     }
 
-    pub fn with_instagram(mut self, client: InstagramClient) -> Self {
+    pub fn with_instagram(self, client: InstagramClient) -> Self {
         self.adapter.register_instagram(client);
         self
     }

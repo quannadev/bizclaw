@@ -48,7 +48,7 @@ impl Tool for GmailTool {
 
     async fn execute(&self, arguments: &str) -> Result<ToolResult, BizClawError> {
         let req: GmailToolRequest =
-            serde_json::from_str(arguments).unwrap_or_else(|_| GmailToolRequest {
+            serde_json::from_str(arguments).unwrap_or(GmailToolRequest {
                 folder: None,
                 max_emails: None,
             });

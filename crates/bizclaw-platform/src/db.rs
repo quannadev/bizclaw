@@ -1210,10 +1210,8 @@ impl PlatformDb {
             .map_err(|e| BizClawError::Memory(format!("Query usage: {e}")))?;
 
         let mut summary = Vec::new();
-        for row in rows {
-            if let Ok(r) = row {
-                summary.push(r);
-            }
+        for r in rows.flatten() {
+            summary.push(r);
         }
         Ok(summary)
     }

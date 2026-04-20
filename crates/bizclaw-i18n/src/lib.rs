@@ -19,16 +19,13 @@ pub enum I18nError {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum TextDirection {
+    #[default]
     Ltr,
     Rtl,
 }
 
-impl Default for TextDirection {
-    fn default() -> Self {
-        Self::Ltr
-    }
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LocaleConfig {

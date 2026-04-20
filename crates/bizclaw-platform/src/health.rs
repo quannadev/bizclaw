@@ -240,11 +240,10 @@ fn run_health_check(
     }
 
     // Periodic cleanup of old usage logs
-    if let Ok(db) = db.lock() {
-        if let Err(e) = db.cleanup_usage_logs(90) {
+    if let Ok(db) = db.lock()
+        && let Err(e) = db.cleanup_usage_logs(90) {
             tracing::warn!("[health] Usage log cleanup failed: {e}");
         }
-    }
 }
 
 #[cfg(test)]

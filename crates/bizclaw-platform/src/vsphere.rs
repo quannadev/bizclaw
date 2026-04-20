@@ -373,12 +373,11 @@ impl VSphereClient {
                 ));
             }
 
-            if let Ok(Some(ip)) = self.get_vm_ip(vm_id).await {
-                if !ip.is_empty() && ip != "0.0.0.0" {
+            if let Ok(Some(ip)) = self.get_vm_ip(vm_id).await
+                && !ip.is_empty() && ip != "0.0.0.0" {
                     tracing::info!("🌐 VM {} got IP: {}", vm_id, ip);
                     return Ok(ip);
                 }
-            }
 
             tokio::time::sleep(Duration::from_secs(5)).await;
         }

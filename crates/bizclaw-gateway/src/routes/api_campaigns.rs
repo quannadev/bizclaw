@@ -83,10 +83,8 @@ pub async fn list_campaigns(State(state): State<Arc<AppState>>) -> Json<serde_js
         })
         .unwrap();
 
-    for c in iter {
-        if let Ok(cam) = c {
-            campaigns.push(cam);
-        }
+    for cam in iter.flatten() {
+        campaigns.push(cam);
     }
 
     Json(serde_json::json!({ "campaigns": campaigns }))

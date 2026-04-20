@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use bizclaw_core::error::Result;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 
 pub mod minimax;
 
@@ -44,6 +43,12 @@ pub trait VideoGenerator: Send + Sync {
 pub struct MediaManager {
     image_gen: Option<Box<dyn ImageGenerator>>,
     video_gen: Option<Box<dyn VideoGenerator>>,
+}
+
+impl Default for MediaManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MediaManager {

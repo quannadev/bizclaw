@@ -315,7 +315,7 @@ pub fn get_sign_key(type_str: &str, params: &std::collections::BTreeMap<&str, St
     // Format: "zsecure" + type_str + values in alphabetical order of their keys.
     // Because we use BTreeMap, iterating it yields keys in alphabetical order naturally.
     let mut data_to_hash = format!("zsecure{}", type_str);
-    for (_, value) in params {
+    for value in params.values() {
         data_to_hash.push_str(value);
     }
 

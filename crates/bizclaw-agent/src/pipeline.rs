@@ -13,10 +13,8 @@
 //! 8. **Summarize** - Generate session summary
 
 use async_trait::async_trait;
-use bizclaw_core::types::{Message, ProviderResponse, ToolCall};
+use bizclaw_core::types::{Message, ToolCall};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -255,7 +253,7 @@ impl PipelineStageHandler for ThinkStage {
         PipelineStage::Think
     }
 
-    async fn execute(&self, state: &mut PipelineState) -> Result<(), PipelineError> {
+    async fn execute(&self, _state: &mut PipelineState) -> Result<(), PipelineError> {
         tracing::info!("🔵 Stage 4/8: LLM reasoning...");
 
         Ok(())
@@ -268,7 +266,7 @@ impl PipelineStageHandler for ActStage {
         PipelineStage::Act
     }
 
-    async fn execute(&self, state: &mut PipelineState) -> Result<(), PipelineError> {
+    async fn execute(&self, _state: &mut PipelineState) -> Result<(), PipelineError> {
         tracing::info!("🔵 Stage 5/8: Executing actions...");
 
         Ok(())
@@ -281,7 +279,7 @@ impl PipelineStageHandler for ObserveStage {
         PipelineStage::Observe
     }
 
-    async fn execute(&self, state: &mut PipelineState) -> Result<(), PipelineError> {
+    async fn execute(&self, _state: &mut PipelineState) -> Result<(), PipelineError> {
         tracing::info!("🔵 Stage 6/8: Observing results...");
 
         Ok(())

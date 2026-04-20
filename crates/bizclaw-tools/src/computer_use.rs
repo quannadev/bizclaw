@@ -44,6 +44,12 @@ impl Default for ComputerUseConfig {
     }
 }
 
+impl Default for ComputerUseTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ComputerUseTool {
     pub fn new() -> Self {
         Self {
@@ -414,7 +420,7 @@ public class WinClick {{
                 .map_err(|e| format!("Failed to run cliclick: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("cliclick keypress failed"));
+                return Err("cliclick keypress failed".to_string());
             }
         }
 
@@ -489,7 +495,7 @@ public class WinClick {{
                 .map_err(|e| format!("Failed to run cliclick: {e}"))?;
 
             if !output.status.success() {
-                return Err(format!("cliclick drag failed"));
+                return Err("cliclick drag failed".to_string());
             }
         }
 
@@ -627,7 +633,7 @@ impl Tool for ComputerUseTool {
 
         let result = match parsed.action.as_str() {
             "screenshot" => {
-                let base64 = self.screenshot().await.map_err(|e| BizClawError::Tool(e))?;
+                let base64 = self.screenshot().await.map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "image": base64,
@@ -643,7 +649,7 @@ impl Tool for ComputerUseTool {
 
                 self.mouse_move(x, y)
                     .await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                    .map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "x": x,
@@ -662,7 +668,7 @@ impl Tool for ComputerUseTool {
 
                 self.mouse_click(x, y, &button, clicks)
                     .await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                    .map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "x": x,
@@ -681,7 +687,7 @@ impl Tool for ComputerUseTool {
 
                 self.mouse_click(x, y, "left", 2)
                     .await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                    .map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "x": x,
@@ -698,7 +704,7 @@ impl Tool for ComputerUseTool {
 
                 self.mouse_click(x, y, "right", 1)
                     .await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                    .map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "x": x,
@@ -715,7 +721,7 @@ impl Tool for ComputerUseTool {
 
                 self.type_text(&text)
                     .await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                    .map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "text": text,
@@ -731,7 +737,7 @@ impl Tool for ComputerUseTool {
 
                 self.key_press(&key)
                     .await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                    .map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "key": key,
@@ -754,7 +760,7 @@ impl Tool for ComputerUseTool {
 
                 self.drag(x1, y1, x2, y2)
                     .await
-                    .map_err(|e| BizClawError::Tool(e))?;
+                    .map_err(BizClawError::Tool)?;
                 serde_json::json!({
                     "success": true,
                     "from": {"x": x1, "y": y1},

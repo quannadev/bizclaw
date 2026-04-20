@@ -14,7 +14,6 @@
 //! - `GET /a2a/v1/tasks/{id}` - Get task status
 //! - `GET /a2a/v1/tasks/{id}/stream` - Stream task events
 
-use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;

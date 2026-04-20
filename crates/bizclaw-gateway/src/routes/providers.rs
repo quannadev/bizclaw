@@ -600,8 +600,8 @@ pub async fn brain_download_model(
                 let mut downloaded: u64 = 0;
                 let mut last_pct = 0;
                 while let Some(chunk) = stream.next().await {
-                    if let Ok(chunk) = chunk {
-                        if file.write_all(&chunk).await.is_ok() {
+                    if let Ok(chunk) = chunk
+                        && file.write_all(&chunk).await.is_ok() {
                             downloaded += chunk.len() as u64;
                             if total > 0 {
                                 let pct = (downloaded as f64 / total as f64 * 100.0) as u32;
@@ -615,7 +615,6 @@ pub async fn brain_download_model(
                                 }
                             }
                         }
-                    }
                 }
                 let _ = file.flush().await;
             }
@@ -640,13 +639,12 @@ pub async fn brain_download_status(
     let models_dir = config_dir.join("models");
     let status_file = models_dir.join(format!(".dl_{}.json", filename));
 
-    if let Ok(content) = std::fs::read_to_string(&status_file) {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
+    if let Ok(content) = std::fs::read_to_string(&status_file)
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(&content) {
             return Json(
                 serde_json::json!({"ok": true, "status": "downloading", "progress": json}),
             );
         }
-    }
 
     let dest = models_dir.join(&filename);
     if dest.exists() && dest.metadata().map(|m| m.len()).unwrap_or(0) > 10 * 1024 * 1024 {

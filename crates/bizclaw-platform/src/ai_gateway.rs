@@ -365,11 +365,10 @@ impl AiGatewayState {
                     let tokens = resp.usage.total_tokens as u64;
                     {
                         let mut limits = self.rate_limits.write().await;
-                        if let Some(state) = limits.get_mut(tenant_id) {
-                            if !state.check_and_add_tokens(tokens, plan.max_tokens_per_hour()) {
+                        if let Some(state) = limits.get_mut(tenant_id)
+                            && !state.check_and_add_tokens(tokens, plan.max_tokens_per_hour()) {
                                 tracing::warn!("⚠️ Tenant {} approaching token limit", tenant_id);
                             }
-                        }
                     }
 
                     // 6. Record usage

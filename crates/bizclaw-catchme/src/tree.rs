@@ -172,11 +172,10 @@ impl TreeOrganizer {
         for event in events {
             if let Some(last) = current.last() {
                 let gap = (event.timestamp - last.timestamp).num_seconds();
-                if gap > self.config.session_gap_secs {
-                    if !current.is_empty() {
+                if gap > self.config.session_gap_secs
+                    && !current.is_empty() {
                         sessions.push(std::mem::take(&mut current));
                     }
-                }
             }
             current.push(event.clone());
         }

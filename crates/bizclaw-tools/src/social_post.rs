@@ -236,11 +236,10 @@ impl SocialPostTool {
             .await
         {
             Ok(resp) => {
-                if let Ok(json) = resp.json::<serde_json::Value>().await {
-                    if json["success"].as_bool() == Some(true) {
+                if let Ok(json) = resp.json::<serde_json::Value>().await
+                    && json["success"].as_bool() == Some(true) {
                         return json["files"][0]["url"].as_str().unwrap_or("").to_string();
                     }
-                }
                 "".into()
             }
             Err(_) => "".into(),

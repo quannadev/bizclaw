@@ -175,7 +175,7 @@ impl CloudRouter {
     }
 
     fn priority_based(&self) -> Option<Arc<RwLock<ProviderEntry>>> {
-        let mut sorted: Vec<_> = self.providers.iter().map(|p| Arc::clone(p)).collect();
+        let mut sorted: Vec<_> = self.providers.iter().map(Arc::clone).collect();
         sorted.sort_by(|a, b| {
             let a_pri = a.read().unwrap().config.priority;
             let b_pri = b.read().unwrap().config.priority;
@@ -260,11 +260,10 @@ impl CloudRouter {
                 }
             }
         }
-        if self.routing.local_fallback {
-            if let Some(local) = &self.local_provider {
+        if self.routing.local_fallback
+            && let Some(local) = &self.local_provider {
                 return local.chat(messages, tools, params).await;
             }
-        }
         Err(BizClawError::provider("All providers failed"))
     }
 
@@ -355,7 +354,7 @@ impl Provider for CloudRouter {
 
     async fn list_models(&self) -> Result<Vec<ModelInfo>> {
         let mut models = Vec::new();
-        let providers: Vec<_> = self.providers.iter().map(|p| Arc::clone(p)).collect();
+        let providers: Vec<_> = self.providers.iter().map(Arc::clone).collect();
         let local = self.local_provider.clone();
 
         for p in &providers {
@@ -368,16 +367,15 @@ impl Provider for CloudRouter {
                 models.extend(m);
             }
         }
-        if let Some(local_prov) = &local {
-            if let Ok(m) = local_prov.list_models().await {
+        if let Some(local_prov) = &local
+            && let Ok(m) = local_prov.list_models().await {
                 models.extend(m);
             }
-        }
         Ok(models)
     }
 
     async fn health_check(&self) -> Result<bool> {
-        let providers: Vec<_> = self.providers.iter().map(|p| Arc::clone(p)).collect();
+        let providers: Vec<_> = self.providers.iter().map(Arc::clone).collect();
         let local = self.local_provider.clone();
 
         for p in &providers {

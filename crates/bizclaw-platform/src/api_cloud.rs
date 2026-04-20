@@ -443,18 +443,15 @@ pub async fn cloud_get_config(State(state): State<Arc<AdminState>>) -> Json<serd
 
     // Redact sensitive values
     let mut safe_config = config.clone();
-    if let Some(obj) = safe_config.as_object_mut() {
-        if let Some(pw) = obj.get("vsphere_password") {
-            if let Some(s) = pw.as_str() {
-                if !s.is_empty() {
+    if let Some(obj) = safe_config.as_object_mut()
+        && let Some(pw) = obj.get("vsphere_password")
+            && let Some(s) = pw.as_str()
+                && !s.is_empty() {
                     obj.insert(
                         "vsphere_password".to_string(),
                         serde_json::Value::String("***configured***".to_string()),
                     );
                 }
-            }
-        }
-    }
 
     Json(safe_config)
 }

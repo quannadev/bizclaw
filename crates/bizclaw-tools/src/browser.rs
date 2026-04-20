@@ -339,7 +339,7 @@ impl Tool for BrowserTool {
                 };
 
                 // Take screenshot
-                let resp = client
+                let _resp = client
                     .get(format!("{}/instances/{}/screenshot", self.base_url, inst_id))
                     .send()
                     .await

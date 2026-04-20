@@ -389,14 +389,13 @@ impl Channel for ZaloBotChannel {
                 self.connected = true;
 
                 // Set webhook if configured
-                if !self.config.webhook_url.is_empty() {
-                    if let Err(e) = self
+                if !self.config.webhook_url.is_empty()
+                    && let Err(e) = self
                         .set_webhook(&self.config.webhook_url, &self.config.secret_token)
                         .await
                     {
                         tracing::warn!("[zalo-bot] Failed to set webhook: {e}");
                     }
-                }
                 Ok(())
             }
             Err(e) => {

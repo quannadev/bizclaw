@@ -441,11 +441,11 @@ pub async fn dispatch_to_channel_agent(
     let target = resolve_agent_for_channel(&state, channel).await;
 
     // Step 3a: If keyword router matched → skip MAMA LLM entirely (fast path)
-    if let Some(routed_agent) = fast_routed {
-        if target.is_none() {
+    if let Some(routed_agent) = fast_routed
+        && target.is_none() {
             let mut orch = state.orchestrator.lock().await;
             // Set session for thread isolation
-            if let Some(agent) = orch.get_agent_mut(&routed_agent) {
+            if let Some(agent) = orch.get_agent_mut(routed_agent) {
                 agent.set_session(&session_key);
             }
             tracing::info!(
@@ -458,7 +458,7 @@ pub async fn dispatch_to_channel_agent(
                 routed_agent,
                 session_key
             );
-            match orch.send_to(&routed_agent, content).await {
+            match orch.send_to(routed_agent, content).await {
                 Ok(reply) => return Some(reply),
                 Err(e) => {
                     tracing::warn!("⚡ Fast-routed agent '{}' failed: {}", routed_agent, e);
@@ -466,7 +466,6 @@ pub async fn dispatch_to_channel_agent(
                 }
             }
         }
-    }
 
     // Step 3b: Ambiguous message → try MAMA LLM routing (slow path)
     let has_mama = {
@@ -542,11 +541,10 @@ pub async fn dispatch_to_channel_agent(
     }
 
     // Last resort: default agent with session isolation
-    if let Some(default_name) = orch.default_agent_name().map(|s| s.to_string()) {
-        if let Some(agent) = orch.get_agent_mut(&default_name) {
+    if let Some(default_name) = orch.default_agent_name().map(|s| s.to_string())
+        && let Some(agent) = orch.get_agent_mut(&default_name) {
             agent.set_session(&session_key);
         }
-    }
     match orch.send(content).await {
         Ok(r) => Some(r),
         Err(e) => Some(format!("⚠️ Agent error: {e}")),
@@ -1076,8 +1074,8 @@ pub async fn zalo_oa_webhook(
                 dispatch_to_channel_agent(state.clone(), "zalo", Some(sender_id), message_text)
                     .await;
 
-            if let Some(agent_response) = agent_response_opt {
-                if let Some(config) = oa_config {
+            if let Some(agent_response) = agent_response_opt
+                && let Some(config) = oa_config {
                     let access_token = &config.official.access_token;
                     if !access_token.is_empty() {
                         let reply_payload = serde_json::json!({
@@ -1120,7 +1118,6 @@ pub async fn zalo_oa_webhook(
                         tracing::warn!("[zalo-oa] No access_token configured — cannot reply");
                     }
                 }
-            }
 
             Json(serde_json::json!({
                 "ok": true,
@@ -1265,8 +1262,8 @@ pub async fn messenger_webhook(
     };
 
     // ── 2. Validate HMAC-SHA256 signature (X-Hub-Signature-256) ──
-    if !app_secret.is_empty() {
-        if let Some(sig_header) = headers.get("x-hub-signature-256") {
+    if !app_secret.is_empty()
+        && let Some(sig_header) = headers.get("x-hub-signature-256") {
             let sig_str = sig_header.to_str().unwrap_or("");
             // Format: sha256=<hex>
             let expected_sig = sig_str.strip_prefix("sha256=").unwrap_or("");
@@ -1282,7 +1279,6 @@ pub async fn messenger_webhook(
                 tracing::debug!("[messenger] HMAC signature validated ✓");
             }
         }
-    }
 
     // ── 3. Parse the webhook event ──
     let event: serde_json::Value = match serde_json::from_str(&body_str) {

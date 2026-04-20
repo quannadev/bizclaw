@@ -289,13 +289,11 @@ impl ProxmoxClient {
             for iface in result {
                 if let Some(addrs) = iface["ip-addresses"].as_array() {
                     for addr in addrs {
-                        if addr["ip-address-type"].as_str() == Some("ipv4") {
-                            if let Some(ip) = addr["ip-address"].as_str() {
-                                if !ip.starts_with("127.") {
+                        if addr["ip-address-type"].as_str() == Some("ipv4")
+                            && let Some(ip) = addr["ip-address"].as_str()
+                                && !ip.starts_with("127.") {
                                     return Ok(ip.to_string());
                                 }
-                            }
-                        }
                     }
                 }
             }

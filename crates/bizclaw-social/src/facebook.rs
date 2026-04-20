@@ -1,10 +1,8 @@
-use crate::types::*;
 use anyhow::{Context, Result};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
 
 #[derive(Debug, Clone)]
 pub struct FacebookClient {

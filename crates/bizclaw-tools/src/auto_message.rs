@@ -15,6 +15,12 @@ struct AutoMessageArgs {
 
 pub struct AutoMessageTool;
 
+impl Default for AutoMessageTool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AutoMessageTool {
     pub fn new() -> Self {
         Self

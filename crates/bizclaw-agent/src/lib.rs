@@ -315,11 +315,10 @@ impl Agent {
         }
 
         // LRU eviction: keep max 50 sessions
-        if self.session_conversations.len() > 50 {
-            if let Some(oldest_key) = self.session_conversations.keys().next().cloned() {
+        if self.session_conversations.len() > 50
+            && let Some(oldest_key) = self.session_conversations.keys().next().cloned() {
                 self.session_conversations.remove(&oldest_key);
             }
-        }
 
         // Restore target session or create fresh
         self.conversation = self

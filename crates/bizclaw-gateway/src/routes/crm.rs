@@ -361,11 +361,11 @@ pub async fn list_conversations(
     let tab = query
         .tab
         .as_ref()
-        .and_then(|t| match t.to_lowercase().as_str() {
-            "unread" => Some(ConversationTab::Unread),
-            "important" => Some(ConversationTab::Important),
-            "other" => Some(ConversationTab::Other),
-            _ => Some(ConversationTab::All),
+        .map(|t| match t.to_lowercase().as_str() {
+            "unread" => ConversationTab::Unread,
+            "important" => ConversationTab::Important,
+            "other" => ConversationTab::Other,
+            _ => ConversationTab::All,
         });
 
     let conversations = state.crm.get_conversations(tab).await;

@@ -1,12 +1,9 @@
-use crate::types::*;
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
 
 #[derive(Debug, Clone)]
 pub struct TikTokClient {
@@ -234,7 +231,7 @@ impl TikTokClient {
         &self,
         upload_url: &str,
         video_data: &[u8],
-        part_number: u32,
+        _part_number: u32,
     ) -> Result<()> {
         let response = self
             .client
@@ -256,7 +253,7 @@ impl TikTokClient {
 
     pub async fn publish_video(
         &self,
-        video_id: &str,
+        _video_id: &str,
         title: &str,
         description: &str,
     ) -> Result<String> {
@@ -461,7 +458,7 @@ impl TikTokShopClient {
 
         let response = self
             .client
-            .get(&format!(
+            .get(format!(
                 "https://open-api.tiktokglobalshop.com/202309/orders?page_size={}",
                 page_size
             ))

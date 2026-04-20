@@ -1,11 +1,8 @@
-use crate::types::*;
 use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
 
 #[derive(Debug, Clone)]
 pub struct ZaloClient {
@@ -299,7 +296,7 @@ impl ZaloOABuilder {
         }
     }
 
-    pub fn access_token(mut self, token: &str) -> Self {
+    pub fn access_token(self, _token: &str) -> Self {
         self
     }
 

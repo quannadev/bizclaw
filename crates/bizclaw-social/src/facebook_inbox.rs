@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InboxConfig {
@@ -144,6 +144,12 @@ pub struct FacebookInboxCollector {
     client: Client,
 }
 
+impl Default for FacebookInboxCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FacebookInboxCollector {
     pub fn new() -> Self {
         Self {
@@ -162,7 +168,7 @@ impl FacebookInboxCollector {
         Ok(())
     }
 
-    pub async fn verify_webhook(&self, mode: &str, token: &str, challenge: &str) -> Result<String> {
+    pub async fn verify_webhook(&self, _mode: &str, token: &str, challenge: &str) -> Result<String> {
         let cfg = self.config.read().await;
         let config = cfg.as_ref().context("Not configured")?;
 

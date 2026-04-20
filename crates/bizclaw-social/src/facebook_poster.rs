@@ -8,7 +8,6 @@
 //! - Post status tracking and logging
 //! - Rate limit handling
 
-use crate::types::{Platform, SocialContent};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use reqwest::Client;

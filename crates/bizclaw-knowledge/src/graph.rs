@@ -126,6 +126,12 @@ pub struct KnowledgeGraph {
     embeddings_index: RwLock<HashMap<EntityId, Vec<f32>>>,
 }
 
+impl Default for KnowledgeGraph {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl KnowledgeGraph {
     pub fn new() -> Self {
         Self {
@@ -189,16 +195,14 @@ impl KnowledgeGraph {
         entities
             .values()
             .filter(|e| {
-                if let Some(name) = &query.entity_name {
-                    if !e.name.to_lowercase().contains(&name.to_lowercase()) {
+                if let Some(name) = &query.entity_name
+                    && !e.name.to_lowercase().contains(&name.to_lowercase()) {
                         return false;
                     }
-                }
-                if let Some(entity_type) = &query.entity_type {
-                    if &e.entity_type != entity_type {
+                if let Some(entity_type) = &query.entity_type
+                    && &e.entity_type != entity_type {
                         return false;
                     }
-                }
                 true
             })
             .take(query.limit.unwrap_or(100))
@@ -223,8 +227,8 @@ impl KnowledgeGraph {
 
             if let Some(neighbor_ids) = adjacency.get(&current_id) {
                 for rel_id in neighbor_ids {
-                    if let Some(rel) = relationships.get(rel_id) {
-                        if rel.source == *id || rel.target == *id {
+                    if let Some(rel) = relationships.get(rel_id)
+                        && (rel.source == *id || rel.target == *id) {
                             let neighbor_id = if rel.source == *id {
                                 &rel.target
                             } else {
@@ -235,7 +239,6 @@ impl KnowledgeGraph {
                                 queue.push((neighbor_id.clone(), current_depth + 1));
                             }
                         }
-                    }
                 }
             }
         }
@@ -279,7 +282,7 @@ impl KnowledgeGraph {
         let mut visited = HashSet::new();
         let mut queue = vec![(source.clone(), vec![source.clone()])];
 
-        while let Some((current_id, mut path)) = queue.pop() {
+        while let Some((current_id, path)) = queue.pop() {
             if current_id == *target {
                 return Some(path);
             }
@@ -365,6 +368,12 @@ pub struct GraphService {
     graph: Arc<KnowledgeGraph>,
 }
 
+impl Default for GraphService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GraphService {
     pub fn new() -> Self {
         Self {
@@ -380,7 +389,7 @@ impl GraphService {
         let mut entities = Vec::new();
         let words: Vec<&str> = text.split_whitespace().collect();
 
-        for (i, word) in words.iter().enumerate() {
+        for (_i, word) in words.iter().enumerate() {
             let word = word.trim_matches(|c: char| !c.is_alphanumeric());
             if word.len() > 2 {
                 let capitalized: String = word

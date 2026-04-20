@@ -145,7 +145,9 @@ pub struct GenerationRequest {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub enum Tone {
+    #[default]
     Professional,
     Casual,
     Humorous,
@@ -156,20 +158,12 @@ pub enum Tone {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Default)]
 pub enum ContentLength {
     Short,
+    #[default]
     Medium,
     Long,
 }
 
-impl Default for Tone {
-    fn default() -> Self {
-        Tone::Professional
-    }
-}
 
-impl Default for ContentLength {
-    fn default() -> Self {
-        ContentLength::Medium
-    }
-}

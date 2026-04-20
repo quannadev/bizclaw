@@ -342,6 +342,7 @@ pub enum NBAPriority {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct ChannelSummary {
     pub total_interactions: u64,
     pub last_interaction: Option<DateTime<Utc>>,
@@ -350,14 +351,3 @@ pub struct ChannelSummary {
     pub sentiment_breakdown: HashMap<String, u64>,
 }
 
-impl Default for ChannelSummary {
-    fn default() -> Self {
-        Self {
-            total_interactions: 0,
-            last_interaction: None,
-            unread_count: 0,
-            open_tickets: 0,
-            sentiment_breakdown: HashMap::new(),
-        }
-    }
-}

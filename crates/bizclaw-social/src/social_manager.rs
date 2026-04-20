@@ -425,7 +425,7 @@ impl SocialMediaManager {
         let image_url = content.media_urls.first().cloned().unwrap_or_default();
         let link_url = content.link_url.unwrap_or_default();
 
-        let url = format!("https://api.pinterest.com/v5/pins");
+        let url = "https://api.pinterest.com/v5/pins".to_string();
         let access_token = creds.access_token.clone();
         let body = serde_json::json!({
             "board_id": account_id,
@@ -495,7 +495,7 @@ impl SocialMediaManager {
             .context("Bluesky account not found")?;
 
         let did = format!("did:plc:{}", account_id);
-        let url = format!("https://bsky.social/xrpc/com.atproto.repo.createRecord");
+        let url = "https://bsky.social/xrpc/com.atproto.repo.createRecord".to_string();
         let access_token = creds.access_token.clone();
         let record = serde_json::json!({
             "repo": did,
@@ -520,7 +520,7 @@ impl SocialMediaManager {
             uri: String,
         }
         let result: BlueskyResponse = response.json().await?;
-        let post_id = result.uri.split("/").last().unwrap_or("").to_string();
+        let _post_id = result.uri.split("/").last().unwrap_or("").to_string();
 
         let uri = result.uri.clone();
         let post_id = uri.split("/").last().unwrap_or("").to_string();
@@ -610,7 +610,7 @@ impl SocialMediaManager {
         _comment_id: &str,
     ) -> Result<Vec<Comment>> {
         let creds = match self
-            .get_credentials("facebook", post_id.split('_').next().unwrap_or("").into())
+            .get_credentials("facebook", post_id.split('_').next().unwrap_or(""))
             .await
         {
             Some(c) => c,
@@ -940,7 +940,7 @@ impl SocialMediaManager {
             creds.access_token
         );
 
-        let response = self.client.get(&format!("{}{}", url, params)).send().await;
+        let response = self.client.get(format!("{}{}", url, params)).send().await;
         if let Ok(resp) = response {
             #[derive(Deserialize)]
             struct ThreadsCommentsResponse {
@@ -1006,7 +1006,7 @@ impl SocialMediaManager {
 
         let response = self
             .client
-            .get(&format!("{}{}", url, params))
+            .get(format!("{}{}", url, params))
             .bearer_auth(&creds.access_token)
             .send()
             .await;
@@ -1268,7 +1268,7 @@ impl SocialMediaManager {
 
     async fn get_facebook_insights(&self, post_id: &str, _metric: &str) -> Result<Insights> {
         let creds = match self
-            .get_credentials("facebook", post_id.split('_').next().unwrap_or("").into())
+            .get_credentials("facebook", post_id.split('_').next().unwrap_or(""))
             .await
         {
             Some(c) => c,
@@ -1649,7 +1649,7 @@ impl SocialMediaManager {
 
         let response = self
             .client
-            .get(&format!("{}{}", url, params))
+            .get(format!("{}{}", url, params))
             .bearer_auth(&creds.access_token)
             .send()
             .await;

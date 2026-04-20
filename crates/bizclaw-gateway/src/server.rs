@@ -1617,8 +1617,8 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
             {
                 Ok(resp) => {
                     // Check if Platform requested an OTA update
-                    if let Ok(data) = resp.json::<serde_json::Value>().await {
-                        if data["update_triggered"].as_bool().unwrap_or(false) {
+                    if let Ok(data) = resp.json::<serde_json::Value>().await
+                        && data["update_triggered"].as_bool().unwrap_or(false) {
                             tracing::warn!(
                                 "🔄 OTA Update triggered by Central Hub! Executing update..."
                             );
@@ -1627,7 +1627,6 @@ pub async fn start(config: &GatewayConfig) -> anyhow::Result<()> {
                                 .arg("cd /opt/bizclaw && git pull origin main && docker-compose -f docker-compose.prod.yml up -d --build")
                                 .spawn();
                         }
-                    }
                 }
                 Err(_e) => {
                     // Fail silently, telemetry is non-critical

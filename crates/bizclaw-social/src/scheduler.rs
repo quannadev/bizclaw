@@ -5,7 +5,7 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info};
 
 #[derive(Debug, Clone)]
 pub struct SocialScheduler {

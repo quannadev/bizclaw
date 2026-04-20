@@ -182,10 +182,8 @@ impl Tool for GroupSummarizerTool {
                             })
                         })
                         .map_err(|e| BizClawError::Tool(e.to_string()))?;
-                    for r in rows {
-                        if let Ok(m) = r {
-                            messages.push(m);
-                        }
+                    for m in rows.flatten() {
+                        messages.push(m);
                     }
                 } else {
                     let rows = stmt
@@ -201,10 +199,8 @@ impl Tool for GroupSummarizerTool {
                             })
                         })
                         .map_err(|e| BizClawError::Tool(e.to_string()))?;
-                    for r in rows {
-                        if let Ok(m) = r {
-                            messages.push(m);
-                        }
+                    for m in rows.flatten() {
+                        messages.push(m);
                     }
                 };
 
