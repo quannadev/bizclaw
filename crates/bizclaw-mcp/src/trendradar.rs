@@ -164,7 +164,7 @@ mod tests {
 
     #[test]
     fn test_tool_call_result_error() {
-        let result = ToolCallResult::<String>::error("test error");
+        let result = ToolCallResult::error("test error");
         assert!(!result.success);
         assert!(result.data.is_none());
         assert_eq!(result.error.unwrap(), "test error");
