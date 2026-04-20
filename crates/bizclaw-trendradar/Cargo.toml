@@ -1,0 +1,30 @@
+[package]
+name = "bizclaw-trendradar"
+version = "1.1.7"
+edition = "2021"
+authors = ["BizClaw Team"]
+description = "Native TrendRadar module for BizClaw - Multi-source trend monitoring and content generation"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/nguyenduchoai/bizclaw"
+keywords = ["trends", "monitoring", "social-media", "ai", "content-generation"]
+categories = ["web-programming", "social-networking"]
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+feed-rs = "0.6"
+regex = { workspace = true }
+once_cell = "1"
+time = { workspace = true, features = ["serde"] }
+tracing = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["full"] }
+
+[features]
+default = []
