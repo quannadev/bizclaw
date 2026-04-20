@@ -4,228 +4,276 @@ description: |
   Trend-to-Post workflow for BizClaw when user wants to create content from trending topics.
   Trigger phrases: tạo bài từ trend, viết content theo trend, theo dõi trend,
   trending content, tạo bài đăng từ hot topic, lấy trend viết bài,
-  trend analysis, hot topic content, social media from trends.
+  trend analysis, hot topic content, social media from trends, TrendRadar,
+  theo dõi tin nóng, giám sát xu hướng, public opinion tracking.
   Scenarios: khi cần tạo content từ trend, khi cần viết bài theo hot topic,
-  khi muốn đăng bài theo xu hướng, khi cần content marketing từ trend.
+  khi muốn đăng bài theo xu hướng, khi cần content marketing từ trend,
+  khi muốn monitor tin tức đa nguồn.
 version: 2.0.0
 ---
 
-# Trend-to-Post Workflow
+# Trend-to-Post Workflow v2.0
 
 You are a content strategist connecting TrendRadar trends with BizClaw content creation.
 
 ## Architecture
 
 ```
-TrendRadar MCP ──query──► BizClaw Agent ──create──► Content ──publish──► Social Channels
-     │                                                              │
-     │ trends, hot topics,                                        │
-     │ AI analysis, sentiment                                     │
-     └────────────────────────────────────────────────────────────┘
-                              feedback loop
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         TREND-TO-POST PIPELINE                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   TRENDRADAR MCP                                                           │
+│   ┌─────────────┐     ┌─────────────┐     ┌─────────────┐                  │
+│   │   Sources   │────▶│   Filter    │────▶│     AI      │                  │
+│   │ 11 platforms│     │ Keywords/AI │     │  Analysis   │                  │
+│   │    + RSS    │     │   Scoring   │     │ Sentiment   │                  │
+│   └─────────────┘     └─────────────┘     └──────┬──────┘                  │
+│                                                  │                          │
+│                                                  ▼                          │
+│   BIZCLAW AGENT                         ┌─────────────┐                   │
+│   ┌─────────────┐     ┌─────────────┐   │   Alerts    │                   │
+│   │   Analyze   │◀────│   Trends    │───▶│   Reports   │                   │
+│   │   Deep     │     │   Hot/New   │    │   Insights   │                   │
+│   └──────┬──────┘     └─────────────┘    └─────────────┘                   │
+│          │                                                            │
+│          ▼                                                            │
+│   ┌─────────────────────────────────────┐                              │
+│   │        CONTENT GENERATOR              │                              │
+│   │  Zalo │ Facebook │ Telegram │ Email│                              │
+│   └─────────────┬───────────────────────┘                              │
+│                 │                                                         │
+│                 ▼                                                         │
+│   ┌─────────────────────────────────────┐                              │
+│   │        AUTO-PUBLISHER                │                              │
+│   │  Schedule │ Queue │ Retry │ Analytics│                              │
+│   └─────────────────────────────────────┘                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Integration Methods
 
-### 1. MCP Server (Recommended)
+### 1. MCP Server (TrendRadar side)
 
 ```yaml
-# Add to BizClaw config for TrendRadar MCP
-[[mcp_servers]]
-name = "trendradar"
-command = "docker"
-args = ["run", "--rm", "-p", "127.0.0.1:3333:3333", "wantcat/trendradar-mcp:latest"]
+# Start TrendRadar MCP Server
+docker run -d \
+  --name trendradar-mcp \
+  -p 127.0.0.1:3333:3333 \
+  -v $(pwd)/config:/app/config:ro \
+  -v $(pwd)/output:/app/output:ro \
+  wantcat/trendradar-mcp:latest
 ```
 
-### 2. HTTP API
+### 2. BizClaw Configuration
 
-```javascript
-// Direct HTTP calls to TrendRadar MCP
-const TRENDRADAR_API = 'http://localhost:3333';
+```yaml
+# bizclaw.yaml
+mcp:
+  trendradar:
+    enabled: true
+    url: "http://127.0.0.1:3333"
+    interests:
+      - "AI"
+      - "technology"
+      - "startup"
+      - "cryptocurrency"
+      - "business"
+    platforms:
+      - "weibo"
+      - "zhihu"
+      - "baidu"
+      - "toutiao"
+      - "wallstreetcn"
+    sentiment_threshold: 0.5
+    refresh_interval: "15m"
 
-// Get trending topics
-async function getTrends(keywords = ['AI', 'tech', 'business']) {
-  const res = await fetch(`${TRENDRADAR_API}/mcp`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      method: 'tools/call',
-      params: { name: 'get_trending_topics', arguments: { keywords } }
-    })
-  });
-  return res.json();
-}
-
-// Search news by topic
-async function searchNews(query, days = 7) {
-  const res = await fetch(`${TRENDRADAR_API}/mcp`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      method: 'tools/call',
-      params: { name: 'search_news', arguments: { query, days, include_url: true } }
-    })
-  });
-  return res.json();
-}
-```
-
-## Workflow Steps
-
-### Step 1: Listen to Trends
-
-```javascript
-// Get today's trending topics matching your interests
-const trends = await searchNews('AI startup funding', 1);
-
-// Get comprehensive daily summary
-const summary = await fetch(`${TRENDRADAR_API}/mcp`, {
-  method: 'POST',
-  body: JSON.stringify({
-    method: 'tools/call',
-    params: { name: 'generate_summary_report', arguments: { days: 1 } }
-  })
-});
-
-// Get topic analysis with sentiment
-const analysis = await fetch(`${TRENDRADAR_API}/mcp`, {
-  method: 'POST',
-  body: JSON.stringify({
-    method: 'tools/call',
-    params: { name: 'analyze_topic_trend', arguments: { topic: 'AI', days: 7 } }
-  })
-});
-```
-
-### Step 2: Analyze & Select
-
-```javascript
-// Filter trends by criteria
-const filteredTrends = trends.filter(trend => {
-  return (
-    trend.platform.includes('weibo') ||    // High engagement
-    trend.mentions > 10000 ||             // Viral potential
-    trend.sentiment === 'positive'        // Brand-safe
-  );
-});
-
-// Rank by engagement
-const ranked = filteredTrends.sort((a, b) => b.mentions - a.mentions);
-```
-
-### Step 3: Create Content
-
-```javascript
-// Generate content for each trend
-const contentPrompts = ranked.slice(0, 5).map(trend => {
-  return {
-    topic: trend.title,
-    source: trend.platform,
-    url: trend.url,
-    angle: determineAngle(trend), // educational, news, opinion
-    format: selectFormat(trend),    // post, article, thread
-    tone: selectTone(trend)        // professional, casual, urgent
-  };
-});
-
-// Call BizClaw content writer
-async function generateContent(prompt) {
-  return await bizclawAgent.process(`
-    Viết một bài ${prompt.format} về "${prompt.topic}"
-
-    Yêu cầu:
-    - Tone: ${prompt.tone}
-    - Nguồn: ${prompt.source}
-    - Link tham khảo: ${prompt.url}
-    - Độ dài: 300-500 từ
-    - Format: Vietnamese with emoji
-    - Include: hashtags, call-to-action
-  `);
-}
-```
-
-### Step 4: Publish
-
-```javascript
-// Schedule posts across channels
-const schedule = [
-  { channel: 'zalo', time: '09:00', content: contentPosts[0] },
-  { channel: 'facebook', time: '10:00', content: contentPosts[1] },
-  { channel: 'telegram', time: '12:00', content: contentPosts[2] },
-  { channel: 'email', time: '18:00', content: weeklyDigest }
-];
-
-// Publish via BizClaw channels
-for (const post of schedule) {
-  await bizclawChannel.send(post.channel, post.content);
-}
+content:
+  channels:
+    - "zalo"
+    - "facebook"
+    - "telegram"
+    - "email"
+  max_posts_per_day: 10
+  auto_publish: true
+  schedule:
+    morning: "08:00"
+    noon: "12:00"
+    evening: "18:00"
 ```
 
 ## MCP Tools Available
 
-| Tool | Purpose | Use Case |
-|------|---------|----------|
-| `get_trending_topics` | Get hot topics | Quick overview |
-| `search_news` | Search by query | Find specific trends |
-| `analyze_topic_trend` | Deep analysis | Understand trajectory |
-| `analyze_sentiment` | Emotion analysis | Brand safety check |
-| `generate_summary_report` | Daily digest | Newsletter content |
-| `compare_periods` | Trend comparison | YoY/YoY analysis |
-| `aggregate_news` | Deduplicate | Clean data |
+| Tool | Purpose | Parameters | Returns |
+|------|---------|------------|---------|
+| `get_trending_topics` | Get hot topics | `keywords[]`, `platforms[]` | List of trending topics |
+| `search_news` | Search by query | `query`, `days`, `include_url` | Matching news items |
+| `get_latest_news` | Get today's news | `platforms[]`, `limit` | Today's news |
+| `analyze_topic_trend` | Deep analysis | `topic`, `days` | TrendAnalysis object |
+| `analyze_sentiment` | Emotion analysis | `topic`, `days` | Sentiment breakdown |
+| `generate_summary_report` | Daily digest | `days` | Full report |
+| `compare_periods` | Trend comparison | `period1`, `period2` | Comparison data |
+| `aggregate_news` | Deduplicate | `news[]` | Deduplicated list |
+
+## Usage Examples
+
+### Example 1: Morning Trend Brief
+
+```javascript
+// 1. Get trending topics
+const topics = await callMcpTool('get_trending_topics', {
+  keywords: ['AI', 'startup'],
+  platforms: ['weibo', 'zhihu']
+});
+
+// 2. Analyze top topic
+const analysis = await callMcpTool('analyze_topic_trend', {
+  topic: topics[0].title,
+  days: 7
+});
+
+// 3. Generate content
+const content = await bizclawAgent.process(`
+  Tạo bài đăng Zalo từ trend analysis:
+  Topic: ${analysis.topic}
+  Mentions: ${analysis.total_mentions}
+  Sentiment: ${JSON.stringify(analysis.sentiment_breakdown)}
+  Insights: ${analysis.insights.join(', ')}
+  
+  Format: 300-500 chars, Vietnamese, có emoji
+`);
+
+// 4. Publish
+await publishToChannel('zalo', content);
+```
+
+### Example 2: Real-time Alert Response
+
+```javascript
+// Check for breaking news
+const alerts = await checkTrendingAlerts({
+  mentions_threshold: 50000,
+  sentiment: ['negative', 'controversial'],
+  hotness: 0.9
+});
+
+if (alerts.length > 0) {
+  for (const alert of alerts) {
+    // Generate response content
+    const response = await generateAlertResponse(alert);
+    
+    // Publish immediately
+    await publishToAllChannels(response, { urgent: true });
+    
+    // Log for analytics
+    await trackAlert(alert, response);
+  }
+}
+```
+
+### Example 3: Weekly Newsletter
+
+```javascript
+// Generate weekly report
+const report = await callMcpTool('generate_summary_report', {
+  days: 7
+});
+
+// Generate newsletter content
+const newsletter = await bizclawAgent.process(`
+  Tạo bản tin email từ dữ liệu sau:
+  
+  ## Top Trends Tuần
+  ${report.top_trends.map((t, i) => `${i+1}. ${t.title} (${t.mentions} mentions)`).join('\n')}
+  
+  ## Sentiment Analysis
+  Positive: ${report.sentiment.positive}%
+  Neutral: ${report.sentiment.neutral}%
+  Negative: ${report.sentiment.negative}%
+  
+  ## Key Insights
+  ${report.insights.map((i, idx) => `${idx+1}. ${i}`).join('\n')}
+  
+  Format: HTML email, professional Vietnamese
+`);
+
+// Schedule for Sunday 9AM
+await scheduleEmail('newsletter@subscribers.com', newsletter, {
+  send_at: '2024-01-21 09:00:00'
+});
+```
 
 ## Content Templates
 
-### Hot Topic Post (Zalo/Facebook)
+### Zalo Post (Short - 500 chars)
 ```markdown
-🔥 [SỐT] {Trend Title}
+🔥 [SỐT] {title}
 
-{2-3 sentence summary of why it's trending}
+{2-sentence summary}
 
-📊 Thông tin:
-• Nền tảng: {Platform}
-• Lượt thảo luận: {Mentions}
-• Xu hướng: {Trajectory}
-
-📖 Đọc thêm: {URL}
-
-#Trending #{RelatedHashtags}
+📊 {mentions} thảo luận trên {platform}
+🔗 {source_url}
 
 ---
-💡 Theo dõi {Brand} để cập nhật tin nóng!
+💡 Theo dõi để cập nhật tin nóng!
 ```
 
-### Thread Post (Twitter-style)
+### Facebook Post (Medium - 1500 chars)
 ```markdown
-🧵 THREAD: {Topic}
+🔥 {title}
 
-1/ {Opening hook - surprising fact}
+{Detailed summary - 3-4 sentences}
 
-2/ {Context - why this matters}
+📊 THÔNG TIN:
+• Nền tảng: {platform}
+• Lượt thảo luận: {mentions}
+• Xu hướng: {trajectory}
+• Cảm xúc: {sentiment}
 
-3/ {Key insights from trend analysis}
+📖 Đọc thêm: {url}
 
-4/ {What this means for you}
+{hashtags}
 
-5/ {Call to action + CTA}
-
-#Thread #{Hashtags}
+---
+💡 Theo dõi page để cập nhật tin nóng mỗi ngày!
 ```
 
-### Newsletter (Email)
+### Telegram Thread (Long - Multi-message)
 ```markdown
-Subject: 📊 Bản tin xu hướng - {Date}
+🧵 THREAD: {topic}
+
+1/ {Hook - surprising fact about the trend}
+
+2/ {Context - why this matters now}
+
+3/ {Key insights from analysis}
+   • Insight 1
+   • Insight 2
+   • Insight 3
+
+4/ {What this means for Vietnam market}
+
+5/ {Call to action}
+   🔗 Read more: {url}
+   🔔 Follow for daily updates
+
+#Trending #{Topic} #Vietnam #Tech
+```
+
+### Email Newsletter (Full Report)
+```markdown
+Subject: 📊 Bản tin xu hướng - {date}
 
 Xin chào!
 
 Tuần này có những xu hướng đáng chú ý:
 
 📈 TOP TRENDING
-1. {Trend 1} - {Mentions} thảo luận
-2. {Trend 2} - {Mentions} thảo luận
-3. {Trend 3} - {Mentions} thảo luận
+{Top 5 trends with mentions and sentiment}
 
 💡 INSIGHTS
-{2-3 AI-generated insights}
+{AI-generated insights about patterns}
 
 📰 MUST-READ
 {Top 3 articles with summaries}
@@ -240,30 +288,46 @@ Hủy đăng ký: [Link]
 
 ## Automation Schedule
 
+### Recommended Schedule
+
+| Time | Action | Channels | Priority |
+|------|--------|----------|----------|
+| 07:00 | Morning brief | Zalo, Email | High |
+| 09:00 | Top trends | Facebook | Medium |
+| 12:00 | Midday update | Zalo, Telegram | Low |
+| 15:00 | Afternoon scan | All | Medium |
+| 18:00 | Evening summary | Email, Facebook | High |
+| 20:00 | Late trends | Telegram | Low |
+| Sunday 09:00 | Weekly digest | Email | High |
+
+### BizClaw Hand Configuration
+
 ```yaml
-# BizClaw Hand configuration
-triggers:
-  - name: "morning-trend-brief"
-    schedule: "0 7 * * 1-5"  # 7AM weekdays
-    action: "generate_trend_brief"
+# hand.yaml
+name: "trend-radar"
+schedule:
+  - cron: "0 7 * * 1-5"   # Weekday morning
+    action: "morning_brief"
     channels: ["zalo", "email"]
-
-  - name: "hourly-trend-scan"
-    schedule: "0 * * * *"  # Every hour
-    action: "scan_trending"
-    filters:
-      mentions_threshold: 50000
-      sentiment: ["positive", "neutral"]
-
-  - name: "daily-content-pack"
-    schedule: "0 9,12,18 * * *"  # 9AM, 12PM, 6PM
-    action: "generate_social_posts"
+    
+  - cron: "0 9,12,18 * * *"  # 3x daily
+    action: "trend_post"
     channels: ["facebook", "telegram"]
-
-  - name: "weekly-digest"
-    schedule: "0 9 * * 0"  # Sunday 9AM
-    action: "generate_weekly_report"
+    
+  - cron: "0 9 * * 0"        # Sunday morning
+    action: "weekly_digest"
     channels: ["email"]
+
+filters:
+  mentions_min: 1000
+  hotness_min: 0.6
+  sentiment_allow: ["positive", "neutral", "negative"]
+  platforms: ["weibo", "zhihu", "baidu", "toutiao"]
+
+content:
+  languages: ["vi"]
+  formats: ["short", "medium", "thread"]
+  max_daily_posts: 10
 ```
 
 ## Gotchas
@@ -272,68 +336,131 @@ triggers:
 ```javascript
 // Don't spam TrendRadar API
 const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-const lastFetch = new Map();
+const cache = new Map();
 
-async function safeFetch(endpoint) {
-  if (lastFetch.get(endpoint) > Date.now() - CACHE_DURATION) {
-    return cachedData.get(endpoint);
+async function safeFetch(endpoint, params) {
+  const cacheKey = JSON.stringify({ endpoint, params });
+  
+  if (cache.has(cacheKey)) {
+    const [timestamp, data] = cache.get(cacheKey);
+    if (Date.now() - timestamp < CACHE_DURATION) {
+      return data;
+    }
   }
-  // ... fetch and cache
+  
+  const data = await callMcpTool(endpoint, params);
+  cache.set(cacheKey, [Date.now(), data]);
+  return data;
 }
 ```
 
 ### 2. Sentiment Filtering
 ```javascript
 // Always check sentiment before publishing
-const blockedSentiments = ['controversial', 'negative', 'sensitive'];
-const trend = await analyze_sentiment(topic);
+const BLOCKED_SENTIMENTS = ['controversial', 'extremely_negative'];
+const ANALYSIS = await analyze_sentiment(topic);
 
-if (blockedSentiments.includes(trend.sentiment)) {
-  console.log('Skipping trend due to sentiment');
-  return null;
+if (BLOCKED_SENTIMENTS.includes(ANALYSIS.dominant)) {
+  console.log('⚠️ Skipping due to sentiment');
+  return { skipped: true, reason: 'sentiment' };
 }
 ```
 
-### 3. Attribution
+### 3. Attribution Required
 ```javascript
-// Always cite sources
+// Always cite TrendRadar sources
 const attribution = `
 📢 Nguồn: TrendRadar - Theo dõi ${platform}
 🔗 Link: ${sourceUrl}
+© TrendRadar
 `;
 ```
 
-## Example Workflow Output
+### 4. Platform-Specific Limits
+```javascript
+const PLATFORM_LIMITS = {
+  zalo: { max_chars: 500, max_posts_per_day: 10 },
+  facebook: { max_chars: 1500, max_posts_per_day: 5 },
+  telegram: { max_chars: 4000, max_posts_per_day: 20 },
+  email: { max_chars: 10000, max_posts_per_day: 1 }
+};
+```
+
+## Complete Workflow Example
 
 ```
-📊 TREND-TO-POST REPORT
-Generated: 2024-01-15 09:00
+┌─────────────────────────────────────────────────────────────────┐
+│                    TREND-TO-POST EXECUTION                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ [08:00] TRIGGER: Morning Brief                                  │
+│                                                                 │
+│ [08:01] ├─ Fetch trending topics                                │
+│ [08:02] │  └─ Found: 12 topics, filtered: 8                    │
+│ [08:03] ├─ Analyze top 3                                        │
+│ [08:04] │  ├─ Topic 1: AI Startup (150K mentions) ✓            │
+│ [08:05] │  ├─ Topic 2: Crypto Rally (85K mentions) ✓           │
+│ [08:06] │  └─ Topic 3: Policy Change (45K mentions) ⚠️        │
+│ [08:07] ├─ Generate content                                     │
+│ [08:08] │  ├─ Zalo post: "🔥 AI Startup..." (450 chars) ✓      │
+│ [08:09] │  ├─ Email brief: Full analysis (2.5KB) ✓             │
+│ [08:10] │  └─ Telegram thread: 5 tweets ✓                     │
+│ [08:11] ├─ Schedule posts                                       │
+│ [08:12] │  ├─ Zalo: Published immediately ✓                   │
+│ [08:13] │  ├─ Email: Scheduled 09:00 ✓                          │
+│ [08:14] │  └─ Telegram: Scheduled 09:30 ✓                      │
+│ [08:15] └─ Log analytics                                        │
+│             └─ 3 posts generated, 0 errors                      │
+│                                                                 │
+│ [09:00] EMAIL SENT                                               │
+│                                                                 │
+│ [09:30] TELEGRAM THREAD POSTED                                   │
+│                                                                 │
+│ [12:00] TRIGGER: Midday Update                                   │
+│             └─ Process continues...                               │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-🎯 TRENDS DETECTED: 12
-📝 CONTENT CREATED: 5 posts
-📱 CHANNELS: Zalo, Facebook, Telegram, Email
-⏰ SCHEDULED: 8 publish times
+## Integration with BizClaw MCP Client
 
----
+```rust
+use bizclaw_mcp::{TrendRadarConfig, TrendMonitor, ContentGenerator};
 
-📈 TOP TREND: "AI Startup raises $100M"
-- Platform: Weibo, Zhihu
-- Mentions: 150,000+
-- Sentiment: Positive
-- Engagement: Very High
+async fn trend_to_post_workflow() -> Result<()> {
+    // Initialize TrendRadar config
+    let config = TrendRadarConfig {
+        api_url: "http://localhost:3333".to_string(),
+        interests: vec![
+            "AI".into(),
+            "startup".into(),
+            "technology".into(),
+        ],
+        language: "vi".into(),
+        ..Default::default()
+    };
 
-📝 CONTENT CREATED:
-1. Zalo post (300 chars) ✓
-2. Facebook post (500 chars) ✓
-3. Telegram thread (5 tweets) ✓
-4. Email newsletter section ✓
+    // Create monitors
+    let mut monitor = TrendMonitor::new(config);
+    let generator = ContentGenerator::new();
 
-⏰ SCHEDULE:
-- Zalo: 09:00 (published)
-- Facebook: 10:00 (queued)
-- Telegram: 12:00 (queued)
-- Email: 18:00 (queued)
+    // Scan trends
+    let trends = monitor.scan_trends("http://localhost:3333").await?;
 
----
-✨ Ready to publish!
+    // Generate alerts
+    let alerts = monitor.generate_alerts(&trends);
+
+    // Generate content for each alert
+    for alert in alerts.iter().take(5) {
+        let content = generator.generate_from_trend(
+            &TrendNews::from(alert),
+            "zalo"
+        );
+
+        // Publish via BizClaw channels
+        bizclaw_channel_send("zalo", &content.content).await?;
+    }
+
+    Ok(())
+}
 ```

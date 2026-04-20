@@ -15,9 +15,15 @@ pub mod bridge;
 pub mod client;
 pub mod sse_http;
 pub mod transport;
+pub mod trendradar;
 pub mod types;
 
 pub use bridge::McpToolBridge;
 pub use client::McpClient;
 pub use sse_http::{HttpTransport, SseTransport};
+pub use trendradar::{
+    content_generator::{ChannelConfig, ContentGenerator, ContentTemplate, GeneratedContent, PostFormat},
+    trend_monitor::{AlertConfig, AlertLevel, TrendAlert, TrendComparison, TrendMonitor, TrendSource},
+    TrendAnalysis, TrendNews, TrendRadarConfig, Sentiment, ToolCallResult, TrendTrajectory,
+};
 pub use types::{McpServerConfig, McpToolInfo};
