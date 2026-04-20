@@ -1,51 +1,62 @@
-# 🦞 BizClaw - AI Agent Platform cho Doanh Nghiệp Việt
+# 🦞 BizClaw - Self-Hosted AI Agent Platform
 
 <p align="center">
-  <img src="assets/bizclaw-logo.png" alt="BizClaw" width="200">
+  <strong>Your own AI assistant. Any channel. Any provider. 100% yours.</strong><br>
+  <sub>Single-tenant • Rust-powered • Privacy-first</sub>
 </p>
 
 <p align="center">
-  <strong>Nhân viên AI làm việc 24/7 cho doanh nghiệp của bạn</strong><br>
-  Không cần biết lập trình • Giao diện tiếng Việt • Dữ liệu 100% thuộc về bạn
-</p>
-
-<p align="center">
-  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/actions"><img src="https://img.shields.io/github/actions/workflow/status/nguyenduchoai/bizclaw-cloud/ci?style=flat-square" alt="Build"></a>
-  <a href="https://github.com/nguyenduchoai/bizclaw-cloud/releases"><img src="https://img.shields.io/github/v/release/nguyenduchoai/bizclaw-cloud?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/nguyenduchoai/bizclaw/actions"><img src="https://img.shields.io/github/actions/workflow/status/nguyenduchoai/bizclaw/ci?style=flat-square" alt="Build"></a>
+  <a href="https://github.com/nguyenduchoai/bizclaw/releases"><img src="https://img.shields.io/github/v/release/nguyenduchoai/bizclaw?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
   <a href="https://discord.gg/bizclaw"><img src="https://img.shields.io/badge/Discord-Join-7289DA?style=flat-square&logo=discord" alt="Discord"></a>
 </p>
 
 ---
 
-## 🎯 BizClaw Dành Cho Ai?
+## 🎯 BizClaw là gì?
 
-| Đối tượng | Lợi ích |
-|-----------|---------|
-| 🛒 **Shop online** | Trả lời tin nhắn tự động, tư vấn sản phẩm 24/7 |
-| 🍜 **Chủ nhà hàng** | Đặt bàn tự động, gửi menu hàng ngày |
-| 🏨 **Chủ khách sạn** | Xác nhận booking, chăm sóc khách |
-| 💼 **Dịch vụ B2B** | Báo giá tự động, lịch hẹn tự động |
-| 📱 **Marketer** | Đăng bài đa nền tảng, nuôi lead tự động |
+BizClaw là **nền tảng AI Agent tự-host** (self-hosted) cho phép bạn:
+
+- 🤖 Chạy AI Agent của riêng bạn trên server/VPS
+- 💬 Kết nối nhiều kênh: Zalo, Telegram, Discord, Slack...
+- 🔒 Dữ liệu 100% thuộc về bạn - không có cloud
+- ⚡ Fast, lightweight, viết bằng Rust
+
+### So với Cloud AI Assistants
+
+| | BizClaw (Self-hosted) | ChatGPT/Claude Cloud |
+|--|----------------------|----------------------|
+| **Dữ liệu** | 100% private | Server-side |
+| **Chi phí** | Một lần server | Trả theo usage |
+| **Customization** | Full control | Limited |
+| **Privacy** | Không có data离开 server | Data được lưu trên cloud |
+| **Setup** | Cần server | Ngay lập tức |
 
 ---
 
-## 🚀 Bắt Đầu Trong 5 Phút
+## 🚀 Bắt Đầu
 
-### Cách 1: Desktop App (Khuyến nghị)
+### Yêu cầu
+- Rust 1.85+
+- macOS / Linux / Windows
+- Server/VPS (hoặc chạy local)
+
+### Cài đặt nhanh
 
 ```bash
-# macOS / Linux
-curl -fsSL https://bizclaw.vn/install.sh | bash
+# 1. Clone repo
+git clone https://github.com/nguyenduchoai/bizclaw.git
+cd bizclaw
 
-# Windows (PowerShell)
-irm https://bizclaw.vn/install.ps1 | iex
+# 2. Build
+cargo build --release
 
-# Khởi động
-./bizclaw-desktop
+# 3. Chạy
+./target/release/bizclaw-desktop
 ```
 
-### Cách 2: Docker
+### Docker
 
 ```bash
 docker run -d \
@@ -56,79 +67,59 @@ docker run -d \
   nguyenduchoai/bizclaw:latest
 ```
 
-### Cách 3: Build từ Source
-
-```bash
-git clone https://github.com/nguyenduchoai/bizclaw.git
-cd bizclaw
-cargo build --release
-./target/release/bizclaw-desktop
-```
-
 ---
 
-## ✨ Tính Năng Nổi Bật
+## ✅ Features Thực Sự Hoạt Động
 
-### 🤖 AI Agent Thông Minh
-- Hiểu ý khách, trả lời tự nhiên bằng tiếng Việt
-- Học từ mỗi cuộc trò chuyện để phục vụ tốt hơn
-- Đa ngôn ngữ: Việt, Anh, Trung...
+### Channels (Kết nối kênh)
 
-### � 12+ Kênh Kết Nối
+| Kênh | Status | Ghi chú |
+|------|--------|----------|
+| **Zalo OA** | ✅ Có code | Official Account API |
+| **Zalo Personal** | ✅ Có code | Personal Zalo |
+| **Telegram** | ✅ Có code | Bot API |
+| **Discord** | ✅ Có code | Bot Gateway |
+| **Slack** | ✅ Có code | Socket Mode |
+| **WhatsApp** | ✅ Có code | Business API |
+| **Email** | ✅ Có code | IMAP/SMTP |
+| **Webhook** | ✅ Có code | Custom HTTP |
 
-| Kênh | Type | Status |
-|------|------|--------|
-| � Zalo OA | Official Account | ✅ |
-| 💬 Telegram | Bot API | ✅ |
-| 👥 Facebook | Page / Messenger | ✅ |
-| 📸 Instagram | DM / Comments | ✅ |
-| 🎵 TikTok | Comments / DM | ✅ |
-| � Shopee | Chat / Orders | ✅ |
-| 💼 Slack | Team Chat | ✅ |
-| 🎮 Discord | Server / DM | ✅ |
-| 📧 Email | IMAP/SMTP | ✅ |
-| 🌐 Webhook | Custom API | ✅ |
-| � WhatsApp | Business | ✅ |
-| ➕ Custom | Webhook | ✅ |
+### AI Providers (18+ Models)
 
-### 🔌 18+ AI Providers
-
-| Provider | Models |
+| Provider | Status |
 |----------|--------|
-| OpenAI | GPT-4o, GPT-4o Mini |
-| Anthropic | Claude Sonnet 4, 3.5 |
-| Google Gemini | 2.5 Pro, 2.5 Flash |
-| DeepSeek | Chat, Reasoner (R1) |
-| Groq | Llama 3.3 70B |
-| Ollama | Qwen3, Llama 3.2 |
-| Llama.cpp | Local GGUF |
-| Cohere | Command R+ |
-| Perplexity | Sonar Pro |
-| DashScope | Qwen Max |
+| OpenAI (GPT-4o, o1) | ✅ |
+| Anthropic (Claude 3.5, 4) | ✅ |
+| Google Gemini (2.0, 2.5) | ✅ |
+| DeepSeek (V3, R1) | ✅ |
+| Groq (Llama, Mixtral) | ✅ |
+| Ollama (local models) | ✅ |
+| Llama.cpp (GGUF local) | ✅ |
+| Cohere, Perplexity, Mistral, xAI, MiniMax | ✅ |
 
-### 🛠️ 40+ Tools
+### Tools (40+)
 
 | Category | Tools |
 |----------|-------|
-| **Browser** | Browser automation, Stealth mode, Screenshot |
-| **Social** | Auto post, Multi-platform scheduling |
-| **Database** | SQL query, Semantic search, Schema |
-| **AI** | Content generation, Image generation, Voice |
-| **Utility** | File, Shell, HTTP, Calendar |
+| **Browser** | browser, screenshot, stealth mode |
+| **Database** | SQL query, semantic search, schema |
+| **Social** | Facebook, Instagram, TikTok posting |
+| **File** | read, write, edit, glob, grep |
+| **Shell** | Command execution |
+| **Web** | search, fetch, HTTP requests |
+| **Memory** | Vector store, semantic search |
+| **AI** | Content generation, image generation |
 
----
+### Security
 
-## 📊 So Sánh
-
-| Feature | BizClaw | OpenClaw | GoClaw | RsClaw |
-|---------|---------|----------|--------|---------|
-| **Binary Size** | 16-22MB | ~300MB | ~25MB | ~15MB |
-| **AI Providers** | 18+ | ~10 | ~12 | 15+ |
-| **Channels** | 12+ | 8 | 7 | 13 |
-| **VN Channels** | ✅ Zalo, Shopee, TikTok | ❌ | ❌ | ❌ |
-| **Security** | AES-256, Vault, RBAC | ❌ | ✅ | ❌ |
-| **MCP Protocol** | ✅ | ❌ | ❌ | ❌ |
-| **Model Router** | ✅ 3 tiers | ❌ | ❌ | ❌ |
+| Feature | Status |
+|---------|--------|
+| AES-256 encryption | ✅ |
+| API Key Vault | ✅ |
+| Prompt injection detection | ✅ |
+| SQL injection prevention | ✅ |
+| Rate limiting | ✅ |
+| Audit trail | ✅ |
 
 ---
 
@@ -136,27 +127,25 @@ cargo build --release
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      BizClaw Architecture                   │
+│                    BizClaw Architecture                   │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
-│  │  Channels   │    │   Gateway   │    │  Dashboard  │  │
-│  │  Zalo/TG/  │───▶│  Actix-web  │◀───│   Web UI    │  │
-│  │  FB/IG/... │    │    REST     │    │   React     │  │
-│  └─────────────┘    └──────┬──────┘    └─────────────┘  │
-│                            │                             │
-│                     ┌──────┴──────┐                     │
-│                     │    Agent     │                     │
-│                     │  Orchestrator│                     │
-│                     └──────┬──────┘                     │
-│                            │                             │
-│         ┌───────────────────┼───────────────────┐          │
-│         │                   │                   │          │
-│  ┌─────┴─────┐     ┌─────┴─────┐     ┌─────┴─────┐    │
-│  │  Providers │     │   Tools   │     │  Memory   │    │
-│  │ 18+ LLMs  │     │   40+    │     │  Vector+  │    │
-│  └───────────┘     └───────────┘     └───────────┘    │
-│                                                             │
+│                                                              │
+│  ┌─────────┐    ┌─────────┐    ┌─────────┐              │
+│  │Channels │    │ Gateway │    │Dashboard│              │
+│  │ Zalo/TG │───▶│ Actix   │◀───│  Web UI  │              │
+│  │ FB/IG   │    │  Web    │    │ React   │              │
+│  └────┬────┘    └────┬────┘    └─────────┘              │
+│       │                │                               │
+│       │         ┌──────┴──────┐                      │
+│       │         │   Agent     │                      │
+│       │         │ Orchestrator│                      │
+│       │         └──────┬──────┘                      │
+│       │                │                               │
+│  ┌───┴───┐      ┌─────┴─────┐      ┌───────┐         │
+│  │Memory │      │ Providers │      │ Tools │         │
+│  │Vector │      │  18+ LLMs │      │ 40+  │         │
+│  └───────┘      └───────────┘      └───────┘         │
+│                                                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -167,78 +156,130 @@ cargo build --release
 | Document | Description |
 |----------|-------------|
 | [Quick Start](docs/QUICK_START.md) | Bắt đầu nhanh |
-| [API Reference](docs/API.md) | REST API documentation |
-| [Channels Guide](docs/CHANNELS.md) | Kết nối kênh |
+| [Configuration](docs/CONFIG.md) | Cấu hình chi tiết |
+| [Channels](docs/CHANNELS.md) | Kết nối kênh |
 | [AI Providers](docs/PROVIDERS.md) | Cấu hình AI providers |
-| [Deployment](docs/DEPLOYMENT.md) | Deploy lên server |
-| [Examples](docs/EXAMPLES.md) | Code examples |
+| [Tools](docs/TOOLS.md) | Danh sách tools |
+| [Deployment](docs/DEPLOYMENT.md) | Deploy lên VPS |
+| [API Reference](docs/API.md) | REST API |
 
 ---
 
-## 💰 Bảng Giá
+## � Use Cases
 
-| Plan | Giá | Channels | Messages | Agents |
-|------|------|----------|----------|--------|
-| **Free** | 0đ/tháng | 1 | 100/tháng | 1 |
-| **Pro** | 499K/tháng | 5 | 5,000/tháng | 5 |
-| **Enterprise** | Liên hệ | Unlimited | Unlimited | Unlimited |
+### 1. Customer Support Bot
+```yaml
+# Kết nối Zalo + AI Agent
+channels:
+  zalo:
+    enabled: true
+    app_id: your_app_id
+    
+agent:
+  system_prompt: "Bạn là nhân viên chăm sóc khách hàng..."
+```
 
-[Đăng ký ngay](https://bizclaw.vn/pricing)
+### 2. Social Media Manager
+```yaml
+# Auto post lên nhiều kênh
+tools:
+  social_post:
+    channels: [facebook, instagram, telegram]
+    schedule: "0 9 * * *"  # 9h daily
+```
+
+### 3. Internal Assistant
+```yaml
+# Chat với team qua Slack/Discord
+channels:
+  slack:
+    enabled: true
+    bot_token: xoxb-...
+```
 
 ---
 
-## 🏆 Case Studies
+## ⚙️ Configuration
 
-### 🛒 Shop Thời Trang - TP.HCM
-> "Trước tôi phải thuê 2 nhân viên chăm sóc Zalo. Giờ BizClaw làm hết, tiết kiệm **15 triệu/tháng**."
-> — Chị Lan, Chủ shop thời trang
+```toml
+# config.toml
+[app]
+name = "BizClaw"
+port = 8080
 
-### 🍜 Nhà Hàng - Đà Nẵng
-> "Khách đặt bàn tự động lúc 11h đêm. Sáng hôm sau tôi chỉ cần xác nhận."
-> — Anh Tuấn, Chủ nhà hàng
+[ai]
+# Provider đầu tiên available sẽ được dùng
+providers = ["openai", "anthropic", "gemini"]
 
-### 🏨 Homestay - Vũng Tàu
-> "BizClaw trả lời nhanh, đúng thông tin, không cần tôi cầm điện thoại suốt ngày."
-> — Chị Hương, Chủ homestay
+[channels.telegram]
+enabled = true
+bot_token = "YOUR_BOT_TOKEN"
+
+[channels.zalo]
+enabled = true
+app_id = "YOUR_APP_ID"
+app_secret = "YOUR_SECRET"
+
+[memory]
+vector_dimensions = 1536
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Zalo không kết nối?
+- Kiểm tra app_id và app_secret đúng
+- Verify OAuth callback URL
+- Xem logs: `tail -f logs/bizclaw.log`
+
+### AI không trả lời?
+- Kiểm tra API key: `curl http://localhost:8080/api/providers`
+- Thử provider khác trong config
+
+### Server chạy chậm?
+- Restart: `docker restart bizclaw`
+- Check memory: `docker stats`
+- Kiểm tra logs: `docker logs bizclaw`
 
 ---
 
 ## 🤝 Contributing
 
-Chúng tôi welcomes contributions! Xem [CONTRIBUTING.md](CONTRIBUTING.md) để biết thêm chi tiết.
+Contributions are welcome! Xem [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
 # Fork repo
 # Tạo branch mới
-git checkout -b feature/amazing-feature
+git checkout -b feature/my-feature
 
-# Commit changes
+# Commit
 git commit -m "feat: add amazing feature"
 
 # Push và tạo PR
-git push origin feature/amazing-feature
+git push origin feature/my-feature
 ```
 
 ---
 
-## 📞 Liên Hệ
+## 📞 Liên hệ
 
 | Kênh | Link |
 |------|------|
 | 🌐 Website | [bizclaw.vn](https://bizclaw.vn) |
-| � Discord | [Discord Community](https://discord.gg/bizclaw) |
-| � Twitter | [@bizclawvn](https://twitter.com/bizclawvn) |
+| 💬 Discord | [Discord Community](https://discord.gg/bizclaw) |
+| 🐦 Twitter | [@bizclawvn](https://twitter.com/bizclawvn) |
 | 📧 Email | contact@bizclaw.vn |
 
 ---
 
 ## 📄 License
 
-MIT License - Xem [LICENSE](LICENSE) để biết chi tiết.
+MIT License - Xem [LICENSE](LICENSE).
 
 ---
 
 <p align="center">
-  <strong>Made with ❤️ in Vietnam</strong><br>
-  <sub>BizClaw - Trợ lý AI 24/7 cho doanh nghiệp Việt</sub>
+  <sub>Made with ❤️ in Vietnam</sub><br>
+  <sub>BizClaw - Self-hosted AI Agent Platform</sub>
 </p>
