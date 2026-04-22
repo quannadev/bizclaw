@@ -746,6 +746,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "bizclaw-evaluator"
+version = "1.1.7"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bizclaw-agent",
+ "bizclaw-core",
+ "chrono",
+ "rand 0.8.5",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid 1.21.0",
+]
+
+[[package]]
 name = "bizclaw-ffi"
 version = "1.1.7"
 dependencies = [
@@ -790,6 +809,23 @@ dependencies = [
  "tower-http",
  "tracing",
  "urlencoding",
+ "uuid 1.21.0",
+]
+
+[[package]]
+name = "bizclaw-hai"
+version = "1.1.7"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bizclaw-agent",
+ "bizclaw-core",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
  "uuid 1.21.0",
 ]
 
@@ -972,6 +1008,26 @@ dependencies = [
  "thiserror 2.0.18",
  "tokio",
  "tokio-stream",
+ "tracing",
+ "uuid 1.21.0",
+]
+
+[[package]]
+name = "bizclaw-redteam"
+version = "1.1.7"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "bizclaw-agent",
+ "bizclaw-core",
+ "bizclaw-security",
+ "chrono",
+ "rand 0.8.5",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
  "tracing",
  "uuid 1.21.0",
 ]

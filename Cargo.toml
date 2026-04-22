@@ -33,6 +33,9 @@ members = [
     "crates/bizclaw-social",
     "crates/bizclaw-media",
     "crates/bizclaw-crm",
+    "crates/bizclaw-evaluator",
+    "crates/bizclaw-redteam",
+    "crates/bizclaw-hai",
 ]
 
 # ── Workspace-wide lint policy ──────────────────────────
@@ -145,6 +148,9 @@ bizclaw-platform = { path = "crates/bizclaw-platform" }
 bizclaw-skills = { path = "crates/bizclaw-skills" }
 bizclaw-webauth = { path = "crates/bizclaw-webauth" }
 bizclaw-crm = { path = "crates/bizclaw-crm" }
+bizclaw-evaluator = { path = "crates/bizclaw-evaluator" }
+bizclaw-redteam = { path = "crates/bizclaw-redteam" }
+bizclaw-hai = { path = "crates/bizclaw-hai" }
 
 [package]
 name = "bizclaw"
