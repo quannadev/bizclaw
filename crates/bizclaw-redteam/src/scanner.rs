@@ -1,6 +1,6 @@
 //! Security vulnerability scanner
 
-use crate::{AttackVector, Scenario, ScenarioLibrary};
+use crate::{AttackVector, ScenarioLibrary};
 use crate::injection::InjectionDetector;
 use crate::jailbreak::JailbreakTester;
 use crate::exfiltration::ExfiltrationTester;

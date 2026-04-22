@@ -1,7 +1,6 @@
 //! User trust modeling for AI agents
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrustScore {
@@ -286,7 +285,7 @@ impl TrustModel {
             0.5
         };
 
-        (success_rate * 0.4 + error_recovery * 0.2 + response_quality * 0.2 + accuracy * 0.2)
+        success_rate * 0.4 + error_recovery * 0.2 + response_quality * 0.2 + accuracy * 0.2
     }
 
     fn calculate_benevolence(&self, factors: &TrustFactors) -> f32 {
@@ -303,7 +302,7 @@ impl TrustModel {
             0.3
         };
 
-        (user_satisfaction * 0.7 + privacy_respect * 0.3)
+        user_satisfaction * 0.7 + privacy_respect * 0.3
     }
 
     fn calculate_integrity(&self, factors: &TrustFactors) -> f32 {
@@ -319,7 +318,7 @@ impl TrustModel {
             0.5
         };
 
-        (accuracy * 0.6 + consistency * 0.4)
+        accuracy * 0.6 + consistency * 0.4
     }
 
     fn score_response_time(&self, time_ms: u64) -> f32 {

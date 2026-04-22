@@ -1,6 +1,6 @@
 //! Security report generation
 
-use crate::{ScanReport, ScanResult, Severity};
+use crate::{ScanReport, Severity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

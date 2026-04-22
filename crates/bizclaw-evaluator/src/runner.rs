@@ -1,11 +1,9 @@
 //! Main evaluation runner
 
-use crate::{ABResult, GoldenDataset, Judgment, Rubric, Score};
+use crate::{GoldenDataset, Judgment, Rubric};
 use crate::judge::Judge;
-use crate::metrics::{MetricType, Metrics, Threshold};
-use async_trait::async_trait;
+use crate::metrics::Metrics;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

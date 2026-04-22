@@ -1,6 +1,6 @@
 //! Report generation for evaluations
 
-use crate::{EvaluationRun, EvaluationResult, Metrics};
+use crate::EvaluationRun;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -180,7 +180,7 @@ impl TrendAnalysis {
             };
         }
 
-        let mut data_points: Vec<TrendPoint> = runs.iter()
+        let data_points: Vec<TrendPoint> = runs.iter()
             .map(|r| TrendPoint {
                 timestamp: r.timestamp,
                 value: match metric {

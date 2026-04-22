@@ -1,7 +1,6 @@
 //! LLM-as-Judge implementation
 
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -351,7 +350,7 @@ impl Judge {
 }
 
 pub mod chain_of_thought {
-    use super::*;
+    
 
     pub fn cot_prompt() -> String {
         r#"You are an expert evaluator with strong analytical reasoning.

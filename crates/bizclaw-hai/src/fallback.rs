@@ -123,6 +123,7 @@ pub enum AlternativeActionType {
 
 pub struct FallbackEngine {
     strategies: Vec<FallbackStrategy>,
+    #[allow(dead_code)]
     trigger_thresholds: std::collections::HashMap<FallbackTrigger, f32>,
 }
 

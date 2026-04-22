@@ -180,7 +180,7 @@ impl ConfidenceIndicator {
     pub fn overall_score(&self) -> f32 {
         match &self.breakdown {
             Some(b) => {
-                (b.semantic * 0.3 + b.factual * 0.3 + b.coherence * 0.2 + b.relevance * 0.2)
+                b.semantic * 0.3 + b.factual * 0.3 + b.coherence * 0.2 + b.relevance * 0.2
             },
             None => self.score,
         }
@@ -256,6 +256,7 @@ impl ConfidenceIndicator {
 }
 
 pub struct ConfidenceCalculator {
+    #[allow(dead_code)]
     config: ConfidenceConfig,
 }
 
