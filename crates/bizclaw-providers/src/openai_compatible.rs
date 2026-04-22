@@ -47,6 +47,8 @@ pub struct OpenAiCompatibleProvider {
     auth_style: AuthStyle,
     /// Default models to return from `list_models`.
     default_models: Vec<ModelInfo>,
+    /// Whether this provider supports dynamic model listing from API.
+    supports_dynamic_models: bool,
     /// HTTP client.
     client: reqwest::Client,
     /// Models that have been detected as incapable of tool calling.
@@ -106,6 +108,7 @@ impl OpenAiCompatibleProvider {
             models_path: registry.models_path.to_string(),
             auth_style: registry.auth_style,
             default_models,
+            supports_dynamic_models: registry.supports_dynamic_models,
             client: reqwest::Client::builder()
                 .user_agent(format!("BizClaw/{}", env!("CARGO_PKG_VERSION")))
                 .timeout(std::time::Duration::from_secs(300))
@@ -143,6 +146,7 @@ impl OpenAiCompatibleProvider {
             models_path: "/models".to_string(),
             auth_style,
             default_models: vec![],
+            supports_dynamic_models: true,
             client: reqwest::Client::builder()
                 .user_agent(format!("BizClaw/{}", env!("CARGO_PKG_VERSION")))
                 .timeout(std::time::Duration::from_secs(300))
@@ -649,6 +653,11 @@ impl Provider for OpenAiCompatibleProvider {
     }
 
     async fn list_models(&self) -> Result<Vec<ModelInfo>> {
+        // If provider doesn't support dynamic models, return defaults
+        if !self.supports_dynamic_models {
+            return Ok(self.default_models.clone());
+        }
+
         // Try to fetch models from the API
         let url = format!("{}{}", self.base_url, self.models_path);
         let req = self.client.get(&url);
@@ -660,30 +669,48 @@ impl Provider for OpenAiCompatibleProvider {
 
                 // OpenAI / Anthropic format: { "data": [ { "id": "..." }, ... ] }
                 // Google Gemini format: { "models": [ { "name": "models/..." }, ... ] }
+                // MiniMax format: { "data": [ { "id": "...", "context_window": 1000000, "output_window": 16384 }, ... ] }
+                // DeepSeek format: { "data": [ { "id": "..." }, ... ] }
+                // Generic format: { "models": [ { "id": "..." }, ... ] }
                 let models: Vec<ModelInfo> = if let Some(arr) = json["data"].as_array() {
                     arr.iter()
                         .filter_map(|m| {
                             let id = m["id"].as_str()?.to_string();
+                            let context_length = m["context_window"]
+                                .as_u64()
+                                .unwrap_or(4096) as u32;
+                            let max_output = m["output_window"]
+                                .as_u64()
+                                .or(m["max_tokens"].as_u64())
+                                .unwrap_or(4096) as u32;
                             Some(ModelInfo {
                                 id: id.clone(),
                                 name: id,
                                 provider: self.name.clone(),
-                                context_length: 4096,
-                                max_output_tokens: Some(4096),
+                                context_length,
+                                max_output_tokens: Some(max_output),
                             })
                         })
                         .collect()
                 } else if let Some(arr) = json["models"].as_array() {
                     arr.iter()
                         .filter_map(|m| {
-                            let name = m["name"].as_str()?;
+                            let name = m["name"].as_str()
+                                .or(m["id"].as_str())?;
                             let id = name.strip_prefix("models/").unwrap_or(name).to_string();
+                            let context_length = m["context_window"]
+                                .as_u64()
+                                .unwrap_or(4096) as u32;
+                            let max_output = m["output_window"]
+                                .as_u64()
+                                .or(m["max_tokens"].as_u64())
+                                .unwrap_or(4096) as u32;
                             Some(ModelInfo {
                                 id: id.clone(),
                                 name: id,
                                 provider: self.name.clone(),
-                                context_length: 4096,
-                                max_output_tokens: Some(4096),
+                                context_length,
+                                max_output_tokens: Some(max_output),
                             })
                         })
                         .collect()
@@ -692,8 +719,10 @@ impl Provider for OpenAiCompatibleProvider {
                 };
 
                 if models.is_empty() {
+                    tracing::debug!("No models fetched from API for {}, using defaults", self.name);
                     Ok(self.default_models.clone())
                 } else {
+                    tracing::info!("Loaded {} models from {} API", models.len(), self.name);
                     Ok(models)
                 }
             }

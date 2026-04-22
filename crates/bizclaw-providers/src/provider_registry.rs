@@ -58,6 +58,9 @@ pub struct ProviderConfig {
     pub base_url_env: Option<&'static str>,
     /// Default models to return from `list_models`.
     pub default_models: &'static [ModelDef],
+    /// Whether this provider supports dynamic model listing from API.
+    /// If true, list_models() will try to fetch from API first.
+    pub supports_dynamic_models: bool,
 }
 
 // ─── Provider Definitions ────────────────────────────────────────────────────
@@ -585,6 +588,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: Some("OPENAI_API_BASE"),
         default_models: OPENAI_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "openrouter",
@@ -595,6 +599,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: OPENROUTER_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "anthropic",
@@ -605,6 +610,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: ANTHROPIC_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "deepseek",
@@ -615,6 +621,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: DEEPSEEK_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "gemini",
@@ -625,6 +632,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: GEMINI_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "groq",
@@ -635,6 +643,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: GROQ_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "ollama",
@@ -645,6 +654,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::None,
         base_url_env: Some("OLLAMA_HOST"),
         default_models: OLLAMA_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "llamacpp",
@@ -655,6 +665,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::None,
         base_url_env: Some("LLAMACPP_HOST"),
         default_models: LLAMACPP_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "cliproxy",
@@ -672,6 +683,7 @@ static PROVIDERS: &[ProviderConfig] = &[
             cost_per_1m_prompt: 0.0,
             cost_per_1m_completion: 0.0,
         }],
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "vllm",
@@ -689,6 +701,7 @@ static PROVIDERS: &[ProviderConfig] = &[
             cost_per_1m_prompt: 0.0,
             cost_per_1m_completion: 0.0,
         }],
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "together",
@@ -706,6 +719,7 @@ static PROVIDERS: &[ProviderConfig] = &[
             cost_per_1m_prompt: 0.90,
             cost_per_1m_completion: 0.90,
         }],
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "mistral",
@@ -716,6 +730,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: MISTRAL_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "minimax",
@@ -726,6 +741,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: MINIMAX_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "xai",
@@ -736,6 +752,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: XAI_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "modelark",
@@ -746,6 +763,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: Some("ARK_BASE_URL"),
         default_models: MODELARK_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "cohere",
@@ -756,6 +774,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: COHERE_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "perplexity",
@@ -766,6 +785,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: PERPLEXITY_MODELS,
+        supports_dynamic_models: true,
     },
     ProviderConfig {
         name: "dashscope",
@@ -776,6 +796,7 @@ static PROVIDERS: &[ProviderConfig] = &[
         auth_style: AuthStyle::Bearer,
         base_url_env: None,
         default_models: DASHSCOPE_MODELS,
+        supports_dynamic_models: true,
     },
 ];
 
