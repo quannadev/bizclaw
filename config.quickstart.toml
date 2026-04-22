@@ -160,3 +160,19 @@ threads = 4
 max_tokens = 512
 context_length = 2048
 auto_download = true
+
+# Dynamic Model Loading — Providers sẽ fetch models từ API
+[[brain.providers]]
+name = "minimax"  # Fetch models tự động từ MiniMax API
+
+[[brain.providers]]
+name = "deepseek"
+
+[[brain.providers]]
+name = "openai"
+
+[[brain.providers]]
+name = "anthropic"
+
+[[brain.providers]]
+name = "gemini"

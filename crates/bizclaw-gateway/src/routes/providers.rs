@@ -10,6 +10,28 @@ use crate::server::AppState;
 use axum::{Json, extract::State};
 use std::sync::Arc;
 
+/// Get base_url from registry fallback if not set in DB
+fn get_registry_base_url(name: &str) -> Option<(&'static str, &'static str)> {
+    match name {
+        "openai" => Some(("https://api.openai.com/v1", "/models")),
+        "openrouter" => Some(("https://openrouter.ai/api/v1", "/models")),
+        "anthropic" => Some(("https://api.anthropic.com/v1", "/models")),
+        "deepseek" => Some(("https://api.deepseek.com", "/models")),
+        "gemini" => Some(("https://generativelanguage.googleapis.com/v1beta/openai", "/models")),
+        "groq" => Some(("https://api.groq.com/openai/v1", "/models")),
+        "mistral" => Some(("https://api.mistral.ai/v1", "/models")),
+        "minimax" => Some(("https://api.minimax.io/v1", "/models")),
+        "xai" | "grok" => Some(("https://api.x.ai/v1", "/models")),
+        "cohere" => Some(("https://api.cohere.com/v2", "/models")),
+        "perplexity" => Some(("https://api.perplexity.ai", "/models")),
+        "together" => Some(("https://api.together.xyz/v1", "/models")),
+        "dashscope" | "qwen" => Some(("https://dashscope.aliyuncs.com/compatible-mode/v1", "/models")),
+        "ollama" => Some(("http://localhost:11434", "/api/tags")),
+        "llamacpp" => Some(("http://localhost:8080/v1", "/models")),
+        _ => None,
+    }
+}
+
 /// List available providers (from DB) — fully self-describing, no hardcoded metadata.
 pub async fn list_providers(State(state): State<Arc<AppState>>) -> Json<serde_json::Value> {
     let cfg = state.full_config.lock().unwrap_or_else(|p| p.into_inner());
@@ -242,19 +264,27 @@ pub async fn fetch_provider_models(
     }
 
     // Generic OpenAI-compatible provider — call /models endpoint
-    if provider.base_url.is_empty() || provider.models_path.is_empty() {
-        return Json(serde_json::json!({
-            "ok": false,
-            "error": "Provider has no base_url or models_path configured",
-            "models": provider.models,
-            "source": "cached",
-        }));
-    }
+    // Fallback to registry config if DB doesn't have base_url
+    let (base_url, models_path) = if provider.base_url.is_empty() || provider.models_path.is_empty() {
+        match get_registry_base_url(&name) {
+            Some((url, path)) => (url.to_string(), path.to_string()),
+            None => {
+                return Json(serde_json::json!({
+                    "ok": false,
+                    "error": format!("Unknown provider '{}' — registry fallback not available", name),
+                    "models": provider.models,
+                    "source": "cached",
+                }));
+            }
+        }
+    } else {
+        (provider.base_url.clone(), provider.models_path.clone())
+    };
 
     let url = format!(
         "{}{}",
-        provider.base_url.trim_end_matches('/'),
-        provider.models_path
+        base_url.trim_end_matches('/'),
+        models_path
     );
     let client = reqwest::Client::new();
 
