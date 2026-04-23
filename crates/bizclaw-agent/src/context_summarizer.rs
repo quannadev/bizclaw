@@ -55,7 +55,7 @@ fn default_true() -> bool {
     true
 }
 fn default_trigger() -> f32 {
-    0.7
+    0.8
 }
 fn default_min_messages() -> usize {
     20
@@ -74,7 +74,7 @@ impl Default for SummarizationConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            trigger_threshold: 0.7,
+            trigger_threshold: 0.8,
             min_messages_to_trigger: 20,
             keep_recent: 10,
             summary_max_tokens: 800,

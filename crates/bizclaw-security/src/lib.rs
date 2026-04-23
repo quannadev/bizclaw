@@ -4,6 +4,7 @@
 pub mod allowlist;
 pub mod approval;
 pub mod cloud_crypto;
+pub mod exec_patterns;
 pub mod injection;
 pub mod redactor;
 pub mod sandbox;
