@@ -2,7 +2,7 @@
 
 > **Biến điện thoại thành AI Agent chạy 24/7 — không chỉ chat, mà điều khiển cả điện thoại.**
 > 
-> **v0.5.0**: Smart Agent Platform — Flow Runner, Workflow Engine, Stuck Detection, Vision Fallback, Screen Diff
+> **v0.6.0**: Smart Agent Platform — Pre-parsed Commands, Session Compaction, Feedback Collection, Pairing Codes
 
 ## 🏗️ Kiến trúc
 
@@ -120,6 +120,33 @@ Round N vs N+1: +2 new, -1 removed, 15 unchanged
 | `screen_capture()` | Screenshot → Vision AI |
 | `flow_run()` | Chạy macro instant |
 | `flow_list()` | Xem danh sách flows |
+
+### ⚡ Pre-parsed Commands (v0.6.0)
+Local commands chạy **không cần LLM**, tức thì, $0 cost:
+
+| Command | Mô tả |
+|---------|-------|
+| `/status` | Xem session stats, context utilization |
+| `/compact` | Trigger context compaction (80% threshold) |
+| `/help` | Danh sách commands |
+| `/clear` | Xóa conversation history |
+| `/model` | Xem model info |
+| `/tools` | Danh sách tools |
+| `/health` | Check system health |
+
+### 🔄 Session Compaction (v0.6.0)
+Auto-compact khi context > 80%:
+- Giữ 10 messages gần nhất
+- Summarize older messages bằng LLM
+- Off-load full transcript ra file
+- Free ~60% context window
+
+### 📝 Feedback Collection (v0.6.0)
+Self-learning từ user feedback:
+- Thumbs up/down sau mỗi response
+- Track helpfulness score per agent
+- Generate optimization prompts từ failed interactions
+- Sync với gateway để train model
 
 
 ### 📘 App Workflows

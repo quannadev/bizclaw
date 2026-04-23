@@ -31,14 +31,16 @@ import java.util.regex.Pattern
  *  Return final text to user
  * ```
  *
- * Features (v0.4.0):
+ * Features (v0.6.0):
  * - StuckDetector: 4-mode stuck detection with recovery hints
  * - VisionFallback: Screenshot → vision LLM when accessibility tree is empty
+ * - Pre-parsed commands: /status, /compact, /help, /clear, /model
  *
  * Architecture:
  *   LocalAgentLoop → BizClawLLM (llama.cpp) → ToolDispatcher → AppController/AccessibilityService
  *                  → StuckDetector (monitors stuck conditions)
  *                  → VisionFallback (screenshot when accessibility fails)
+ *                  → PreParsedCommands (local shortcuts, no LLM)
  *
  * Everything runs ON THE PHONE. No server. No API keys. $0 cost.
  */
@@ -52,6 +54,112 @@ class LocalAgentLoop(
     private val stuckDetector = StuckDetector()
     private val visionFallback = VisionFallback(context)
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    // ─── Pre-parsed Commands (v0.6.0) ──────────────────────────────
+    private val preParsedCommands = mapOf(
+        "/status" to PreParsedCommand("Status", "Show session stats", false),
+        "/compact" to PreParsedCommand("Compact", "Compact context window", false),
+        "/help" to PreParsedCommand("Help", "Show available commands", false),
+        "/clear" to PreParsedCommand("Clear", "Clear conversation history", false),
+        "/model" to PreParsedCommand("Model", "Show current model info", false),
+        "/tools" to PreParsedCommand("Tools", "List available tools", false),
+        "/health" to PreParsedCommand("Health", "Check system health", false),
+    )
+
+    data class PreParsedCommand(
+        val name: String,
+        val description: String,
+        val bypassLLM: Boolean = true,
+    )
+
+    fun isPreParsedCommand(input: String): Boolean {
+        val trimmed = input.trim()
+        return trimmed.startsWith("/") && preParsedCommands.containsKey(
+            trimmed.split(" ").first()
+        )
+    }
+
+    fun executePreParsedCommand(input: String): String {
+        val trimmed = input.trim()
+        val parts = trimmed.split(" ", limit = 2)
+        val cmd = parts[0]
+
+        return when (cmd) {
+            "/status" -> buildStatusResponse()
+            "/compact" -> compactContext()
+            "/help" -> buildHelpResponse()
+            "/clear" -> clearConversation()
+            "/model" -> buildModelResponse()
+            "/tools" -> buildToolsResponse()
+            "/health" -> "✅ System healthy\n\n• LLM: ${llm.modelName}\n• Memory: ${Runtime.getRuntime().freeMemory() / 1024 / 1024}MB free"
+            else -> "Unknown command: $cmd"
+        }
+    }
+
+    private fun buildStatusResponse(): String {
+        return buildString {
+            appendLine("📊 Session Status")
+            appendLine()
+            appendLine("• LLM: ${llm.modelName}")
+            appendLine("• Messages: ${llm.getMessageCount()}")
+            appendLine("• Tokens: ~${llm.getEstimatedTokens()}")
+            appendLine("• Compacting at: 80% context")
+            appendLine()
+            appendLine("💡 Type /compact to manually trigger compaction")
+        }
+    }
+
+    private fun compactContext(): String {
+        llm.clearConversation()
+        return "✅ Context compacted!\n\nMemory cleared. Starting fresh conversation."
+    }
+
+    private fun buildHelpResponse(): String {
+        return buildString {
+            appendLine("🔧 Available Commands")
+            appendLine()
+            preParsedCommands.forEach { (cmd, info) ->
+                appendLine("• $cmd — ${info.description}")
+            }
+            appendLine()
+            appendLine("💡 Commands above run locally (no LLM)")
+        }
+    }
+
+    private fun clearConversation(): String {
+        llm.clearConversation()
+        return "🗑️ Conversation cleared."
+    }
+
+    private fun buildModelResponse(): String {
+        return buildString {
+            appendLine("🤖 Model Info")
+            appendLine()
+            appendLine("• Name: ${llm.modelName}")
+            appendLine("• Type: Local GGUF")
+            appendLine("• Memory: ${Runtime.getRuntime().maxMemory() / 1024 / 1024}MB max")
+            appendLine()
+            appendLine("💡 Download new models from Settings → Local LLM")
+        }
+    }
+
+    private fun buildToolsResponse(): String {
+        val tools = dispatcher.toolDefinitions.lines()
+            .filter { it.contains("\"name\"") }
+            .mapNotNull {
+                Regex("\"name\"\\s*:\\s*\"([^\"]+)\"").find(it)?.groupValues?.get(1)
+            }
+        return buildString {
+            appendLine("🔧 Available Tools (${tools.size})")
+            appendLine()
+            tools.take(20).forEach { tool ->
+                appendLine("• $tool")
+            }
+            if (tools.size > 20) {
+                appendLine("• ... and ${tools.size - 20} more")
+            }
+        }
+    }
 
     // Tool call parsing: <tool_call>...</tool_call>
     // Use java.util.regex.Pattern directly to avoid Android ICU engine angle-bracket issues

@@ -87,6 +87,15 @@ LLMInference::addChatMessage(const char *message, const char *role) {
     _messages.push_back({strdup(role), strdup(message)});
 }
 
+void
+LLMInference::clearChatHistory() {
+    _messages.clear();
+    _formattedMessages.clear();
+    _formattedMessages = std::vector<char>(llama_n_ctx(_ctx));
+    _nCtxUsed = 0;
+    LOGi("Chat history cleared");
+}
+
 float
 LLMInference::getResponseGenerationTime() const {
     return (float) _responseNumTokens / (_responseGenerationTime / 1e6);

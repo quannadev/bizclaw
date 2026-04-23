@@ -372,13 +372,52 @@ fun SettingsScreen(
                 ),
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    InfoItem("Phiên bản", "BizClaw Android v0.3.0")
+                    InfoItem("Phiên bản", "BizClaw Android v0.6.0")
                     InfoItem("Chế độ", selectedMode.label)
-                    InfoItem("Giao diện FFI", "7 hàm (bizclaw-ffi)")
+                    InfoItem("Giao diện FFI", "8 hàm (bizclaw-ffi)")
                     InfoItem("Công cụ thiết bị", "10 (pin, GPS, thông báo...)")
                     InfoItem("Điều khiển app", "Facebook, Messenger, Zalo, mọi ứng dụng")
+                    InfoItem("Pre-parsed cmds", "/status, /compact, /help, /clear")
                 }
             }
+
+            // ─── v0.6.0 New Features ─────────────────────────────
+
+            Text(
+                "✨ Tính năng v0.6.0",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                ),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    FeatureItem("⚡", "Pre-parsed Commands", "/status, /compact, /help, /clear — chạy tức thì, không cần LLM")
+                    FeatureItem("🔄", "Session Compaction", "Auto-compact khi context > 80%, giữ 10 messages gần nhất")
+                    FeatureItem("📝", "Feedback Collection", "Thumbs up/down để agent tự cải thiện")
+                    FeatureItem("🔗", "Gateway Sync", "Session stats, metrics sync với bizclaw-gateway")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FeatureItem(emoji: String, title: String, description: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(emoji, fontSize = 16.sp)
+        Spacer(Modifier.width(8.dp))
+        Column {
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

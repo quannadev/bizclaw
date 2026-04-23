@@ -111,3 +111,66 @@ data class ActivityEvent(
     val summary: String = "",
     val timestamp: String = "",
 )
+
+// ─── Session Stats (v0.6.0) ────────────────────────────────────────
+
+@Serializable
+data class SessionStats(
+    @SerialName("session_id") val sessionId: String = "",
+    @SerialName("message_count") val messageCount: Int = 0,
+    @SerialName("estimated_tokens") val estimatedTokens: Int = 0,
+    @SerialName("utilization_pct") val utilizationPct: Float = 0f,
+    @SerialName("max_context") val maxContext: Int = 128000,
+    @SerialName("last_tool_rounds") val lastToolRounds: Int = 0,
+    val compacted: Boolean = false,
+    val provider: String = "",
+    val model: String = "",
+)
+
+// ─── Feedback (v0.6.0) ──────────────────────────────────────────────
+
+@Serializable
+data class FeedbackEntry(
+    @SerialName("session_id") val sessionId: String = "",
+    @SerialName("agent_id") val agentId: String = "",
+    val helpful: Boolean = true,
+    @SerialName("interaction_type") val interactionType: String = "chat",
+    @SerialName("message_preview") val messagePreview: String = "",
+    val timestamp: Long = System.currentTimeMillis(),
+)
+
+@Serializable
+data class AgentMetrics(
+    @SerialName("agent_id") val agentId: String = "",
+    @SerialName("total_interactions") val totalInteractions: Int = 0,
+    @SerialName("helpful_count") val helpfulCount: Int = 0,
+    @SerialName("helpful_score") val helpfulScore: Float = 0f,
+)
+
+// ─── Pairing Code (v0.6.0) ──────────────────────────────────────────
+
+@Serializable
+data class PairingRequest(
+    val userId: String,
+    val channel: String = "telegram",
+)
+
+@Serializable
+data class PairingResponse(
+    val code: String = "",
+    @SerialName("expires_at") val expiresAt: Long = 0,
+    @SerialName("channel") val channel: String = "",
+)
+
+@Serializable
+data class PairingVerifyRequest(
+    val code: String,
+    val userId: String,
+)
+
+@Serializable
+data class PairingVerifyResponse(
+    val success: Boolean = false,
+    @SerialName("paired_user_id") val pairedUserId: String = "",
+    val channel: String = "",
+)

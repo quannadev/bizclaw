@@ -70,6 +70,13 @@ Java_vn_bizclaw_app_engine_BizClawLLM_close(
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_vn_bizclaw_app_engine_BizClawLLM_clearChatHistory(
+        JNIEnv* env, jobject thiz, jlong modelPtr) {
+    auto* llmInference = reinterpret_cast<LLMInference*>(modelPtr);
+    llmInference->clearChatHistory();
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_vn_bizclaw_app_engine_BizClawLLM_startCompletion(
         JNIEnv* env, jobject thiz, jlong modelPtr, jstring prompt) {
     jboolean isCopy = true;

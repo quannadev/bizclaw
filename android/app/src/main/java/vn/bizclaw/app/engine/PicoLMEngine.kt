@@ -113,6 +113,23 @@ class BizClawLLM {
 
     val isLoaded: Boolean get() = nativePtr != 0L
 
+    var modelName: String = "No model loaded"
+        private set
+
+    private var messageCount: Int = 0
+
+    fun getMessageCount(): Int = messageCount
+
+    fun getEstimatedTokens(): Int = getContextUsed()
+
+    fun clearConversation() {
+        if (nativePtr != 0L) {
+            clearChatHistory(nativePtr)
+            messageCount = 0
+            Log.i(TAG, "Conversation history cleared")
+        }
+    }
+
     // ═══════════════════════════════════════════════════════════
     // Core API
     // ═══════════════════════════════════════════════════════════
@@ -157,6 +174,7 @@ class BizClawLLM {
     fun addUserMessage(message: String) {
         verifyHandle()
         addChatMessage(nativePtr, message, "user")
+        messageCount++
     }
 
     /** Add system prompt */
@@ -169,6 +187,7 @@ class BizClawLLM {
     fun addAssistantMessage(message: String) {
         verifyHandle()
         addChatMessage(nativePtr, message, "assistant")
+        messageCount++
     }
 
     /**
@@ -245,6 +264,7 @@ class BizClawLLM {
     private external fun getResponseGenerationSpeed(modelPtr: Long): Float
     private external fun getContextSizeUsed(modelPtr: Long): Int
     private external fun close(modelPtr: Long)
+    private external fun clearChatHistory(modelPtr: Long)
     private external fun startCompletion(modelPtr: Long, prompt: String)
     private external fun completionLoop(modelPtr: Long): String
     private external fun stopCompletion(modelPtr: Long)

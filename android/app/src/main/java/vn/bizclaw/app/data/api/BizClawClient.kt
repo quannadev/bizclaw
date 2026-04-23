@@ -208,4 +208,103 @@ class BizClawClient(
         val response = client.newCall(request).execute()
         response.isSuccessful
     }
+
+    // ─── Session Stats (v0.6.0) ──────────────────────────────────────
+
+    suspend fun getSessionStats(sessionId: String): Result<SessionStats> = runCatching {
+        val request = Request.Builder()
+            .url("$serverUrl/api/v1/sessions/$sessionId/stats")
+            .get()
+            .addAuth()
+            .build()
+
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: "{}"
+        json.decodeFromString<SessionStats>(body)
+    }
+
+    suspend fun compactSession(sessionId: String): Result<SessionStats> = runCatching {
+        val request = Request.Builder()
+            .url("$serverUrl/api/v1/sessions/$sessionId/compact")
+            .post("".toRequestBody(jsonMediaType))
+            .addAuth()
+            .build()
+
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: "{}"
+        json.decodeFromString<SessionStats>(body)
+    }
+
+    // ─── Feedback Collection (v0.6.0) ────────────────────────────────
+
+    suspend fun submitFeedback(feedback: FeedbackEntry): Result<Boolean> = runCatching {
+        val body = json.encodeToString(FeedbackEntry.serializer(), feedback)
+            .toRequestBody(jsonMediaType)
+
+        val request = Request.Builder()
+            .url("$serverUrl/api/v1/feedback")
+            .post(body)
+            .addAuth()
+            .build()
+
+        val response = client.newCall(request).execute()
+        response.isSuccessful
+    }
+
+    suspend fun getAgentMetrics(agentId: String): Result<AgentMetrics> = runCatching {
+        val request = Request.Builder()
+            .url("$serverUrl/api/v1/agents/$agentId/metrics")
+            .get()
+            .addAuth()
+            .build()
+
+        val response = client.newCall(request).execute()
+        val body = response.body?.string() ?: "{}"
+        json.decodeFromString<AgentMetrics>(body)
+    }
+
+    suspend fun getOptimizationPrompt(agentId: String): Result<String> = runCatching {
+        val request = Request.Builder()
+            .url("$serverUrl/api/v1/agents/$agentId/optimize")
+            .get()
+            .addAuth()
+            .build()
+
+        val response = client.newCall(request).execute()
+        response.body?.string() ?: ""
+    }
+
+    // ─── Pairing Codes (v0.6.0) ─────────────────────────────────────
+
+    suspend fun generatePairingCode(userId: String, channel: String = "telegram"): Result<PairingResponse> = runCatching {
+        val pairingReq = PairingRequest(userId = userId, channel = channel)
+        val body = json.encodeToString(PairingRequest.serializer(), pairingReq)
+            .toRequestBody(jsonMediaType)
+
+        val request = Request.Builder()
+            .url("$serverUrl/api/v1/pairing/generate")
+            .post(body)
+            .addAuth()
+            .build()
+
+        val response = client.newCall(request).execute()
+        val respBody = response.body?.string() ?: "{}"
+        json.decodeFromString<PairingResponse>(respBody)
+    }
+
+    suspend fun verifyPairingCode(code: String, userId: String): Result<PairingVerifyResponse> = runCatching {
+        val verifyReq = PairingVerifyRequest(code = code, userId = userId)
+        val body = json.encodeToString(PairingVerifyRequest.serializer(), verifyReq)
+            .toRequestBody(jsonMediaType)
+
+        val request = Request.Builder()
+            .url("$serverUrl/api/v1/pairing/verify")
+            .post(body)
+            .addAuth()
+            .build()
+
+        val response = client.newCall(request).execute()
+        val respBody = response.body?.string() ?: "{}"
+        json.decodeFromString<PairingVerifyResponse>(respBody)
+    }
 }

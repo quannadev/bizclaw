@@ -52,6 +52,7 @@ public:
     std::string benchModel(int pp, int tg, int pl, int nr);
 
     void addChatMessage(const char* message, const char* role);
+    void clearChatHistory();
     float getResponseGenerationTime() const;
     int getContextSizeUsed() const;
 
