@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
 import vn.bizclaw.app.engine.ProviderChat
 import vn.bizclaw.app.engine.ProviderManager
 import vn.bizclaw.app.service.AppController
@@ -666,6 +667,8 @@ private fun SettingsPanel(
     config: MeetingConfig,
     onConfigChange: (MeetingConfig) -> Unit,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var editPrompt by remember(config) { mutableStateOf(config.recapPrompt) }
     var editZalo by remember(config) { mutableStateOf(config.defaultZaloContact) }
     var editEmail by remember(config) { mutableStateOf(config.defaultEmail) }
