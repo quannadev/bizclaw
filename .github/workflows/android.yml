@@ -1,0 +1,71 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'android/**'
+  pull_request:
+    branches: [master]
+    paths:
+      - 'android/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('android/*.gradle*', 'android/*/gradle*') }}
+          restore-keys: ${{ runner.os }}-gradle-
+
+      - name: Build Debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: bizclaw-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download APK
+        uses: actions/download-artifact@v3
+        with:
+          name: bizclaw-debug-apk
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: "*.apk"
+          tag_name: android-v${{ github.run_number }}
+          release_name: "BizClaw Android v${{ github.run_number }}"
+          body: "Auto-built debug APK from master branch"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
