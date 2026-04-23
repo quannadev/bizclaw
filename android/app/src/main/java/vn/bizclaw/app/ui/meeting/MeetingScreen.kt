@@ -38,6 +38,8 @@ import vn.bizclaw.app.engine.ProviderChat
 import vn.bizclaw.app.engine.ProviderManager
 import vn.bizclaw.app.service.AppController
 import vn.bizclaw.app.service.AudioRecorder
+import vn.bizclaw.app.service.CalendarIntegration
+import vn.bizclaw.app.service.SpeechToText
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -378,17 +380,22 @@ fun MeetingScreen(
                                         val result = generateRecap(
                                             context, recording, meetingConfig.recapPrompt
                                         )
-                                        recapText = result
+                                        recapText = result.recap
                                         recapFileName = recording.fileName
 
                                         // Save recap to disk
-                                        savedRecaps[recording.fileName] = result
+                                        savedRecaps[recording.fileName] = result.recap
                                         val recapDir = File(context.filesDir, "recaps")
                                         recapDir.mkdirs()
-                                        File(recapDir, recording.fileName).writeText(result)
+                                        File(recapDir, recording.fileName).writeText(result.recap)
+
+                                        // Show transcription info
+                                        if (result.transcript != null) {
+                                            recapText = "📝 Transcription: ${result.transcript.take(200)}...\n\n${result.recap}"
+                                        }
 
                                         // Auto-send if enabled
-                                        autoSendRecap(result)
+                                        autoSendRecap(result.recap)
                                     } catch (e: Exception) {
                                         recapText = "❌ Lỗi: ${e.message}"
                                         recapFileName = recording.fileName
@@ -821,6 +828,63 @@ private fun SettingsPanel(
                 Icon(Icons.Default.Save, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text("💾 Lưu Cài Đặt", fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── Calendar Integration ──
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            val calendar = CalendarIntegration(context)
+                            calendar.openCalendarApp()
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Không mở được Calendar", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Default.CalendarMonth, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("📅 Calendar", fontSize = 12.sp)
+                }
+
+                Button(
+                    onClick = {
+                        try {
+                            val calendar = CalendarIntegration(context)
+                            scope.launch {
+                                val events = calendar.getUpcomingEvents(5)
+                                if (events.isEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Không có sự kiện sắp tới", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        val msg = events.take(3).joinToString("\n") {
+                                            "• ${it.title} (${SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(it.startTime))})"
+                                        }
+                                        Toast.makeText(context, "📅 Sắp tới:\n$msg", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Lỗi đọc Calendar", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary,
+                    ),
+                ) {
+                    Icon(Icons.Default.Schedule, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("📋 Sự kiện", fontSize = 12.sp)
+                }
             }
         }
     }
@@ -1270,29 +1334,145 @@ private fun EmptyRecordingsPlaceholder() {
 }
 
 // ═══════════════════════════════════════════════════════
-// AI Recap Generation
+// AI Recap Generation with Real Transcription
 // ═══════════════════════════════════════════════════════
+
+data class RecapResult(
+    val recap: String,
+    val transcript: String?,
+    val actionItems: List<ActionItem>,
+    val duration: Long,
+    val provider: String,
+)
+
+data class ActionItem(
+    val task: String,
+    val assignee: String?,
+    val deadline: String?,
+    val priority: String = "normal",
+)
 
 private suspend fun generateRecap(
     context: android.content.Context,
     recording: AudioRecorder.RecordingResult,
     customPrompt: String,
-): String = withContext(Dispatchers.IO) {
+): RecapResult = withContext(Dispatchers.IO) {
     val providerManager = ProviderManager(context)
     val providers = providerManager.loadProviders()
     val provider = providers.firstOrNull { it.enabled }
         ?: throw Exception("Chưa cấu hình AI Provider. Vào Settings để thêm.")
 
-    val prompt = """$customPrompt
+    // Step 1: Transcribe audio to text
+    val stt = SpeechToText(context)
+    val audioFile = File(recording.filePath)
+    val transcription = stt.transcribe(audioFile)
 
-File ghi âm: ${recording.fileName}
-Kích thước: ${recording.sizeFormatted}
+    val transcriptText = if (transcription.success && transcription.text.isNotBlank()) {
+        transcription.text
+    } else {
+        null
+    }
 
-Lưu ý: Đây là file ghi âm ${recording.sizeFormatted}, hãy tạo recap mẫu phù hợp.
-Khi có tính năng transcribe đầy đủ, recap sẽ dựa trên nội dung thực tế."""
+    // Step 2: Build enhanced prompt with transcript
+    val enhancedPrompt = buildEnhancedRecapPrompt(customPrompt, transcriptText, recording)
 
+    // Step 3: Generate recap using LLM
     ProviderChat.appContext = context
-    ProviderChat.chat(provider, "", prompt)
+    val recapText = ProviderChat.chat(provider, "", enhancedPrompt)
+
+    // Step 4: Extract action items
+    val actionItems = extractActionItems(recapText)
+
+    RecapResult(
+        recap = recapText,
+        transcript = transcriptText,
+        actionItems = actionItems,
+        duration = recording.sizeFormatted.let {
+            // Estimate duration from file size (rough: 1MB ≈ 1 minute for m4a)
+            val sizeMb = recording.sizeFormatted.replace(Regex("[^0-9.]"), "").toFloatOrNull() ?: 0f
+            (sizeMb * 60 * 1000).toLong()
+        },
+        provider = transcription.provider,
+    )
+}
+
+private fun buildEnhancedRecapPrompt(basePrompt: String, transcript: String?, recording: AudioRecorder.RecordingResult): String {
+    return buildString {
+        appendLine(basePrompt)
+        appendLine()
+        
+        if (transcript != null && transcript.isNotBlank()) {
+            appendLine("=== TRANSCRIPT ===")
+            appendLine(transcript)
+            appendLine()
+            appendLine("Hãy tạo recap dựa trên transcript thực tế ở trên.")
+            appendLine()
+        } else {
+            appendLine("⚠️ LƯU Ý: Không có transcription. File chỉ có thông tin:")
+            appendLine("- Tên file: ${recording.fileName}")
+            appendLine("- Kích thước: ${recording.sizeFormatted}")
+            appendLine()
+            appendLine("Hãy tạo recap mẫu với placeholder. Khi có transcription, recap sẽ chi tiết hơn.")
+            appendLine()
+        }
+
+        appendLine("=== YÊU CẦU THÊM ===")
+        appendLine("1. Trích xuất các ACTION ITEMS rõ ràng:")
+        appendLine("   - Ai làm gì (assignee)")
+        appendLine("   - Deadline nếu có")
+        appendLine("   - Priority: cao/trung bình/thấp")
+        appendLine()
+        appendLine("2. Đánh dấu các quyết định đã được đưa ra")
+        appendLine()
+        appendLine("3. Ghi nhận các câu hỏi cần follow-up")
+    }
+}
+
+private fun extractActionItems(text: String): List<ActionItem> {
+    val items = mutableListOf<ActionItem>()
+    
+    // Common patterns for action items in Vietnamese
+    val patterns = listOf(
+        Regex("(?:@|phân công|giao cho)\\s*([A-ZÀ-ỹ][a-zà-ỹ\\s]+?)(?::|,|\\s+-|$)", RegexOption.IGNORE_CASE),
+        Regex("(?:deadline|hạn chót)\\s*:?\\s*(\\d{1,2}[/.-]\\d{1,2}[/.-]\\d{2,4})", RegexOption.IGNORE_CASE),
+        Regex("(?:ưu tiên|priority)\\s*:?\\s*(cao|trung bình|thấp|high|medium|low)", RegexOption.IGNORE_CASE),
+        Regex("[-•*]\\s*([A-ZÀ-ỹ][^.!?\n]{10,100}?(?:làm|xong|hoàn thành|gửi|báo cáo|tạo|cập nhật))", RegexOption.IGNORE_CASE),
+    )
+    
+    // Simple extraction - look for lines with action verbs
+    val actionVerbs = listOf("làm", "xong", "hoàn thành", "gửi", "báo cáo", "tạo", "cập nhật", "liên hệ", "prepare", "send", "complete", "finish", "update", "do", "call")
+    
+    text.lines().forEach { line ->
+        val trimmed = line.trim()
+        if (trimmed.startsWith("-") || trimmed.startsWith("•")) {
+            val content = trimmed.removePrefix("-").removePrefix("•").trim()
+            if (actionVerbs.any { content.contains(it, ignoreCase = true) }) {
+                // Try to extract assignee
+                val assigneeMatch = Regex("@?([A-ZÀ-ỹ][a-zà-ỹ]+)").find(content)
+                val assignee = assigneeMatch?.groupValues?.getOrNull(1)
+                
+                // Try to extract deadline
+                val deadlineMatch = Regex("\\d{1,2}[/.-]\\d{1,2}[/.-]\\d{2,4}").find(content)
+                val deadline = deadlineMatch?.value
+                
+                // Try to extract priority
+                val priority = when {
+                    content.contains("ưu tiên cao", ignoreCase = true) || content.contains("priority cao", ignoreCase = true) -> "cao"
+                    content.contains("ưu tiên thấp", ignoreCase = true) || content.contains("priority thấp", ignoreCase = true) -> "thấp"
+                    else -> "trung bình"
+                }
+                
+                items.add(ActionItem(
+                    task = content,
+                    assignee = assignee,
+                    deadline = deadline,
+                    priority = priority,
+                ))
+            }
+        }
+    }
+    
+    return items
 }
 
 // ═══════════════════════════════════════════════════════

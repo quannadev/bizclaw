@@ -2,7 +2,7 @@
 
 > **Biến điện thoại thành AI Agent chạy 24/7 — không chỉ chat, mà điều khiển cả điện thoại.**
 > 
-> **v0.6.0**: Smart Agent Platform — Pre-parsed Commands, Session Compaction, Feedback Collection, Pairing Codes
+> **v0.6.1**: Smart Agent + Meeting Assistant — Transcription, AI Recap, Calendar Integration
 
 ## 🏗️ Kiến trúc
 
@@ -148,6 +148,22 @@ Self-learning từ user feedback:
 - Generate optimization prompts từ failed interactions
 - Sync với gateway để train model
 
+### 🎙️ Meeting Assistant (v0.6.1)
+AI-powered meeting recording và transcription:
+
+| Feature | Mô tả |
+|---------|--------|
+| 🎤 Audio Recording | One-tap record với timer + waveform animation |
+| 📝 Transcription | Whisper API, Google STT, hoặc Ollama local |
+| 🤖 AI Recap | Tạo recap từ transcript thực tế |
+| ✅ Action Items | Trích xuất task, assignee, deadline, priority |
+| 📅 Calendar | Tích hợp calendar, tạo reminder từ action items |
+| 📱 Auto-send | Gửi recap qua Zalo/Email tự động |
+
+**Supported STT Providers:**
+- OpenAI Whisper API (recommended)
+- Google Speech-to-Text
+- Local Ollama + Whisper
 
 ### 📘 App Workflows
 
