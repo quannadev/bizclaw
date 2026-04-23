@@ -2,7 +2,7 @@
 
 > **Biến điện thoại thành AI Agent chạy 24/7 — không chỉ chat, mà điều khiển cả điện thoại.**
 > 
-> **v0.6.1**: Smart Agent + Meeting Assistant — Transcription, AI Recap, Calendar Integration
+> **v0.6.2**: SME Business Dashboard — Auto-reply, Multi-platform posting, Email aggregation, Group monitoring
 
 ## 🏗️ Kiến trúc
 
@@ -164,6 +164,49 @@ AI-powered meeting recording và transcription:
 - OpenAI Whisper API (recommended)
 - Google Speech-to-Text
 - Local Ollama + Whisper
+
+### 💬 Smart Auto-Reply (v0.6.2)
+AI-powered auto-reply cho Zalo/Chat:
+
+| Feature | Mô tả |
+|---------|--------|
+| AI Responses | LLM-generated contextual replies |
+| Template Responses | Canned responses cho FAQ |
+| Sentiment Detection | Phát hiện khách hàng khó tính |
+| Escalation | Chuyển chat phức tạp cho agent |
+| Rate Limiting | Tránh spam response |
+
+### 📧 Email Aggregation (v0.6.2)
+Multi-account email với digest:
+
+| Feature | Mô tả |
+|---------|--------|
+| Gmail/Outlook/OAuth | OAuth2 integration |
+| Smart Grouping | Thread detection, topic clustering |
+| Priority Filtering | Urgent, VIP, Promotions |
+| Digest Template | Daily/Weekly summary |
+
+### 📱 Multi-Platform Posting (v0.6.2)
+Unified Post Manager cho:
+
+| Platform | Status |
+|----------|--------|
+| Facebook Page/Group | ✅ |
+| Zalo OA | ✅ |
+| Instagram | ✅ |
+| LinkedIn | ✅ |
+| TikTok | 🔜 |
+| Custom Webhook | ✅ |
+
+### 📊 Unified Dashboard (v0.6.2)
+Tổng hợp metrics từ tất cả services:
+
+- **Zalo Metrics**: Chats, auto-reply, CSAT
+- **Email Metrics**: Unread, urgent, pending
+- **Social Metrics**: Posts, reach, engagement
+- **Action Items**: Tasks từ meetings, escalations
+- **Alerts**: Priority notifications
+- **Health Score**: 0-100% system health
 
 ### 📘 App Workflows
 
