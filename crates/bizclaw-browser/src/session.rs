@@ -70,13 +70,15 @@ impl BrowserSession {
         let session_id = Uuid::new_v4().to_string();
         info!("Creating browser session: {}", session_id);
         
-        let ws_url = if let Some(ref page_id) = config.page_id {
-            format!("ws://localhost:{}/devtools/page/{}", config.chrome_debug_port, page_id)
+        let (client, page_id) = if let Some(ref existing_page_id) = config.page_id {
+            let ws_url = format!("ws://localhost:{}/devtools/page/{}", config.chrome_debug_port, existing_page_id);
+            let c = CdpClient::connect(&ws_url).await?;
+            (c, existing_page_id.clone())
         } else {
-            format!("ws://localhost:{}/devtools/browser", config.chrome_debug_port)
+            let (c, new_id) = CdpClient::new_tab(config.chrome_debug_port).await?;
+            (c, new_id)
         };
         
-        let client = CdpClient::connect(&ws_url).await?;
         client.page_enable().await?;
         
         let stealth = if let Some(ref stealth_config) = config.stealth_config {

@@ -160,6 +160,27 @@ impl CdpClient {
         })
     }
     
+    pub async fn new_tab(port: u16) -> Result<(Self, String), BrowserError> {
+        info!("Creating new tab via Chrome DevTools on port {}", port);
+        
+        let client = Self::connect(&format!("ws://localhost:{}/devtools/browser", port)).await?;
+        
+        let response = client.send_command("Target.createTarget", Some(serde_json::json!({
+            "url": "about:blank"
+        }))).await?;
+        
+        let page_id = response.get("targetId")
+            .and_then(|t| t.as_str())
+            .ok_or_else(|| BrowserError::ConnectionFailed("Failed to create new tab".to_string()))?
+            .to_string();
+        
+        let ws_url = format!("ws://localhost:{}/devtools/page/{}", port, page_id);
+        let page_client = Self::connect(&ws_url).await?;
+        
+        info!("New tab created with ID: {}", page_id);
+        Ok((page_client, page_id))
+    }
+    
     pub async fn send_command(&self, method: &str, params: Option<Value>) -> Result<Value, BrowserError> {
         let sender = self.sender.lock().await;
         let sender = sender.as_ref()
