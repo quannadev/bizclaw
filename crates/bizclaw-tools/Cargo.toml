@@ -39,6 +39,8 @@ mailparse = "0.16.1"
 whoami.workspace = true
 rustc_version = "0.4"
 bizclaw-sandbox.workspace = true
+bizclaw-browser.workspace = true
+parking_lot = "0.12"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 enigo = "0.3"

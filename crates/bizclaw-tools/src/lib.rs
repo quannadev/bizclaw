@@ -29,6 +29,7 @@
 pub mod api_connector;
 pub mod auto_message;
 pub mod browser;
+pub mod cdp_browser;
 pub mod bundle_provisioner;
 pub mod calendar;
 pub mod catchme_search;
@@ -116,6 +117,8 @@ impl ToolRegistry {
         reg.register(Box::new(http_request::HttpRequestTool::new()));
         // Browser automation (PinchTab)
         reg.register(Box::new(browser::BrowserTool::new()));
+        // CDP Browser (direct Chrome DevTools Protocol)
+        reg.register(Box::new(cdp_browser::CdpBrowserTool::new()));
         // Stealth browser (anti-detection)
         reg.register(Box::new(stealth_browser::StealthBrowserTool::new()));
         // Config tools

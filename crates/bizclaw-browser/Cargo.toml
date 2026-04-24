@@ -1,0 +1,28 @@
+[package]
+name = "bizclaw-browser"
+version = "0.1.0"
+edition = "2021"
+description = "AI Browser Harness - CDP-based browser automation tools for LLM agents"
+authors = ["BizClaw Team"]
+license = "MIT"
+
+[dependencies]
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+futures-util = "0.3"
+serde.workspace = true
+serde_json.workspace = true
+url.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+base64.workspace = true
+once_cell = "1.20"
+dirs.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+parking_lot = "0.12"
+
+[dev-dependencies]
+tokio-test = "0.4"

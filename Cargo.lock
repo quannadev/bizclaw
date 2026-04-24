@@ -599,6 +599,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "bizclaw-browser"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "dirs",
+ "futures-util",
+ "once_cell",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-test",
+ "tokio-tungstenite 0.24.0",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid 1.21.0",
+]
+
+[[package]]
 name = "bizclaw-catchme"
 version = "1.1.7"
 dependencies = [
@@ -1153,6 +1176,7 @@ version = "1.1.7"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bizclaw-browser",
  "bizclaw-catchme",
  "bizclaw-core",
  "bizclaw-db",
@@ -1168,6 +1192,7 @@ dependencies = [
  "imap",
  "mailparse",
  "native-tls",
+ "parking_lot",
  "pdf-extract",
  "regex",
  "reqwest",
