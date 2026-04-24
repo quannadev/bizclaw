@@ -38,6 +38,7 @@ native-tls.workspace = true
 mailparse = "0.16.1"
 whoami.workspace = true
 rustc_version = "0.4"
+bizclaw-sandbox.workspace = true
 
 [target.'cfg(target_os = "macos")'.dependencies]
 enigo = "0.3"

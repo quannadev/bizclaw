@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/bizclaw-core",
     "crates/bizclaw-brain",
+    "crates/bizclaw-sandbox",
     "crates/bizclaw-providers",
     "crates/bizclaw-channels",
     "crates/bizclaw-memory",
@@ -151,6 +152,7 @@ bizclaw-crm = { path = "crates/bizclaw-crm" }
 bizclaw-evaluator = { path = "crates/bizclaw-evaluator" }
 bizclaw-redteam = { path = "crates/bizclaw-redteam" }
 bizclaw-hai = { path = "crates/bizclaw-hai" }
+bizclaw-sandbox = { path = "crates/bizclaw-sandbox" }
 
 [package]
 name = "bizclaw"
