@@ -1046,6 +1046,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "bizclaw-sandbox"
+version = "1.1.7"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "uuid 1.21.0",
+]
+
+[[package]]
 name = "bizclaw-scheduler"
 version = "1.1.7"
 dependencies = [
@@ -1141,6 +1157,7 @@ dependencies = [
  "bizclaw-core",
  "bizclaw-db",
  "bizclaw-memory",
+ "bizclaw-sandbox",
  "bizclaw-security",
  "calamine",
  "chrono",
