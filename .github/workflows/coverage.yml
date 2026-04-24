@@ -1,0 +1,90 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  coverage:
+    name: Coverage Report
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Install cargo-tarpaulin
+        uses: taiki-e/install-action@cargo-tarpaulin
+        with:
+          version: 0.31
+
+      - name: Run coverage
+        run: |
+          cargo tarpaulin --workspace \
+            --out Xml \
+            --out Html \
+            --out Json \
+            --features full \
+            --ignore-panics \
+            --ignore-tests \
+            --fail-under-lines 50
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./tarpaulin-report.xml
+          flags: unittests
+          fail_ci_if_error: false
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: tarpaulin-report.*
+
+      - name: Generate summary
+        run: |
+          cargo tarpaulin --workspace \
+            --features full \
+            --out Html \
+            2>&1 | tee coverage.log
+          
+          # Extract summary
+          grep -E "(Coverage|TOTAL)" coverage.log || true
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: target
+
+      - name: Run tests
+        run: cargo test --workspace --features full -- --nocapture 2>&1 | tee test.log
+
+      - name: Extract test summary
+        run: |
+          grep -E "(test result|passed|failed|running)" test.log || true
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: test.log

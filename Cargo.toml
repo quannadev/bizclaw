@@ -38,6 +38,7 @@ members = [
     "crates/bizclaw-evaluator",
     "crates/bizclaw-redteam",
     "crates/bizclaw-hai",
+    "crates/bizclaw-tracing",
 ]
 
 # ── Workspace-wide lint policy ──────────────────────────

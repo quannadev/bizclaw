@@ -1217,6 +1217,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bizclaw-tracing"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-test",
+ "tracing",
+]
+
+[[package]]
 name = "bizclaw-trendradar"
 version = "1.1.7"
 dependencies = [

@@ -1,0 +1,18 @@
+[package]
+name = "bizclaw-tracing"
+version = "0.1.0"
+edition = "2021"
+description = "Distributed tracing and metrics for BizClaw"
+authors = ["BizClaw Team"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+rand.workspace = true
+
+[dev-dependencies]
+tokio-test = "0.4"
