@@ -48,6 +48,7 @@ impl CdpBrowserTool {
             }),
             user_agent: None,
             headless: false,
+            stealth_config: Some(bizclaw_browser::StealthConfig::default()),
         };
         Self { config }
     }

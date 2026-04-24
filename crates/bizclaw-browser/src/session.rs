@@ -1,6 +1,7 @@
 use crate::cdp::CdpClient;
 use crate::error::{BrowserError, Result};
 use crate::skills::{SkillRegistry, SkillMatch};
+use crate::stealth::{StealthConfig, StealthManager};
 use crate::tools::BrowserTools;
 use tokio::sync::RwLock;
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,7 @@ pub struct SessionConfig {
     pub viewport: Option<ViewportConfig>,
     pub user_agent: Option<String>,
     pub headless: bool,
+    pub stealth_config: Option<StealthConfig>,
 }
 
 impl Default for SessionConfig {
@@ -39,6 +41,7 @@ impl Default for SessionConfig {
             }),
             user_agent: None,
             headless: true,
+            stealth_config: Some(StealthConfig::default()),
         }
     }
 }
@@ -57,6 +60,7 @@ pub struct BrowserSession {
     pub config: SessionConfig,
     pub client: CdpClient,
     pub tools: BrowserTools,
+    pub stealth: Option<StealthManager>,
     pub skills: Arc<SkillRegistry>,
     pub info: Arc<RwLock<SessionInfo>>,
 }
@@ -74,6 +78,18 @@ impl BrowserSession {
         
         let client = CdpClient::connect(&ws_url).await?;
         client.page_enable().await?;
+        
+        let stealth = if let Some(ref stealth_config) = config.stealth_config {
+            if stealth_config.enabled {
+                let manager = StealthManager::new(client.clone(), stealth_config.clone());
+                manager.apply_all().await?;
+                Some(manager)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
         
         if let Some(ref viewport) = config.viewport {
             let params = serde_json::json!({
@@ -93,6 +109,7 @@ impl BrowserSession {
             config: config.clone(),
             client,
             tools,
+            stealth,
             skills: Arc::new(SkillRegistry::new()),
             info: Arc::new(RwLock::new(SessionInfo {
                 id: session_id,
