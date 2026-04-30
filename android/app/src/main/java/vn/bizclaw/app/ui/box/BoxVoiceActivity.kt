@@ -6,26 +6,27 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.Bundle
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
+import android.view.View
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import vn.bizclaw.app.R
 import vn.bizclaw.app.box.BoxConfig
 import vn.bizclaw.app.box.BoxEngine
+import java.io.File
 
+/**
+ * Box Voice Activity - Voice chat với AI
+ */
 class BoxVoiceActivity : AppCompatActivity() {
     
     private lateinit var boxEngine: BoxEngine
     private lateinit var recordButton: Button
     private lateinit var statusText: TextView
     private lateinit var transcriptText: TextView
+    private lateinit var voiceWave: VoiceWaveView
     
     private var isRecording = false
     private var audioRecord: AudioRecord? = null
@@ -45,10 +46,11 @@ class BoxVoiceActivity : AppCompatActivity() {
         recordButton = findViewById(R.id.recordButton)
         statusText = findViewById(R.id.statusText)
         transcriptText = findViewById(R.id.transcriptText)
+        voiceWave = findViewById(R.id.voiceWave)
         
         recordButton.setOnClickListener { toggleRecording() }
         
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
             != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 this,
@@ -63,17 +65,13 @@ class BoxVoiceActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             val config = BoxConfig(
-                modelPath = filesDir.absolutePath + "/models/hermes-2-pro-q4.gguf",
-                whisperPath = filesDir.absolutePath + "/models/whisper-tiny.bin"
+                modelPath = getExternalFilesDir("models")?.absolutePath + "/hermes-2-pro-q4.gguf",
+                whisperPath = getExternalFilesDir("models")?.absolutePath + "/whisper-tiny.bin"
             )
             
             boxEngine.initialize(config).onSuccess {
                 runOnUiThread {
                     statusText.text = "Ready"
-                }
-            }.onFailure { e ->
-                runOnUiThread {
-                    statusText.text = "Error: ${e.message}"
                 }
             }
         }
@@ -88,49 +86,47 @@ class BoxVoiceActivity : AppCompatActivity() {
     }
     
     private fun startRecording() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) 
             != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Microphone permission required", Toast.LENGTH_SHORT).show()
             return
         }
         
         val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
         
-        try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                sampleRate,
-                channelConfig,
-                audioFormat,
-                bufferSize
-            )
-            
-            audioRecord?.startRecording()
-            isRecording = true
-            
-            runOnUiThread {
-                recordButton.text = "Stop"
-                statusText.text = "Recording..."
-            }
-            
-            lifecycleScope.launch(Dispatchers.IO) {
-                val audioData = recordAudio()
-                processAudio(audioData)
-            }
-        } catch (e: Exception) {
-            runOnUiThread {
-                Toast.makeText(this@BoxVoiceActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+        audioRecord = AudioRecord(
+            MediaRecorder.AudioSource.MIC,
+            sampleRate,
+            channelConfig,
+            audioFormat,
+            bufferSize
+        )
+        
+        audioRecord?.startRecording()
+        isRecording = true
+        
+        runOnUiThread {
+            recordButton.text = "Stop"
+            statusText.text = "Recording..."
+            voiceWave.visibility = View.VISIBLE
+            voiceWave.startAnimation()
+        }
+        
+        // Start recording thread
+        lifecycleScope.launch {
+            val audioData = recordAudio()
+            processAudio(audioData)
         }
     }
     
     private suspend fun recordAudio(): ByteArray {
         val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-        val buffer = ByteArray(bufferSize * 10)
+        val buffer = ByteArray(bufferSize * 10) // 10 seconds max
         var totalRead = 0
         
         while (isRecording && totalRead < buffer.size) {
-            val read = audioRecord?.read(buffer, totalRead, bufferSize)
-            if (read != null && read > 0) {
+            val read = audioRecord?.read(buffer, totalRead, bufferSize) ?: 0
+            if (read > 0) {
                 totalRead += read
             }
         }
@@ -147,22 +143,22 @@ class BoxVoiceActivity : AppCompatActivity() {
         runOnUiThread {
             recordButton.text = "Record"
             statusText.text = "Processing..."
+            voiceWave.stopAnimation()
         }
     }
     
-    private fun processAudio(audioData: ByteArray) {
-        lifecycleScope.launch {
-            val transcription = withContext(Dispatchers.IO) {
-                boxEngine.transcribe(audioData)
-            }
-            
-            runOnUiThread {
-                transcription.onSuccess { text ->
-                    transcriptText.text = text
-                    statusText.text = "Done"
-                }.onFailure { e ->
-                    statusText.text = "Error: ${e.message}"
-                }
+    private suspend fun processAudio(audioData: ByteArray) {
+        val transcription = boxEngine.transcribe(audioData)
+        
+        runOnUiThread {
+            transcription.onSuccess { text ->
+                transcriptText.text = text
+                statusText.text = "Done"
+                
+                // Continue to chat with transcribed text
+                // navigateToChat(text)
+            }.onFailure { e ->
+                statusText.text = "Error: ${e.message}"
             }
         }
     }
@@ -171,5 +167,19 @@ class BoxVoiceActivity : AppCompatActivity() {
         super.onDestroy()
         if (isRecording) stopRecording()
         boxEngine.release()
+    }
+}
+
+/**
+ * Custom view for voice wave animation
+ */
+class VoiceWaveView(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
+    // Simple wave animation implementation
+    fun startAnimation() {
+        // Start animating
+    }
+    
+    fun stopAnimation() {
+        // Stop animation
     }
 }

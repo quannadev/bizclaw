@@ -5,8 +5,6 @@ import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import vn.bizclaw.app.R
 import vn.bizclaw.app.box.BoxConfig
