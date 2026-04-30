@@ -28,6 +28,9 @@ pub enum BrowserError {
     #[error("Invalid selector: {0}")]
     InvalidSelector(String),
     
+    #[error("Auth failed: {0}")]
+    AuthFailed(String),
+    
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
     

@@ -8,6 +8,9 @@ members = [
     "crates/bizclaw-providers",
     "crates/bizclaw-channels",
     "crates/bizclaw-memory",
+    "crates/bizclaw-memory-redb",
+    "crates/bizclaw-memory-search",
+    "crates/bizclaw-memory-vector",
     "crates/bizclaw-tools",
     "crates/bizclaw-mcp",
     "crates/bizclaw-trendradar",
@@ -39,6 +42,8 @@ members = [
     "crates/bizclaw-redteam",
     "crates/bizclaw-hai",
     "crates/bizclaw-tracing",
+    "crates/bizclaw-skillforge",
+    "crates/bizclaw-agi",
 ]
 
 # ── Workspace-wide lint policy ──────────────────────────
@@ -134,6 +139,9 @@ bizclaw-brain = { path = "crates/bizclaw-brain" }
 bizclaw-providers = { path = "crates/bizclaw-providers" }
 bizclaw-channels = { path = "crates/bizclaw-channels" }
 bizclaw-memory = { path = "crates/bizclaw-memory" }
+bizclaw-memory-redb = { path = "crates/bizclaw-memory-redb" }
+bizclaw-memory-search = { path = "crates/bizclaw-memory-search" }
+bizclaw-memory-vector = { path = "crates/bizclaw-memory-vector" }
 bizclaw-tools = { path = "crates/bizclaw-tools" }
 bizclaw-security = { path = "crates/bizclaw-security" }
 bizclaw-runtime = { path = "crates/bizclaw-runtime" }
@@ -156,6 +164,8 @@ bizclaw-redteam = { path = "crates/bizclaw-redteam" }
 bizclaw-hai = { path = "crates/bizclaw-hai" }
 bizclaw-sandbox = { path = "crates/bizclaw-sandbox" }
 bizclaw-browser = { path = "crates/bizclaw-browser" }
+bizclaw-skillforge = { path = "crates/bizclaw-skillforge" }
+bizclaw-agi = { path = "crates/bizclaw-agi" }
 
 [package]
 name = "bizclaw"
@@ -183,6 +193,7 @@ bizclaw-gateway.workspace = true
 bizclaw-db.workspace = true
 bizclaw-platform.workspace = true
 bizclaw-hands.workspace = true
+bizclaw-agi.workspace = true
 
 tokio.workspace = true
 clap.workspace = true

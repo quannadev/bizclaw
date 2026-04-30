@@ -1,0 +1,90 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BizClaw",
+  "identifier": "ai.bizclaw.app",
+  "version": "1.1.7",
+  "build": {
+    "beforeBuildCommand": "pnpm build",
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../target/release/bundle"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "BizClaw",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true
+    },
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "copyright": "Copyright © 2024 BizClaw",
+    "category": "Productivity",
+    "shortDescription": "AI Agent Platform for SME",
+    "longDescription": "BizClaw is a fast, small, and fully autonomous AI assistant infrastructure with local brain. Built with Rust for performance and reliability.",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "plugins": {
+    "shell": {
+      "open": true,
+      "scope": [
+        {
+          "name": "open-browser",
+          "cmd": "open",
+          "args": true
+        }
+      ]
+    },
+    "fs": {
+      "scope": {
+        "allow": ["$APPDATA/**", "$LOCALAPPDATA/**", "$HOME/.bizclaw/**"],
+        "deny": ["$APPDATA/secret/**"]
+      }
+    },
+    "http": {
+      "scope": {
+        "allow": [
+          { "url": "https://**" },
+          { "url": "http://localhost:**" }
+        ]
+      }
+    },
+    "notification": {
+      "all": true
+    },
+    "clipboard-manager": {
+      "all": true
+    },
+    "dialog": {
+      "all": true
+    }
+  }
+}

@@ -1,0 +1,50 @@
+[package]
+name = "bizclaw-desktop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "BizClaw Desktop App - Tauri-based AI Assistant"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+bizclaw-core.workspace = true
+bizclaw-agent.workspace = true
+bizclaw-memory.workspace = true
+bizclaw-memory-redb.workspace = true
+bizclaw-memory-search.workspace = true
+bizclaw-memory-vector.workspace = true
+bizclaw-channels.workspace = true
+bizclaw-tools.workspace = true
+bizclaw-gateway.workspace = true
+bizclaw-skills.workspace = true
+
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-http = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-clipboard-manager = "2"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+anyhow.workspace = true
+rusqlite.workspace = true
+chrono.workspace = true
+uuid.workspace = true
+dirs.workspace = true
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
