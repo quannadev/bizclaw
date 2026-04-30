@@ -202,23 +202,38 @@ impl TraceAnalyzer {
         let timestamp_str = timestamp_regex.captures(line)?.get(1)?.as_str();
         let level_str = level_regex.captures(line)?.get(1)?.as_str();
         
-        let rest = line.splitn(2, |c| c == ']' || c == ':').last()?.trim();
-        let parts: Vec<&str> = rest.splitn(2, ':').collect();
+        // Find the ] to get the rest after timestamp
+        if let Some(rest_start) = line.find("] ") {
+            let rest = &line[rest_start + 2..];
+            // rest is like "INFO tool: browser_navigate url=https://example.com"
+            // Split at the first ": " to get category and message
+            if let Some(category_end) = rest.find(": ") {
+                let category_message = &rest[..category_end];
+                let message = rest[category_end + 2..].trim().to_string();
+                
+                // Category is the part after the level (first word)
+                let parts: Vec<&str> = category_message.split_whitespace().collect();
+                let category = if parts.len() > 1 {
+                    parts[1..].join(" ")
+                } else {
+                    category_message.to_string()
+                };
+                
+                let timestamp = DateTime::parse_from_rfc3339(timestamp_str)
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(|_| Utc::now());
+                
+                return Some(TraceEntry {
+                    timestamp,
+                    level: TraceLevel::from_str(level_str),
+                    category,
+                    message,
+                    metadata: StdHashMap::new(),
+                });
+            }
+        }
         
-        let category = parts.first()?.trim().to_string();
-        let message = parts.get(1).map(|s| s.trim()).unwrap_or("").to_string();
-        
-        let timestamp = DateTime::parse_from_rfc3339(timestamp_str)
-            .map(|dt| dt.with_timezone(&Utc))
-            .unwrap_or_else(|_| Utc::now());
-        
-        Some(TraceEntry {
-            timestamp,
-            level: TraceLevel::from_str(level_str),
-            category,
-            message,
-            metadata: StdHashMap::new(),
-        })
+        None
     }
 
     /// Phân tích tất cả entries
@@ -419,6 +434,7 @@ impl Default for TraceAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_parse_log_line() {
