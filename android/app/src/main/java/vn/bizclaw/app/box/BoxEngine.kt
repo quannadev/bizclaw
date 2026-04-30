@@ -31,22 +31,20 @@ class BoxEngine(private val context: Context) {
      */
     suspend fun initialize(config: BoxConfig): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            // Load LLM model
             chatEngine.loadModel(config.modelPath, config.quantization)
             
-            config.whisperPath?.let { path ->
-                voiceEngine.loadModel(path)
-            }
+            // Load voice model
+            voiceEngine.loadModel(config.whisperPath)
             
+            // Load vision model (optional)
             if (config.visionEnabled) {
-                config.visionPath?.let { path ->
-                    visionEngine.loadModel(path)
-                }
+                visionEngine.loadModel(config.visionPath)
             }
             
+            // Load image model (optional)
             if (config.imageEnabled) {
-                config.imagePath?.let { path ->
-                    imageEngine.loadModel(path)
-                }
+                imageEngine.loadModel(config.imagePath)
             }
             
             Result.success(Unit)
@@ -82,11 +80,10 @@ class BoxEngine(private val context: Context) {
      */
     suspend fun generateImage(
         prompt: String,
-        negativePrompt: String = "",
         width: Int = 512,
         height: Int = 512,
         steps: Int = 20
-    ): Result<String> = imageEngine.generate(prompt, negativePrompt, width, height, steps)
+    ): Result<String> = imageEngine.generate(prompt, width, height, steps)
     
     /**
      * Bật Hard Offline Mode
