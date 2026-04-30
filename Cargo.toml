@@ -45,6 +45,7 @@ members = [
     "crates/bizclaw-skillforge",
     "crates/bizclaw-agi",
     "crates/bizclaw-obsidian",
+    "crates/bizclaw-hermes",
 ]
 
 # ── Workspace-wide lint policy ──────────────────────────
