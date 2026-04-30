@@ -1,0 +1,18 @@
+[package]
+name = "bizclaw-khazix"
+version = "0.1.0"
+edition = "2021"
+description = "Khazix Skills - Modular AI Agent Skills System inspired by KKKKhazix/khazix-skills"
+authors = ["BizClaw Team"]
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+tracing = "0.1"
+tokio = { version = "1.0", features = ["full"] }
+regex = "1.10"
+uuid = { version = "1.0", features = ["v4"] }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt", "macros"] }
