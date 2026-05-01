@@ -7,28 +7,30 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.provider.MediaStore
 import android.view.View
-import android.widget.*
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.camera.core.*
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import vn.bizclaw.app.R
-import vn.bizclaw.app.box.*
+import vn.bizclaw.app.box.BoxConfig
+import vn.bizclaw.app.box.BoxEngine
 import java.io.File
-import java.util.concurrent.ExecutorService
 
-/**
- * Box Vision Activity - Camera AI analysis
- */
 class BoxVisionActivity : AppCompatActivity() {
     
     private lateinit var boxEngine: BoxEngine
     private lateinit var cameraProvider: ProcessCameraProvider
-    
-    private lateinit var imageCapture: ImageCapture
-    private lateinit var cameraExecutor: ExecutorService
+    private var imageCapture: ImageCapture? = null
     
     private lateinit var captureButton: Button
     private lateinit var resultCard: CardView
@@ -55,7 +57,6 @@ class BoxVisionActivity : AppCompatActivity() {
         objectsList = findViewById(R.id.objectsList)
         
         captureButton.setOnClickListener { captureImage() }
-        
         resultCard.visibility = View.GONE
         
         findViewById<Button>(R.id.galleryButton).setOnClickListener {
@@ -64,7 +65,7 @@ class BoxVisionActivity : AppCompatActivity() {
     }
     
     private fun initCamera() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
             != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 this,
@@ -78,11 +79,11 @@ class BoxVisionActivity : AppCompatActivity() {
         cameraProviderFuture.addListener({
             cameraProvider = cameraProviderFuture.get()
             bindCameraUseCases()
-        }, getMainExecutor())
+        }, ContextCompat.getMainExecutor(this))
     }
     
     private fun bindCameraUseCases() {
-        val cameraProvider = cameraProvider ?: return
+        val provider = cameraProvider ?: return
         
         imageCapture = ImageCapture.Builder()
             .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
@@ -91,8 +92,8 @@ class BoxVisionActivity : AppCompatActivity() {
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
         
         try {
-            cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
+            provider.unbindAll()
+            provider.bindToLifecycle(
                 this, cameraSelector, imageCapture
             )
         } catch (e: Exception) {
@@ -105,7 +106,7 @@ class BoxVisionActivity : AppCompatActivity() {
         
         lifecycleScope.launch {
             val config = BoxConfig(
-                modelPath = getExternalFilesDir("models")?.absolutePath + "/hermes-2-pro-q4.gguf",
+                modelPath = filesDir.absolutePath + "/models/hermes-2-pro-q4.gguf",
                 visionEnabled = true
             )
             
@@ -114,18 +115,18 @@ class BoxVisionActivity : AppCompatActivity() {
     }
     
     private fun captureImage() {
-        val imageCapture = imageCapture ?: return
+        val capture = imageCapture ?: return
         
         val photoFile = File(
-            getExternalFilesDir(null),
+            filesDir,
             "box_vision_${System.currentTimeMillis()}.jpg"
         )
         
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
         
-        imageCapture.takePicture(
+        capture.takePicture(
             outputOptions,
-            getMainExecutor(),
+            ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     lastImagePath = photoFile.absolutePath

@@ -15,15 +15,6 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/**
- * Box Security Module
- * 
- * Features:
- * - Biometric lock (fingerprint, face)
- * - Chat history encryption
- * - Hard offline mode
- * - Secure key storage
- */
 class BoxSecurity(private val context: Context) {
     
     private val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -32,12 +23,8 @@ class BoxSecurity(private val context: Context) {
     private var encryptionEnabled = true
     private var hardOfflineMode = false
     
-    // Encryption key alias
     private val keyAlias = "box_security_key"
     
-    /**
-     * Check if biometric is available
-     */
     fun isBiometricAvailable(): BiometricStatus {
         val biometricManager = BiometricManager.from(context)
         
@@ -50,16 +37,12 @@ class BoxSecurity(private val context: Context) {
         }
     }
     
-    /**
-     * Enable biometric lock
-     */
     suspend fun enableBiometric(activity: FragmentActivity): Result<Unit> = withContext(Dispatchers.Main) {
         try {
             val status = isBiometricAvailable()
             if (status != BiometricStatus.AVAILABLE) {
                 return@withContext Result.failure(Exception("Biometric not available: $status"))
             }
-            
             biometricEnabled = true
             Result.success(Unit)
         } catch (e: Exception) {
@@ -67,9 +50,6 @@ class BoxSecurity(private val context: Context) {
         }
     }
     
-    /**
-     * Authenticate with biometric
-     */
     suspend fun authenticate(
         activity: FragmentActivity,
         reason: String = "Unlock Box AI"
@@ -107,9 +87,6 @@ class BoxSecurity(private val context: Context) {
         }
     }
     
-    /**
-     * Encrypt data
-     */
     suspend fun encrypt(data: ByteArray): Result<EncryptedData> = withContext(Dispatchers.IO) {
         try {
             val key = getOrCreateKey()
@@ -125,9 +102,6 @@ class BoxSecurity(private val context: Context) {
         }
     }
     
-    /**
-     * Decrypt data
-     */
     suspend fun decrypt(encrypted: EncryptedData): Result<ByteArray> = withContext(Dispatchers.IO) {
         try {
             val key = getOrCreateKey()
@@ -142,19 +116,13 @@ class BoxSecurity(private val context: Context) {
         }
     }
     
-    /**
-     * Encrypt string
-     */
     suspend fun encryptString(text: String): Result<String> {
-        return encrypt(text.toByteArray()).map { encrypted ->
-            android.util.Base64.encodeToString(encrypted.data, android.util.Base64.NO_WRAP) + ":" + 
-            android.util.Base64.encodeToString(encrypted.iv, android.util.Base64.NO_WRAP)
+        return encrypt(text.toByteArray()).map { enc ->
+            android.util.Base64.encodeToString(enc.data, android.util.Base64.NO_WRAP) + ":" + 
+            android.util.Base64.encodeToString(enc.iv, android.util.Base64.NO_WRAP)
         }
     }
     
-    /**
-     * Decrypt string
-     */
     suspend fun decryptString(encrypted: String): Result<String> {
         return try {
             val parts = encrypted.split(":")
@@ -171,21 +139,12 @@ class BoxSecurity(private val context: Context) {
         }
     }
     
-    /**
-     * Enable hard offline mode
-     */
     fun enableHardOfflineMode(enable: Boolean) {
         hardOfflineMode = enable
     }
     
-    /**
-     * Check if hard offline mode is enabled
-     */
     fun isHardOfflineMode() = hardOfflineMode
     
-    /**
-     * Get or create encryption key
-     */
     private fun getOrCreateKey(): SecretKey {
         val existingKey = keyStore.getEntry(keyAlias, null) as? KeyStore.SecretKeyEntry
         if (existingKey != null) {
@@ -210,27 +169,60 @@ class BoxSecurity(private val context: Context) {
         return keyGenerator.generateKey()
     }
     
-    /**
-     * Encrypt chat history
-     */
     suspend fun encryptChatHistory(messages: List<ChatMessage>): Result<String> {
-        val json = Gson().toJson(messages)
-        encryptString(json)
-    }
-    
-    /**
-     * Decrypt chat history
-     */
-    suspend fun decryptChatHistory(encrypted: String): Result<List<ChatMessage>> {
-        decryptString(encrypted).mapCatching { json ->
-            Gson().fromJson(json, Array<ChatMessage>::class.java).toList()
+        return try {
+            val json = serializeChatMessages(messages)
+            encryptString(json)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
+    
+    suspend fun decryptChatHistory(encrypted: String): Result<List<ChatMessage>> {
+        return try {
+            decryptString(encrypted).mapCatching { json ->
+                deserializeChatMessages(json)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    private fun serializeChatMessages(messages: List<ChatMessage>): String {
+        val items = messages.joinToString(",") { msg ->
+            """{"id":"${msg.id.escapeJson()}","role":"${msg.role.escapeJson()}","content":"${msg.content.escapeJson()}","timestamp":${msg.timestamp}}"""
+        }
+        return "[$items]"
+    }
+    
+    private fun deserializeChatMessages(json: String): List<ChatMessage> {
+        if (json.isBlank() || json == "[]") return emptyList()
+        
+        val result = mutableListOf<ChatMessage>()
+        val regex = """\{"id":"([^"]*)","role":"([^"]*)","content":"([^"]*)","timestamp":(\d+)\}""".toRegex()
+        
+        var remaining = json.trim().removePrefix("[").removeSuffix("]")
+        while (remaining.isNotBlank()) {
+            val match = regex.find(remaining)
+            if (match != null) {
+                val (id, role, content, timestamp) = match.destructured
+                result.add(ChatMessage(id, role, content, timestamp.toLong()))
+                remaining = remaining.substringAfter(match.value).trimStart(',', ' ')
+            } else {
+                break
+            }
+        }
+        return result
+    }
+    
+    private fun String.escapeJson(): String = this
+        .replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace("\t", "\\t")
 }
 
-/**
- * Biometric status
- */
 enum class BiometricStatus {
     AVAILABLE,
     NO_HARDWARE,
@@ -238,68 +230,34 @@ enum class BiometricStatus {
     NOT_ENROLLED
 }
 
-/**
- * Biometric result
- */
-sealed class BiometricResult
-object BiometricResult {
-    object Success : BiometricResult()
+sealed class BiometricResult {
+    data object Success : BiometricResult()
     data class Error(val code: Int, val message: String) : BiometricResult()
 }
 
-/**
- * Encrypted data container
- */
 data class EncryptedData(
     val data: ByteArray,
     val iv: ByteArray
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        other as EncryptedData
+        if (!data.contentEquals(other.data)) return false
+        if (!iv.contentEquals(other.iv)) return false
+        return true
+    }
+    
+    override fun hashCode(): Int {
+        var result = data.contentHashCode()
+        result = 31 * result + iv.contentHashCode()
+        return result
+    }
+}
 
-/**
- * Chat message for encryption
- */
 data class ChatMessage(
     val id: String,
     val role: String,
     val content: String,
     val timestamp: Long
 )
-
-/**
- * Simple JSON serializer
- */
-class Gson {
-    fun toJson(obj: Any): String {
-        return when (obj) {
-            is List<*> -> "[${obj.joinToString(",") { toJson(it as Any) }]"
-            is ChatMessage -> """{"id":"${obj.id}","role":"${obj.role}","content":"${obj.content.escape()}","timestamp":${obj.timestamp}}"""
-            else -> obj.toString()
-        }
-    }
-    
-    fun <T> fromJson(json: String, clazz: Class<T>): T {
-        return when (clazz) {
-            ChatMessage::class.java -> {
-                val parts = json.trim('{', '}').split(",")
-                val map = parts.associate { part ->
-                    val kv = part.split(":")
-                    kv[0].trim('"') to kv.getOrNull(1)?.trim('"') ?: ""
-                }
-                ChatMessage(
-                    id = map["id"] ?: "",
-                    role = map["role"] ?: "",
-                    content = map["content"] ?: "",
-                    timestamp = (map["timestamp"] ?: "0").toLongOrNull() ?: 0
-                )
-            }
-            else -> throw NotImplementedError()
-        } as T
-    }
-    
-    private fun String.escape() = this
-        .replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t")
-}
